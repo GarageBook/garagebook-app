@@ -12,26 +12,48 @@ class MaintenanceLogForm
         return $schema
             ->components([
                 Forms\Components\Select::make('vehicle_id')
+                    ->label('Voertuig')
                     ->relationship('vehicle', 'model')
                     ->required(),
 
                 Forms\Components\TextInput::make('description')
+                    ->label('Omschrijving')
                     ->required(),
 
                 Forms\Components\TextInput::make('km_reading')
+                    ->label('Kilometerstand')
                     ->numeric()
+                    ->suffix(' km')
                     ->required(),
 
                 Forms\Components\DatePicker::make('maintenance_date')
+                    ->label('Onderhoudsdatum')
                     ->required(),
 
                 Forms\Components\TextInput::make('cost')
-                    ->numeric(),
+                    ->label('Kosten')
+                    ->numeric()
+                    ->prefix('€'),
 
-                Forms\Components\FileUpload::make('attachment')
-                    ->directory('maintenance-files'),
+                Forms\Components\FileUpload::make('attachments')
+                    ->label('Foto’s')
+                    ->disk('public')
+                    ->directory('maintenance-attachments')
+                    ->visibility('public')
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->maxSize(20480)
+                    ->image()
+                    ->imageEditor()
+                    ->multiple()
+                    ->reorderable()
+                    ->downloadable()
+                    ->openable()
+                    ->previewable(true)
+                    ->columnSpanFull(),
 
-                Forms\Components\Textarea::make('notes'),
+                Forms\Components\Textarea::make('notes')
+                    ->label('Notities')
+                    ->columnSpanFull(),
             ]);
     }
 }

@@ -14,7 +14,13 @@ class MaintenanceLog extends Model
         'maintenance_date',
         'cost',
         'attachment',
+        'attachments',
         'notes',
+    ];
+
+    protected $casts = [
+        'attachments' => 'array',
+        'maintenance_date' => 'date',
     ];
 
     public function vehicle(): BelongsTo
