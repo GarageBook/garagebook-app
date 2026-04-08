@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../storage/framework/views/*.php";
+@source "../**/*.blade.php";
+@source "../**/*.js";
+
+/* =========================
+   CUSTOM FONTS
+========================= */
+@font-face {
+    font-family: "ZalandoSans";
+    src: url("/fonts/zalandosans/ZalandoSans-Light.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "ZalandoSans";
+    src: url("/fonts/zalandosans/ZalandoSans-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "QuantixExtraBold";
+    src: url("/fonts/quantix/QuantixExtrabold.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+}
+
+/* =========================
+   TAILWIND THEME
+========================= */
+@theme {
+    --font-sans: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* =========================
+   GLOBAL BASE STYLES
+========================= */
+html,
+body {
+    font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+    color: #181818;
+    background: #ffffff;
+    line-height: 1.6;
+}
+
+/* =========================
+   HEADINGS
+========================= */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "QuantixExtraBold", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+h1 {
+    font-size: 56px;
+    line-height: 0.9 !important;
+    
+}
+
+h2 {
+    font-size: 40px;
+    line-height: 1.2;
+    margin-bottom: 40px;
+}
+
+h3 {
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+/* =========================
+   BODY TEXT
+========================= */
+p,
+span,
+div,
+li,
+a,
+input,
+textarea,
+button {
+    font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+}
