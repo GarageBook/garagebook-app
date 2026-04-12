@@ -48,17 +48,25 @@
 
         @foreach($logs as $log)
             @php
-                $firstAttachment = is_array($log->attachments ?? null)
-                    ? ($log->attachments[0] ?? null)
+                $attachments = $log->attachments;
+
+                if (is_string($attachments)) {
+                    $attachments = json_decode($attachments, true);
+                }
+
+                $firstAttachment = is_array($attachments)
+                    ? ($attachments[0] ?? null)
                     : null;
 
-                $imageSrc = $firstAttachment
-                    ? (
-                        request()->is('maintenance/pdf')
-                            ? public_path('storage/' . $firstAttachment)
-                            : asset('storage/' . $firstAttachment)
-                    )
-                    : null;
+                $imageSrc = null;
+
+                if ($firstAttachment) {
+                    $imagePath = public_path('storage/' . ltrim($firstAttachment, '/'));
+
+                    if (file_exists($imagePath)) {
+                        $imageSrc = $imagePath;
+                    }
+                }
             @endphp
 
             <div style="border-bottom:1px solid #ddd; padding:25px 0;">
