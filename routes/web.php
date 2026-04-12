@@ -12,23 +12,29 @@ Route::get('/', function () {
 });
 
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
-    $user = User::all()->first(function ($user) use ($username) {
-        return Str::slug($user->name) === $username;
+    $users = User::all();
+
+    $user = $users->first(function ($user) use ($username) {
+        return Str::slug(trim($user->name)) === trim($username);
     });
 
-    abort_if(!$user, 404);
+    if (! $user) {
+        abort(404, 'User not found');
+    }
 
-    $vehicle = Vehicle::where('user_id', $user->id)
-        ->get()
-        ->first(function ($vehicle) use ($vehicleSlug) {
-            $slug = Str::slug(
-                $vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model
-            );
+    $vehicles = Vehicle::where('user_id', $user->id)->get();
 
-            return $slug === $vehicleSlug;
-        });
+    $vehicle = $vehicles->first(function ($vehicle) use ($vehicleSlug) {
+        $slug = Str::slug(
+            trim($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model)
+        );
 
-    abort_if(!$vehicle, 404);
+        return $slug === trim($vehicleSlug);
+    });
+
+    if (! $vehicle) {
+        abort(404, 'Vehicle not found');
+    }
 
     $logs = MaintenanceLog::where('vehicle_id', $vehicle->id)
         ->latest('maintenance_date')
