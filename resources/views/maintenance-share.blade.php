@@ -38,7 +38,7 @@
     </div>
 
     <div style="padding:40px; max-width:900px; margin:0 auto;">
-        <h1 style="margin-bottom:10px;">Onderhoudstijdlijn TEST</h1>
+        <h1 style="margin-bottom:10px;">Onderhoudstijdlijn</h1>
 
         @if(isset($vehicle))
             <div style="font-size:18px; color:#666; margin-bottom:30px;">
