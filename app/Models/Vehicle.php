@@ -16,6 +16,7 @@ class Vehicle extends Model
         'current_km',
         'year',
         'notes',
+        'photo',
     ];
 
     public function maintenanceLogs(): HasMany

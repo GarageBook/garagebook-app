@@ -64,85 +64,96 @@ class AdminPanelProvider extends PanelProvider
             'panels::head.end',
             fn (): string => new HtmlString('
                 <style>
-                    :root {
-                        --gb-yellow: #ffd200;
-                        --gb-black: #000000;
+                    .gb-login-footer {
+                        background: #0d0f12;
+                        color: white;
+                        font-family: "Zalando Sans", sans-serif;
+                        padding: 70px 50px 40px 50px;
+                        width: 100%;
                     }
 
-                    @font-face {
-                        font-family: "Zalando Sans";
-                        src: url("/fonts/zalandosans/ZalandoSans-Regular.woff2") format("woff2");
-                        font-weight: 400;
-                        font-style: normal;
+                    .gb-login-footer a {
+                        color: white;
+                        text-decoration: none;
                     }
 
-                    @font-face {
-                        font-family: "Zalando Sans";
-                        src: url("/fonts/zalandosans/ZalandoSans-Bold.woff2") format("woff2");
+                    .gb-login-footer h3 {
+                        font-size: 18px;
                         font-weight: 700;
-                        font-style: normal;
+                        margin-bottom: 22px;
                     }
 
-                    body,
-                    .fi-layout,
-                    .fi-main,
-                    .fi-sidebar,
-                    .fi-topbar,
-                    .fi-page,
-                    .fi-section,
-                    .fi-input {
-                        font-family: "Zalando Sans", sans-serif !important;
+                    .gb-footer-links {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 14px;
+                        font-size: 17px;
                     }
 
-                    button[type="submit"],
-                    a.fi-btn,
-                    .fi-btn,
-                    [data-color="primary"] {
-                        background: var(--gb-yellow) !important;
-                        border-color: var(--gb-yellow) !important;
-                        color: var(--gb-black) !important;
-                        font-family: "Zalando Sans", sans-serif !important;
-                        font-weight: 700 !important;
+                    .gb-footer-inner {
+                        width: 52%;
+                        min-width: 780px;
+                        margin-bottom: 85px;
                     }
 
-                    button[type="submit"]:hover,
-                    a.fi-btn:hover,
-                    .fi-btn:hover,
-                    [data-color="primary"]:hover {
-                        background: var(--gb-yellow) !important;
-                        border-color: var(--gb-yellow) !important;
-                        color: var(--gb-black) !important;
-                    }
-
-                    /* FILAMENT SIDEBAR ACTIVE STATE */
-                    .fi-sidebar-nav {
-                        --c-400: 255, 210, 0 !important;
-                        --c-500: 255, 210, 0 !important;
-                        --c-600: 255, 210, 0 !important;
-                        --c-700: 255, 210, 0 !important;
-                    }
-
-                    .fi-sidebar-nav a[aria-current="page"] {
-                        background: #ffd200 !important;
-                        color: #000 !important;
-                    }
-
-                    .fi-sidebar-nav a[aria-current="page"] * {
-                        color: #000 !important;
-                        fill: #000 !important;
-                        stroke: #000 !important;
-                    }
-
-                    .fi-sidebar-nav a[aria-current="page"] svg {
-                        color: #000 !important;
-                        stroke: #000 !important;
-                    }
-
-                    input[type="checkbox"]:checked,
-                    input[type="radio"]:checked {
-                        accent-color: #ffd200 !important;
+                    .gb-footer-bottom {
+                        border-top: 1px solid #2c2f35;
+                        padding-top: 28px;
+                        font-size: 15px;
+                        color: #8d9199;
+                        width: 100%;
                     }
                 </style>
+            ')
+        );
+
+        FilamentView::registerRenderHook(
+            'panels::body.end',
+            fn (): string => new HtmlString('
+                <footer class="gb-login-footer">
+                    <div class="gb-footer-inner">
+                        <div style="margin-bottom:60px;">
+                            <img src="/images/garagebook-logo-white.png" style="height:44px;" alt="GarageBook">
+                        </div>
+
+                        <div style="
+                            display:grid;
+                            grid-template-columns: 1fr 1fr 1fr;
+                            gap:70px;
+                        ">
+                            <div>
+                                <h3>Mijn GarageBook</h3>
+                                <div class="gb-footer-links">
+                                    <a href="/admin/vehicles">Mijn voertuigen</a>
+                                    <a href="/admin/maintenance-logs">Onderhoud</a>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3>Over GarageBook</h3>
+                                <div class="gb-footer-links">
+                                    <a href="#">Ons verhaal</a>
+                                    <a href="#">Privacy Statement</a>
+                                    <a href="#">Voorwaarden</a>
+                                    <a href="#">Contact</a>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3>Volg ons op social media</h3>
+                                <div class="gb-footer-links">
+                                <a href="https://www.instagram.com/garagebook.global" target="_blank">Instagram</a>
+                                <a href="https://linkedin.com/company/thegaragebook/" target="_blank">LinkedIn</a>
+                                <a href="https://www.facebook.com/profile.php?id=61584164445375" target="_blank">Facebook</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gb-footer-bottom">
+                        © GarageBook 2026 - Alle rechten voorbehouden
+                    </div>
+                </footer>
             ')
         );
     }

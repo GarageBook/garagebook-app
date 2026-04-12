@@ -29,6 +29,14 @@ class VehicleForm
                     ->numeric(),
 
                 Forms\Components\Textarea::make('notes'),
+
+                Forms\Components\FileUpload::make('photo')
+                    ->label('Foto')
+                    ->image()
+                    ->disk('public')
+                    ->directory('vehicles')
+                    ->imageEditor()
+                    ->columnSpanFull(),
             ]);
     }
 }

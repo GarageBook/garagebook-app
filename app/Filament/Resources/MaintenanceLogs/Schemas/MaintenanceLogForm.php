@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
+use App\Models\Vehicle;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 
@@ -13,7 +14,17 @@ class MaintenanceLogForm
             ->components([
                 Forms\Components\Select::make('vehicle_id')
                     ->label('Voertuig')
-                    ->relationship('vehicle', 'model')
+                    ->options(
+                        Vehicle::where('user_id', auth()->id())
+                            ->get()
+                            ->mapWithKeys(function ($vehicle) {
+                                return [
+                                    $vehicle->id => $vehicle->nickname
+                                        ?: $vehicle->brand . ' ' . $vehicle->model,
+                                ];
+                            })
+                    )
+                    ->searchable()
                     ->required(),
 
                 Forms\Components\TextInput::make('description')
