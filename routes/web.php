@@ -12,7 +12,11 @@ Route::get('/', function () {
 });
 
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
-    $user = User::whereRaw('LOWER(name) = ?', [strtolower($username)])->firstOrFail();
+    $user = User::all()->first(function ($user) use ($username) {
+        return Str::slug($user->name) === $username;
+    });
+
+    abort_if(!$user, 404);
 
     $vehicle = Vehicle::where('user_id', $user->id)
         ->get()
