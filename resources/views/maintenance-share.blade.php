@@ -63,7 +63,13 @@
                 if ($firstAttachment) {
                     if (request()->is('maintenance/pdf')) {
                         $absolutePath = storage_path('app/public/' . ltrim($firstAttachment, '/'));
-                        $imageSrc = file_exists($absolutePath) ? $absolutePath : null;
+
+                        if (file_exists($absolutePath)) {
+                            $imageData = base64_encode(file_get_contents($absolutePath));
+                            $mimeType = mime_content_type($absolutePath);
+
+                            $imageSrc = 'data:' . $mimeType . ';base64,' . $imageData;
+                        }
                     } else {
                         $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
                     }
