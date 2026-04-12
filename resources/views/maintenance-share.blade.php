@@ -61,10 +61,10 @@
                 $imageSrc = null;
 
                 if ($firstAttachment) {
-                    $imagePath = public_path('storage/' . ltrim($firstAttachment, '/'));
-
-                    if (file_exists($imagePath)) {
-                        $imageSrc = $imagePath;
+                    if (request()->is('maintenance/pdf')) {
+                        $imageSrc = public_path('storage/' . ltrim($firstAttachment, '/'));
+                    } else {
+                        $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
                     }
                 }
             @endphp
