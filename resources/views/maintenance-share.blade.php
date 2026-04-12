@@ -62,7 +62,8 @@
 
                 if ($firstAttachment) {
                     if (request()->is('maintenance/pdf')) {
-                        $imageSrc = public_path('storage/' . ltrim($firstAttachment, '/'));
+                        $absolutePath = storage_path('app/public/' . ltrim($firstAttachment, '/'));
+                        $imageSrc = file_exists($absolutePath) ? $absolutePath : null;
                     } else {
                         $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
                     }
