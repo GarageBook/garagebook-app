@@ -17,6 +17,7 @@ class VehicleForm
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
+                    ->maxSize(20480)
                     ->previewable(false)
                     ->columnSpanFull(),
 
@@ -28,6 +29,7 @@ class VehicleForm
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
+                    ->maxSize(20480)
                     ->previewable(false)
                     ->columnSpanFull(),
 
