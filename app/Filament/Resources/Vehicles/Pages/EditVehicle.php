@@ -29,6 +29,16 @@ class EditVehicle extends EditRecord
             $html .= '<img src="' . Storage::url($vehicle->photo) . '" style="max-width:300px; border-radius:12px;">';
         }
 
+        if (!empty($vehicle->photos)) {
+            $html .= '<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';
+
+            foreach ($vehicle->photos as $photo) {
+                $html .= '<img src="' . Storage::url($photo) . '" style="width:100px; height:100px; object-fit:cover; border-radius:10px;">';
+            }
+
+            $html .= '</div>';
+        }
+
         $html .= '<div>Voertuig bewerken</div>';
         $html .= '</div>';
 
