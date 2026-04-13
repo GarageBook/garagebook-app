@@ -14,8 +14,13 @@ class VehicleForm
                 Forms\Components\FileUpload::make('photo')
                     ->label('Voertuigfoto')
                     ->image()
-                    ->directory('vehicle-photos')
                     ->disk('public')
+                    ->directory('vehicle-photos')
+                    ->visibility('public')
+                    ->imagePreviewHeight('250')
+                    ->loadingIndicatorPosition('left')
+                    ->downloadable()
+                    ->openable()
                     ->imageEditor()
                     ->columnSpanFull(),
 
