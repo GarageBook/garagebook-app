@@ -16,7 +16,8 @@ class VehiclesTable
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('Foto')
                     ->disk('public')
-                    ->square(),
+                    ->square()
+                    ->size(80),
 
                 Tables\Columns\TextColumn::make('brand')
                     ->label('Merk')
@@ -36,10 +37,6 @@ class VehiclesTable
 
                 Tables\Columns\TextColumn::make('year')
                     ->label('Bouwjaar'),
-
-                Tables\Columns\TextColumn::make('photo')
-                    ->label('Foto pad')
-                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Aangemaakt')
