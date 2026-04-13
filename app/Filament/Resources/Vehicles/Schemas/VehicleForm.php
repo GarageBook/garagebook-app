@@ -11,21 +11,12 @@ class VehicleForm
     {
         return $schema
             ->components([
-                Forms\Components\View::make('filament.forms.components.vehicle-photo-preview')
-                    ->columnSpanFull(),
-
                 Forms\Components\FileUpload::make('photo')
-                    ->label('Nieuwe voertuigfoto uploaden')
+                    ->label('Voertuigfoto')
                     ->image()
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
-                    ->acceptedFileTypes([
-                        'image/jpeg',
-                        'image/png',
-                        'image/webp',
-                    ])
-                    ->maxSize(5120)
                     ->previewable(false)
                     ->columnSpanFull(),
 
