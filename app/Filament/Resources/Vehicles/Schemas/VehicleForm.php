@@ -12,7 +12,18 @@ class VehicleForm
         return $schema
             ->components([
                 Forms\Components\FileUpload::make('photo')
-                    ->label('Voertuigfoto')
+                    ->label('Hoofdfoto')
+                    ->image()
+                    ->disk('public')
+                    ->directory('vehicle-photos')
+                    ->visibility('public')
+                    ->previewable(false)
+                    ->columnSpanFull(),
+
+                Forms\Components\FileUpload::make('photos')
+                    ->label('Fotogalerij')
+                    ->multiple()
+                    ->reorderable()
                     ->image()
                     ->disk('public')
                     ->directory('vehicle-photos')
