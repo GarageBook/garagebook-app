@@ -14,6 +14,7 @@ class UsersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withCount('vehicles'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Naam')
@@ -24,25 +25,13 @@ class UsersTable
                     ->searchable(),
 
                 TextColumn::make('vehicles_count')
-                    ->counts('vehicles')
                     ->label('Voertuigen')
-                    ->sortable(),
-
-                TextColumn::make('email_verified_at')
-                    ->label('Geverifieerd')
-                    ->dateTime('d-m-Y H:i')
                     ->sortable(),
 
                 TextColumn::make('created_at')
                     ->label('Aangemaakt')
                     ->dateTime('d-m-Y H:i')
                     ->sortable(),
-
-                TextColumn::make('updated_at')
-                    ->label('Bijgewerkt')
-                    ->dateTime('d-m-Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
