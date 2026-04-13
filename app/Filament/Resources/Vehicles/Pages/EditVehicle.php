@@ -26,14 +26,22 @@ class EditVehicle extends EditRecord
         $html = '<div style="display:flex; flex-direction:column; gap:15px;">';
 
         if ($vehicle->photo) {
-            $html .= '<img src="' . Storage::url($vehicle->photo) . '" style="max-width:300px; border-radius:12px;">';
+            $photoUrl = Storage::url($vehicle->photo);
+
+            $html .= '<a href="' . $photoUrl . '" target="_blank">';
+            $html .= '<img src="' . $photoUrl . '" style="max-width:300px; border-radius:12px; cursor:pointer;">';
+            $html .= '</a>';
         }
 
         if (!empty($vehicle->photos)) {
             $html .= '<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';
 
             foreach ($vehicle->photos as $photo) {
-                $html .= '<img src="' . Storage::url($photo) . '" style="width:100px; height:100px; object-fit:cover; border-radius:10px;">';
+                $photoUrl = Storage::url($photo);
+
+                $html .= '<a href="' . $photoUrl . '" target="_blank">';
+                $html .= '<img src="' . $photoUrl . '" style="width:100px; height:100px; object-fit:cover; border-radius:10px; cursor:pointer;">';
+                $html .= '</a>';
             }
 
             $html .= '</div>';
