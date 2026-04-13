@@ -17,10 +17,7 @@ class VehicleForm
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
-                    ->imagePreviewHeight('250')
-                    ->loadingIndicatorPosition('left')
-                    ->downloadable()
-                    ->openable()
+                    ->previewable(false)
                     ->imageEditor()
                     ->columnSpanFull(),
 
