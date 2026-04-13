@@ -17,8 +17,15 @@ class VehicleForm
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
-                    ->previewable(false)
-                    ->imageEditor()
+                    ->acceptedFileTypes([
+                        'image/jpeg',
+                        'image/png',
+                        'image/webp',
+                    ])
+                    ->maxSize(5120)
+                    ->downloadable()
+                    ->openable()
+                    ->imagePreviewHeight('200')
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('brand')
