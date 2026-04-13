@@ -17,16 +17,15 @@ class Vehicle extends Model
         'year',
         'notes',
         'photo',
+        'photos',
+    ];
+
+    protected $casts = [
+        'photos' => 'array',
     ];
 
     public function maintenanceLogs(): HasMany
     {
         return $this->hasMany(MaintenanceLog::class);
     }
-
-    public function photos()
-    {
-        return $this->hasMany(VehiclePhoto::class);
-    }
-
 }
