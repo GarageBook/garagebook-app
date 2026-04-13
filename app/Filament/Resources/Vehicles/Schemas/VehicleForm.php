@@ -12,31 +12,30 @@ class VehicleForm
         return $schema
             ->components([
                 Forms\Components\TextInput::make('brand')
+                    ->label('Merk')
                     ->required(),
 
                 Forms\Components\TextInput::make('model')
+                    ->label('Model')
                     ->required(),
 
-                Forms\Components\TextInput::make('nickname'),
+                Forms\Components\TextInput::make('nickname')
+                    ->label('Titel'),
 
-                Forms\Components\TextInput::make('license_plate'),
+                Forms\Components\TextInput::make('license_plate')
+                    ->label('Kenteken'),
 
                 Forms\Components\TextInput::make('current_km')
+                    ->label('Huidige kilometerstand')
                     ->numeric()
                     ->required(),
 
                 Forms\Components\TextInput::make('year')
+                    ->label('Bouwjaar')
                     ->numeric(),
 
-                Forms\Components\Textarea::make('notes'),
-
-                Forms\Components\FileUpload::make('photo')
-                    ->label('Foto')
-                    ->image()
-                    ->disk('public')
-                    ->directory('vehicles')
-                    ->imageEditor()
-                    ->columnSpanFull(),
+                Forms\Components\Textarea::make('notes')
+                    ->label('Notities'),
             ]);
     }
 }
