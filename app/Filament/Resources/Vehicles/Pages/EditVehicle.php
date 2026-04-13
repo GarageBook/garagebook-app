@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Vehicles\Pages;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Storage;
 
 class EditVehicle extends EditRecord
 {
@@ -15,5 +17,21 @@ class EditVehicle extends EditRecord
         return [
             DeleteAction::make(),
         ];
+    }
+
+    public function getHeading(): string | HtmlString
+    {
+        $vehicle = $this->record;
+
+        $html = '<div style="display:flex; flex-direction:column; gap:15px;">';
+
+        if ($vehicle->photo) {
+            $html .= '<img src="' . Storage::url($vehicle->photo) . '" style="max-width:300px; border-radius:12px;">';
+        }
+
+        $html .= '<div>Voertuig bewerken</div>';
+        $html .= '</div>';
+
+        return new HtmlString($html);
     }
 }
