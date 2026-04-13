@@ -1,5 +1,8 @@
 @php
-    $vehicles = \App\Models\Vehicle::latest()->take(6)->get();
+    $vehicles = \App\Models\Vehicle::where('user_id', auth()->id())
+        ->latest()
+        ->take(6)
+        ->get();
 @endphp
 
 <x-filament-widgets::widget>
