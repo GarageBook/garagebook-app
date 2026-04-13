@@ -11,6 +11,14 @@ class VehicleForm
     {
         return $schema
             ->components([
+                Forms\Components\FileUpload::make('photo')
+                    ->label('Voertuigfoto')
+                    ->image()
+                    ->directory('vehicle-photos')
+                    ->disk('public')
+                    ->imageEditor()
+                    ->columnSpanFull(),
+
                 Forms\Components\TextInput::make('brand')
                     ->label('Merk')
                     ->required(),

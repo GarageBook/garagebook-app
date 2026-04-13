@@ -23,4 +23,10 @@ class Vehicle extends Model
     {
         return $this->hasMany(MaintenanceLog::class);
     }
+
+    public function photos()
+    {
+        return $this->hasMany(VehiclePhoto::class);
+    }
+
 }
