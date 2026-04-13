@@ -23,32 +23,73 @@ class EditVehicle extends EditRecord
     {
         $vehicle = $this->record;
 
-        $html = '<div style="display:flex; flex-direction:column; gap:15px;">';
+        $photos = [];
 
         if ($vehicle->photo) {
-            $photoUrl = Storage::url($vehicle->photo);
-
-            $html .= '<a href="' . $photoUrl . '" target="_blank">';
-            $html .= '<img src="' . $photoUrl . '" style="max-width:300px; border-radius:12px; cursor:pointer;">';
-            $html .= '</a>';
+            $photos[] = Storage::url($vehicle->photo);
         }
 
         if (!empty($vehicle->photos)) {
-            $html .= '<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">';
-
             foreach ($vehicle->photos as $photo) {
-                $photoUrl = Storage::url($photo);
-
-                $html .= '<a href="' . $photoUrl . '" target="_blank">';
-                $html .= '<img src="' . $photoUrl . '" style="width:100px; height:100px; object-fit:cover; border-radius:10px; cursor:pointer;">';
-                $html .= '</a>';
+                $photos[] = Storage::url($photo);
             }
-
-            $html .= '</div>';
         }
 
-        $html .= '<div>Voertuig bewerken</div>';
-        $html .= '</div>';
+        $photosJson = json_encode($photos);
+
+        $html = '
+        <div style="display:flex; flex-direction:column; gap:15px;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">';
+
+        foreach ($photos as $index => $photoUrl) {
+            $size = $index === 0 ? '300px' : '100px';
+
+            $html .= '
+                <img
+                    src="' . $photoUrl . '"
+                    onclick="openGallery(' . $index . ')"
+                    style="width:' . $size . '; height:' . ($index === 0 ? 'auto' : '100px') . '; object-fit:cover; border-radius:12px; cursor:pointer;"
+                >
+            ';
+        }
+
+        $html .= '
+            </div>
+            <div>Voertuig bewerken</div>
+        </div>
+
+        <div id="galleryOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center;">
+            <button onclick="prevPhoto()" style="position:absolute; left:30px; font-size:40px; color:white;">‹</button>
+            <img id="galleryImage" style="max-width:90vw; max-height:90vh; border-radius:12px;">
+            <button onclick="nextPhoto()" style="position:absolute; right:30px; font-size:40px; color:white;">›</button>
+            <button onclick="closeGallery()" style="position:absolute; top:30px; right:30px; font-size:30px; color:white;">✕</button>
+        </div>
+
+        <script>
+            const photos = ' . $photosJson . ';
+            let currentPhoto = 0;
+
+            function openGallery(index) {
+                currentPhoto = index;
+                document.getElementById("galleryImage").src = photos[currentPhoto];
+                document.getElementById("galleryOverlay").style.display = "flex";
+            }
+
+            function closeGallery() {
+                document.getElementById("galleryOverlay").style.display = "none";
+            }
+
+            function nextPhoto() {
+                currentPhoto = (currentPhoto + 1) % photos.length;
+                document.getElementById("galleryImage").src = photos[currentPhoto];
+            }
+
+            function prevPhoto() {
+                currentPhoto = (currentPhoto - 1 + photos.length) % photos.length;
+                document.getElementById("galleryImage").src = photos[currentPhoto];
+            }
+        </script>
+        ';
 
         return new HtmlString($html);
     }
