@@ -88,6 +88,26 @@ class EditVehicle extends EditRecord
                 currentPhoto = (currentPhoto - 1 + photos.length) % photos.length;
                 document.getElementById("galleryImage").src = photos[currentPhoto];
             }
+
+            document.addEventListener("keydown", function(event) {
+                const overlay = document.getElementById("galleryOverlay");
+
+                if (overlay.style.display !== "flex") {
+                    return;
+                }
+
+                if (event.key === "ArrowRight") {
+                    nextPhoto();
+                }
+
+                if (event.key === "ArrowLeft") {
+                    prevPhoto();
+                }
+
+                if (event.key === "Escape") {
+                    closeGallery();
+                }
+            });
         </script>
         ';
 
