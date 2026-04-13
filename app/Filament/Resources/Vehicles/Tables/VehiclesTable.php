@@ -13,6 +13,11 @@ class VehiclesTable
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('photo')
+                    ->label('Foto')
+                    ->disk('public')
+                    ->square(),
+
                 Tables\Columns\TextColumn::make('brand')
                     ->label('Merk')
                     ->sortable()
@@ -27,10 +32,19 @@ class VehiclesTable
                     ->label('Kenteken'),
 
                 Tables\Columns\TextColumn::make('current_km')
-                    ->label('Huidige kilometerstand'),
+                    ->label('KM'),
 
                 Tables\Columns\TextColumn::make('year')
                     ->label('Bouwjaar'),
+
+                Tables\Columns\TextColumn::make('photo')
+                    ->label('Foto pad')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Aangemaakt')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable(),
             ])
             ->recordActions([
                 EditAction::make(),
