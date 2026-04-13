@@ -16,19 +16,31 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label('Naam')
                     ->searchable(),
+
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('E-mail')
                     ->searchable(),
-                TextColumn::make('email_verified_at')
-                    ->dateTime()
+
+                TextColumn::make('vehicles_count')
+                    ->counts('vehicles')
+                    ->label('Voertuigen')
                     ->sortable(),
+
+                TextColumn::make('email_verified_at')
+                    ->label('Geverifieerd')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('Aangemaakt')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable(),
+
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Bijgewerkt')
+                    ->dateTime('d-m-Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
