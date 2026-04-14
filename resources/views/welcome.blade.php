@@ -3,31 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <link rel="stylesheet" href="{{ asset('styles.css') }}">
 
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="shortcut icon" href="favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-    
+
     <title>GarageBook - Bouw aan het verhaal van jouw motor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-white text-gray-900">
 
-    <!-- <header class="border-b border-gray-200" style="background-color:#181818;"> --> 
-    
     <header style="background-color:#181818;">
         <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
             <div class="text-2xl font-bold tracking-tight">
                 <img src="https://garagebook.nl/assets/GarageBookLogo.png" alt="GarageBook motor onderhoud app logo">
             </div>
-            
+
             <div class="space-x-4">
-                <a href="/admin/login" class="text-sm font-medium hover:underline">Login</a>
-                <a href="/admin/register" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                <a href="/admin/login" class="text-sm font-medium hover:underline">
+                    Login
+                </a>
+
+                <a href="/admin/register" class="bg-[#ffd200] hover:bg-[#ffd200] text-black px-4 py-2 rounded-lg text-sm font-medium">
                     Registreer gratis
                 </a>
             </div>
@@ -46,7 +47,7 @@
             </p>
 
             <div class="mt-8 flex gap-4">
-                <a href="/admin/register" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold">
+                <a href="/admin/register" class="bg-[#ffd200] hover:bg-[#ffd200] text-black px-6 py-3 rounded-xl font-semibold">
                     Start gratis
                 </a>
 
