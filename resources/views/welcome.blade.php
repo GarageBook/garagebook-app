@@ -14,6 +14,30 @@
     <meta property="og:description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
     <meta property="og:url" content="{{ url('/') }}">
     <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+        {!! json_encode([
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                [
+                    '@type' => 'Organization',
+                    'name' => 'GarageBook',
+                    'url' => url('/'),
+                    'logo' => asset('images/garagebook-logo.png'),
+                    'sameAs' => [
+                        'https://www.instagram.com/garagebook.global',
+                        'https://linkedin.com/company/thegaragebook/',
+                        'https://www.facebook.com/profile.php?id=61584164445375',
+                    ],
+                ],
+                [
+                    '@type' => 'WebSite',
+                    'name' => 'GarageBook',
+                    'url' => url('/'),
+                    'inLanguage' => 'nl-NL',
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+    </script>
 
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />

@@ -14,6 +14,34 @@
     <meta property="og:description" content="@yield('og_description', trim($__env->yieldContent('meta_description', 'GarageBook helpt motorrijders om onderhoud, historie, upgrades en belangrijke momenten van hun motor overzichtelijk vast te leggen.')))">
     <meta property="og:url" content="@yield('canonical_url', url()->current())">
     <meta name="twitter:card" content="summary_large_image">
+    @hasSection('structured_data')
+        @yield('structured_data')
+    @else
+        <script type="application/ld+json">
+            {!! json_encode([
+                '@context' => 'https://schema.org',
+                '@graph' => [
+                    [
+                        '@type' => 'Organization',
+                        'name' => 'GarageBook',
+                        'url' => url('/'),
+                        'logo' => asset('images/garagebook-logo.png'),
+                        'sameAs' => [
+                            'https://www.instagram.com/garagebook.global',
+                            'https://linkedin.com/company/thegaragebook/',
+                            'https://www.facebook.com/profile.php?id=61584164445375',
+                        ],
+                    ],
+                    [
+                        '@type' => 'WebSite',
+                        'name' => 'GarageBook',
+                        'url' => url('/'),
+                        'inLanguage' => 'nl-NL',
+                    ],
+                ],
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+        </script>
+    @endif
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

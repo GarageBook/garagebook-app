@@ -115,6 +115,12 @@ Route::get('/sitemap.xml', function () {
         ->header('Content-Type', 'application/xml');
 });
 
+Route::get('/robots.txt', function () {
+    return response()
+        ->view('robots')
+        ->header('Content-Type', 'text/plain; charset=UTF-8');
+});
+
 Route::get('/{slug}', function ($slug) {
     $page = Page::where('slug', $slug)->first();
 
