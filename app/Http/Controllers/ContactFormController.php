@@ -21,7 +21,7 @@ class ContactFormController extends Controller
             new ContactFormMail(
                 name: $data['name'],
                 email: $data['email'],
-                message: $data['message'],
+                body: $data['message'],
             )
         );
 

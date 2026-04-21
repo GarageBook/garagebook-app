@@ -46,10 +46,14 @@ class ContactPageTest extends TestCase
         ])->assertRedirect();
 
         Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) {
+            $replyTo = $mail->envelope()->replyTo[0] ?? null;
+
             return $mail->hasTo('willem@garagebook.nl')
                 && $mail->name === 'Willem Tester'
                 && $mail->email === 'willem@example.com'
-                && $mail->message === 'Ik heb een vraag over GarageBook.';
+                && $mail->body === 'Ik heb een vraag over GarageBook.'
+                && $replyTo?->address === 'willem@example.com'
+                && $replyTo?->name === 'Willem Tester';
         });
     }
 

@@ -4,4 +4,4 @@
 <p><strong>E-mailadres:</strong> {{ $email }}</p>
 
 <p><strong>Vragen of opmerkingen:</strong></p>
-<p>{!! nl2br(e($message)) !!}</p>
+<p>{!! nl2br(e($body)) !!}</p>
