@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->brandName('GarageBook')
             ->brandLogo(asset('images/garagebook-logo.png'))
             ->brandLogoHeight('2.5rem')
             ->login()
