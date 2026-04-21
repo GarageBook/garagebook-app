@@ -32,20 +32,18 @@
                 Stel je vraag of laat een opmerking achter. We reageren zo snel mogelijk.
             </p>
 
-            @if(session('contact_status'))
+            @if(request()->boolean('contact_sent'))
                 <div class="gb-contact-card__status">
-                    {{ session('contact_status') }}
+                    Je bericht is verzonden. We nemen zo snel mogelijk contact met je op.
                 </div>
             @endif
 
-            @if($errors->any())
-                <div class="gb-contact-card__error">
-                    Controleer de ingevulde velden en probeer het opnieuw.
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('contact.submit') }}" class="gb-contact-form">
-                @csrf
+            <form method="POST" action="https://api.web3forms.com/submit" class="gb-contact-form">
+                <input type="hidden" name="access_key" value="cbee6c88-fd19-48a6-bc15-e21d10b8849d">
+                <input type="hidden" name="subject" value="Nieuw contactbericht via GarageBook">
+                <input type="hidden" name="from_name" value="GarageBook contactformulier">
+                <input type="hidden" name="redirect" value="{{ url('/contact?contact_sent=1') }}">
+                <input type="checkbox" name="botcheck" class="gb-contact-form__botcheck" tabindex="-1" autocomplete="off">
 
                 <div class="gb-contact-form__field">
                     <label for="name" class="gb-contact-form__label">Naam</label>
@@ -53,13 +51,9 @@
                         id="name"
                         name="name"
                         type="text"
-                        value="{{ old('name') }}"
                         class="gb-contact-form__input"
                         required
                     >
-                    @error('name')
-                        <div class="gb-contact-form__field-error">{{ $message }}</div>
-                    @enderror
                 </div>
 
                 <div class="gb-contact-form__field">
@@ -68,13 +62,9 @@
                         id="email"
                         name="email"
                         type="email"
-                        value="{{ old('email') }}"
                         class="gb-contact-form__input"
                         required
                     >
-                    @error('email')
-                        <div class="gb-contact-form__field-error">{{ $message }}</div>
-                    @enderror
                 </div>
 
                 <div class="gb-contact-form__field">
@@ -85,10 +75,7 @@
                         class="gb-contact-form__textarea"
                         rows="6"
                         required
-                    >{{ old('message') }}</textarea>
-                    @error('message')
-                        <div class="gb-contact-form__field-error">{{ $message }}</div>
-                    @enderror
+                    ></textarea>
                 </div>
 
                 <button type="submit" class="gb-button gb-button--primary gb-contact-form__submit">

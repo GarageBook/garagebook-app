@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\ContactFormController;
 use App\Models\MaintenanceLog;
 use App\Models\Page;
 use App\Models\User;
@@ -100,8 +99,6 @@ Route::get('/blog-image/{path}', function ($path) {
 
     return response()->file($fullPath);
 })->where('path', '.*');
-
-Route::post('/contact', ContactFormController::class)->name('contact.submit');
 
 Route::get('/{slug}', function ($slug) {
     $page = Page::where('slug', $slug)->first();

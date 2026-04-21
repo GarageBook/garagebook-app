@@ -216,6 +216,10 @@ body.gb-public-body {
     font-size: 14px;
 }
 
+.gb-contact-form__botcheck {
+    display: none;
+}
+
 .gb-contact-form__submit {
     justify-self: start;
     border: 0;

@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Mail\ContactFormMail;
 use App\Models\Page;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class ContactPageTest extends TestCase
@@ -26,38 +24,12 @@ class ContactPageTest extends TestCase
             ->assertSee('Naam')
             ->assertSee('E-mailadres')
             ->assertSee('Vragen of opmerkingen')
-            ->assertSee('Verstuur');
+            ->assertSee('Verstuur')
+            ->assertSee('https://api.web3forms.com/submit')
+            ->assertSee('cbee6c88-fd19-48a6-bc15-e21d10b8849d');
     }
 
-    public function test_contact_form_sends_mail(): void
-    {
-        Mail::fake();
-
-        Page::query()->create([
-            'title' => 'Contact',
-            'slug' => 'contact',
-            'content' => 'Neem contact met ons op.',
-        ]);
-
-        $this->post('/contact', [
-            'name' => 'Willem Tester',
-            'email' => 'willem@example.com',
-            'message' => 'Ik heb een vraag over GarageBook.',
-        ])->assertRedirect();
-
-        Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) {
-            $replyTo = $mail->envelope()->replyTo[0] ?? null;
-
-            return $mail->hasTo('willem@garagebook.nl')
-                && $mail->name === 'Willem Tester'
-                && $mail->email === 'willem@example.com'
-                && $mail->body === 'Ik heb een vraag over GarageBook.'
-                && $replyTo?->address === 'willem@example.com'
-                && $replyTo?->name === 'Willem Tester';
-        });
-    }
-
-    public function test_contact_form_validates_required_fields(): void
+    public function test_contact_page_shows_success_message_after_redirect(): void
     {
         Page::query()->create([
             'title' => 'Contact',
@@ -65,13 +37,8 @@ class ContactPageTest extends TestCase
             'content' => 'Neem contact met ons op.',
         ]);
 
-        $this->from('/contact')
-            ->post('/contact', [
-                'name' => '',
-                'email' => '',
-                'message' => '',
-            ])
-            ->assertRedirect('/contact')
-            ->assertSessionHasErrors(['name', 'email', 'message']);
+        $this->get('/contact?contact_sent=1')
+            ->assertOk()
+            ->assertSee('Je bericht is verzonden. We nemen zo snel mogelijk contact met je op.');
     }
 }
