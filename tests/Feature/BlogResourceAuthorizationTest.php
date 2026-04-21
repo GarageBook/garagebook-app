@@ -57,12 +57,14 @@ class BlogResourceAuthorizationTest extends TestCase
         $page = Page::query()->create([
             'title' => 'Over ons',
             'slug' => 'over-ons',
+            'hero_image' => 'page-images/hero.jpg',
             'content' => 'Publieke pagina-inhoud',
         ]);
 
         $this->get('/' . $page->slug)
             ->assertOk()
             ->assertSee('Over ons')
+            ->assertSee('storage/page-images/hero.jpg')
             ->assertSee('Publieke pagina-inhoud');
     }
 

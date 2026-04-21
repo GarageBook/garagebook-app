@@ -22,6 +22,14 @@ class PageForm
                 ->required()
                 ->unique(ignoreRecord: true),
 
+            Forms\Components\FileUpload::make('hero_image')
+                ->image()
+                ->disk('public')
+                ->directory('page-images')
+                ->visibility('public')
+                ->moveFiles()
+                ->imageEditor(),
+
             Forms\Components\RichEditor::make('content')
                 ->required()
                 ->columnSpanFull(),
