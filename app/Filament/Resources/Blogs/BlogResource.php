@@ -13,12 +13,43 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class BlogResource extends Resource
 {
     protected static ?string $model = Blog::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
 
     public static function form(Schema $schema): Schema
     {

@@ -8,6 +8,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Forms;
 use Filament\Tables;
+use Illuminate\Database\Eloquent\Model;
 
 class BlogResource extends Resource
 {
@@ -18,6 +19,36 @@ class BlogResource extends Resource
     protected static ?string $navigationLabel = 'Blogs';
 
     protected static ?string $pluralModelLabel = 'Blogs';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
 
     public static function form(Schema $schema): Schema
     {
