@@ -100,6 +100,21 @@ Route::get('/blog-image/{path}', function ($path) {
     return response()->file($fullPath);
 })->where('path', '.*');
 
+Route::get('/sitemap.xml', function () {
+    $pages = Page::query()
+        ->orderBy('slug')
+        ->get();
+
+    $blogs = Blog::query()
+        ->whereNotNull('published_at')
+        ->latest('published_at')
+        ->get();
+
+    return response()
+        ->view('sitemap', compact('pages', 'blogs'))
+        ->header('Content-Type', 'application/xml');
+});
+
 Route::get('/{slug}', function ($slug) {
     $page = Page::where('slug', $slug)->first();
 

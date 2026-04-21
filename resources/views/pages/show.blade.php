@@ -1,10 +1,11 @@
 @extends('layouts.public')
 
-@section('title', $page->title)
+@section('title', $page->title . ' - GarageBook')
+@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($page->content), 155))
 
 @section('content')
 
-<div class="gb-content-shell">
+<article class="gb-content-shell">
 
     <h1 class="gb-page-title">
         {{ $page->title }}
@@ -85,6 +86,6 @@
         </div>
     @endif
 
-</div>
+</article>
 
 @endsection

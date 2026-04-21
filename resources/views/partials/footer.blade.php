@@ -4,7 +4,7 @@
             <img src="/images/garagebook-logo-white.png" class="gb-footer-logo" alt="GarageBook">
         </div>
 
-        <div class="gb-footer-columns">
+        <nav class="gb-footer-columns" aria-label="Footer navigatie">
             <div>
                 <h3>
                     Mijn GarageBook
@@ -41,7 +41,7 @@
                     <a href="https://www.facebook.com/profile.php?id=61584164445375" target="_blank">Facebook</a>
                 </div>
             </div>
-        </div>
+        </nav>
     </div>
 
     <div class="gb-footer-bottom">

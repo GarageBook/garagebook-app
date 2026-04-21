@@ -1,18 +1,21 @@
 @extends('layouts.public')
 
 @section('title', 'Blogs - GarageBook')
+@section('meta_description', 'Lees blogs van GarageBook over motoronderhoud, onderhoudshistorie, documentatie en de waarde van een goed bijgehouden motor.')
 
 @section('content')
 
-<div class="gb-page-shell">
-    <h1 class="gb-page-title gb-page-title--tight">
-        Blogs
-    </h1>
+<section class="gb-page-shell">
+    <header>
+        <h1 class="gb-page-title gb-page-title--tight">
+            Blogs
+        </h1>
+    </header>
 
     <div class="gb-card-grid">
         @foreach($blogs as $blog)
-            <a href="/blogs/{{ $blog->slug }}" class="gb-card-link">
-                <div class="gb-card-surface">
+            <article class="gb-card-surface">
+                <a href="/blogs/{{ $blog->slug }}" class="gb-card-link">
                     @if($blog->hero_image)
                         <img
                             src="/blog-image/{{ $blog->hero_image }}"
@@ -30,10 +33,10 @@
                             {{ $blog->excerpt }}
                         </p>
                     </div>
-                </div>
-            </a>
+                </a>
+            </article>
         @endforeach
     </div>
-</div>
+</section>
 
 @endsection

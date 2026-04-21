@@ -3,8 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'GarageBook')
-</title>
+    <title>@yield('title', 'GarageBook')</title>
+    <meta name="description" content="@yield('meta_description', 'GarageBook helpt motorrijders om onderhoud, historie, upgrades en belangrijke momenten van hun motor overzichtelijk vast te leggen.')">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="@yield('canonical_url', url()->current())">
+    <meta property="og:locale" content="nl_NL">
+    <meta property="og:site_name" content="GarageBook">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:title" content="@yield('og_title', trim($__env->yieldContent('title', 'GarageBook')))">
+    <meta property="og:description" content="@yield('og_description', trim($__env->yieldContent('meta_description', 'GarageBook helpt motorrijders om onderhoud, historie, upgrades en belangrijke momenten van hun motor overzichtelijk vast te leggen.')))">
+    <meta property="og:url" content="@yield('canonical_url', url()->current())">
+    <meta name="twitter:card" content="summary_large_image">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -35,9 +44,9 @@
     </header>
 
     <!-- CONTENT -->
-    <div>
+    <main>
         @yield('content')
-    </div>
+    </main>
 
     <!-- FOOTER -->
     @include('partials.footer')
