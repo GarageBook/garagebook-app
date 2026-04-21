@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class PageResource extends Resource
 {
@@ -23,6 +24,36 @@ class PageResource extends Resource
     protected static ?string $navigationLabel = 'Pagina’s';
 
     protected static ?string $pluralModelLabel = 'Pagina’s';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->check()
+            && auth()->user()->email === 'willemvanveelen@icloud.com';
+    }
 
     public static function form(Schema $schema): Schema
     {

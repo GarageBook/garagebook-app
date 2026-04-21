@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\BlogResource as LegacyBlogResource;
 use App\Filament\Resources\Blogs\BlogResource;
+use App\Filament\Resources\Pages\PageResource;
 use App\Models\Blog;
+use App\Models\Page;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +14,57 @@ use Tests\TestCase;
 class BlogResourceAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_published_blogs_are_publicly_visible(): void
+    {
+        $blog = Blog::query()->create([
+            'title' => 'Publieke blog',
+            'slug' => 'publieke-blog',
+            'excerpt' => 'Publieke excerpt',
+            'content' => 'Publieke content',
+            'published_at' => now(),
+        ]);
+
+        $this->get('/blogs')
+            ->assertOk()
+            ->assertSee('Publieke blog');
+
+        $this->get('/blogs/' . $blog->slug)
+            ->assertOk()
+            ->assertSee('Publieke blog')
+            ->assertSee('Publieke content');
+    }
+
+    public function test_unpublished_blogs_are_not_publicly_visible(): void
+    {
+        $blog = Blog::query()->create([
+            'title' => 'Verborgen blog',
+            'slug' => 'verborgen-blog',
+            'content' => 'Verborgen content',
+            'published_at' => null,
+        ]);
+
+        $this->get('/blogs')
+            ->assertOk()
+            ->assertDontSee('Verborgen blog');
+
+        $this->get('/blogs/' . $blog->slug)
+            ->assertNotFound();
+    }
+
+    public function test_pages_are_publicly_visible(): void
+    {
+        $page = Page::query()->create([
+            'title' => 'Over ons',
+            'slug' => 'over-ons',
+            'content' => 'Publieke pagina-inhoud',
+        ]);
+
+        $this->get('/' . $page->slug)
+            ->assertOk()
+            ->assertSee('Over ons')
+            ->assertSee('Publieke pagina-inhoud');
+    }
 
     public function test_regular_users_cannot_access_blog_management(): void
     {
@@ -38,6 +91,18 @@ class BlogResourceAuthorizationTest extends TestCase
         $this->assertFalse(LegacyBlogResource::canCreate());
         $this->assertFalse(LegacyBlogResource::canEdit($blog));
         $this->assertFalse(LegacyBlogResource::canDelete($blog));
+
+        $page = Page::query()->create([
+            'title' => 'Test pagina',
+            'slug' => 'test-pagina',
+            'content' => 'Test pagina-inhoud',
+        ]);
+
+        $this->assertFalse(PageResource::canViewAny());
+        $this->assertFalse(PageResource::shouldRegisterNavigation());
+        $this->assertFalse(PageResource::canCreate());
+        $this->assertFalse(PageResource::canEdit($page));
+        $this->assertFalse(PageResource::canDelete($page));
     }
 
     public function test_admin_can_access_blog_management(): void
@@ -65,5 +130,17 @@ class BlogResourceAuthorizationTest extends TestCase
         $this->assertTrue(LegacyBlogResource::canCreate());
         $this->assertTrue(LegacyBlogResource::canEdit($blog));
         $this->assertTrue(LegacyBlogResource::canDelete($blog));
+
+        $page = Page::query()->create([
+            'title' => 'Admin pagina',
+            'slug' => 'admin-pagina',
+            'content' => 'Admin pagina-inhoud',
+        ]);
+
+        $this->assertTrue(PageResource::canViewAny());
+        $this->assertTrue(PageResource::shouldRegisterNavigation());
+        $this->assertTrue(PageResource::canCreate());
+        $this->assertTrue(PageResource::canEdit($page));
+        $this->assertTrue(PageResource::canDelete($page));
     }
 }
