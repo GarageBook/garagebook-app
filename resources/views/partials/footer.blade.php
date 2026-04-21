@@ -23,10 +23,10 @@
 
                 <div class="gb-footer-links">
                     <a href="/blogs">Blogs</a>
-                    <a href="#">Ons verhaal</a>
-                    <a href="#">Privacy Statement</a>
-                    <a href="#">Voorwaarden</a>
-                    <a href="#">Contact</a>
+                    <a href="/ons-verhaal">Ons verhaal</a>
+                    <a href="/privacy-statement">Privacy Statement</a>
+                    <a href="/algemene-voorwaarden">Voorwaarden</a>
+                    <a href="/contact">Contact</a>
                 </div>
             </div>
 
