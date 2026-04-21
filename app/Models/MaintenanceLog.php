@@ -13,6 +13,7 @@ class MaintenanceLog extends Model
         'km_reading',
         'maintenance_date',
         'cost',
+        'worked_hours',
         'attachment',
         'attachments',
         'notes',
@@ -29,6 +30,7 @@ class MaintenanceLog extends Model
         'attachments' => 'array',
         'maintenance_date' => 'date',
         'last_date' => 'date',
+        'worked_hours' => 'decimal:2',
         'reminder_enabled' => 'boolean',
     ];
 

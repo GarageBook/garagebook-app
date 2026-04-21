@@ -50,6 +50,11 @@ class MaintenanceLogsTable
                     ->label('Kosten')
                     ->money('EUR')
                     ->badge(),
+
+                Tables\Columns\TextColumn::make('worked_hours')
+                    ->label('Uren')
+                    ->suffix(' uur')
+                    ->badge(),
             ])
             ->defaultSort('maintenance_date', 'desc')
             ->striped()

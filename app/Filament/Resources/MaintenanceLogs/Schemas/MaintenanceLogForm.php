@@ -48,6 +48,13 @@ class MaintenanceLogForm
                     ->numeric()
                     ->prefix('€'),
 
+                Forms\Components\TextInput::make('worked_hours')
+                    ->label('Gewerkte uren')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->placeholder('bijv. 2.5')
+                    ->suffix(' uur'),
+
                 Forms\Components\FileUpload::make('attachments')
                     ->label('Foto’s')
                     ->disk('public')
