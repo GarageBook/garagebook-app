@@ -2,7 +2,8 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\DashboardActions;
+use App\Filament\Widgets\MyVehicles;
+use App\Filament\Widgets\MaintenanceReminders;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
 
@@ -18,15 +19,16 @@ class Dashboard extends BaseDashboard
         return 'Beheer je voertuigen en voeg onderhoud toe.';
     }
 
-    public function getHeaderWidgets(): array
+    protected function getHeaderWidgets(): array
     {
         return [
-            DashboardActions::class,
+            MyVehicles::class,
+            MaintenanceReminders::class,
         ];
     }
 
     public function getColumns(): int | array
     {
-        return 1;
+        return 2;
     }
 }

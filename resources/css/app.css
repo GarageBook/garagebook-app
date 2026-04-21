@@ -30,48 +30,383 @@
 }
 
 /* =========================
-   TAILWIND THEME
+   GLOBAL BASE
 ========================= */
-@theme {
-    --font-sans: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
-}
-
-/* =========================
-   GLOBAL BASE STYLES
-========================= */
-html,
-body {
+html, body {
+    margin: 0;
     font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
     color: #181818;
     background: #ffffff;
     line-height: 1.6;
 }
 
+body.gb-public-body {
+    background: #f5f5f5;
+    color: #111827;
+}
+
+/* =========================
+   PUBLIC LAYOUT
+========================= */
+.gb-public-header {
+    background-color: #181818;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+.gb-public-header__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gb-public-header__logo {
+    height: 42px;
+}
+
+.gb-public-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.gb-public-header__login {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.gb-public-header__cta {
+    background: #ffd200;
+    color: #000;
+    padding: 14px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.gb-page-shell {
+    max-width: 1200px;
+    margin: 60px auto;
+    padding: 0 40px 80px;
+}
+
+.gb-section-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.gb-section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+}
+
+.gb-feature-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.gb-feature-card {
+    background: #fff;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.gb-media-rounded {
+    width: 100%;
+    border-radius: 18px;
+    display: block;
+}
+
+.gb-media-elevated {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.gb-content-shell {
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+.gb-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.gb-card-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.gb-card-surface {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    height: 100%;
+}
+
+.gb-card-image {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+}
+
+.gb-card-body {
+    padding: 20px;
+}
+
+.gb-card-title {
+    font-size: 20px;
+    margin-bottom: 10px;
+    line-height: 1.2;
+}
+
+.gb-card-text {
+    color: #6b7280;
+    margin: 0;
+}
+
+.gb-page-title {
+    font-size: 36px;
+    margin-bottom: 30px;
+}
+
+.gb-page-title--tight {
+    margin-bottom: 40px;
+    line-height: 1;
+}
+
+.gb-container {
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 0 20px 80px;
+}
+
+.gb-back {
+    display: inline-block;
+    margin-bottom: 24px;
+    color: #4b5563;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.gb-title {
+    font-size: 36px;
+    line-height: 1.1;
+    margin-bottom: 30px;
+}
+
+.gb-hero {
+    width: 100%;
+    display: block;
+    border-radius: 18px;
+    margin-bottom: 32px;
+}
+
+.gb-content {
+    color: #111827;
+}
+
+.gb-blog-detail {
+    max-width: 960px;
+    margin: 60px auto;
+    padding: 0 24px 80px;
+}
+
+.gb-blog-detail__back {
+    display: inline-block;
+    margin-bottom: 24px;
+    color: #4b5563;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.gb-blog-detail__title {
+    font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 48px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-transform: none;
+    margin-bottom: 30px;
+}
+
+.gb-blog-detail__hero {
+    width: 100%;
+    display: block;
+    border-radius: 18px;
+    margin-bottom: 40px;
+}
+
+.gb-blog-detail__content {
+    color: #4b5563;
+    font-size: 18px !important;
+    line-height: 1.6 !important;
+    max-width: 72ch;
+}
+
+.gb-blog-detail__content p,
+.gb-blog-detail__content ul,
+.gb-blog-detail__content ol,
+.gb-blog-detail__content blockquote {
+    margin: 0 0 24px;
+}
+
+.gb-blog-detail__content ul,
+.gb-blog-detail__content ol {
+    padding-left: 28px;
+}
+
+.gb-blog-detail__content ul {
+    list-style: disc;
+}
+
+.gb-blog-detail__content ol {
+    list-style: decimal;
+}
+
+.gb-blog-detail__content li + li {
+    margin-top: 6px;
+}
+
+.gb-blog-detail__content h2,
+.gb-blog-detail__content h3,
+.gb-blog-detail__content h4 {
+    font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin: 56px 0 20px;
+    color: #111827;
+}
+
+.gb-blog-detail__content h2 {
+    font-size: 24px !important;
+}
+
+.gb-blog-detail__content h3 {
+    font-size: 40px;
+}
+
+.gb-blog-detail__content h4 {
+    font-size: 30px;
+}
+
+.gb-blog-detail__content strong {
+    font-weight: 700;
+}
+
+.gb-blog-detail__content img {
+    width: 100%;
+    display: block;
+    border-radius: 18px;
+    margin: 32px 0;
+}
+
+.gb-home-section {
+    padding: 90px 0 80px;
+}
+
+.gb-home-section--compact {
+    padding: 40px 0 80px;
+}
+
+.gb-home-grid {
+    gap: 80px;
+}
+
+.gb-home-grid--features {
+    gap: 50px;
+}
+
+.gb-home-title {
+    font-size: 52px;
+    line-height: 60px;
+    font-weight: 700;
+    margin: 0 0 24px;
+    letter-spacing: -1px;
+}
+
+.gb-home-lead {
+    font-size: 26px;
+    color: #4b5563;
+    margin: 0 0 36px;
+}
+
+.gb-home-actions {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.gb-button {
+    display: inline-block;
+    padding: 16px 28px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.gb-button--primary {
+    background: #ffd200;
+    color: #000;
+}
+
+.gb-button--secondary {
+    background: #fff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+.gb-home-feature-intro {
+    color: #4b5563;
+    font-size: 24px;
+    margin: 0 0 70px 30px;
+    width: 50%;
+}
+
+.gb-banner-image {
+    width: 100%;
+    display: block;
+}
+
 /* =========================
    HEADINGS
 ========================= */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1 {
     font-family: "QuantixExtraBold", sans-serif;
     text-transform: uppercase;
     letter-spacing: -0.02em;
     margin: 0;
+    font-size: 56px;
+    line-height: 0.9;
 }
 
-h1 {
-    font-size: 56px;
-    line-height: 0.9 !important;
-    
+h2, h3, h4, h5, h6 {
+    font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
 }
 
 h2 {
     font-size: 40px;
-    line-height: 1.2;
     margin-bottom: 40px;
+    line-height: 1.2;
 }
 
 h3 {
@@ -82,13 +417,92 @@ h3 {
 /* =========================
    BODY TEXT
 ========================= */
-p,
-span,
-div,
-li,
-a,
-input,
-textarea,
-button {
+p, span, div, li, a, input, textarea, button {
     font-family: "ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* =========================
+   BLOG CONTENT FIX (Tailwind reset override)
+========================= */
+.prose ul {
+    list-style: disc;
+    margin-left: 20px;
+}
+
+.prose ol {
+    list-style: decimal;
+    margin-left: 20px;
+}
+
+.prose li {
+    margin-bottom: 8px;
+}
+
+.prose p {
+    margin-bottom: 16px;
+}
+
+/* =========================
+   FOOTER
+========================= */
+.gb-login-footer {
+    background:#0b0f14;
+    color:#fff;
+    padding:70px 50px 40px 50px;
+    width:100%;
+}
+
+.gb-footer-inner {
+    width:52%;
+    min-width:780px;
+    margin-bottom:85px;
+}
+
+.gb-login-footer h3 {
+    font-family:"ZalandoSans", ui-sans-serif, system-ui, sans-serif;
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:0;
+    text-transform:none;
+    margin-bottom:22px;
+}
+
+.gb-footer-brand {
+    margin-bottom: 60px;
+}
+
+.gb-footer-logo {
+    height: 44px;
+}
+
+.gb-footer-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 70px;
+}
+
+.gb-footer-links {
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    font-size:17px;
+}
+
+.gb-footer-links a {
+    display:block;
+    color:#9ca3af;
+    text-decoration:none;
+}
+
+.gb-footer-links a:hover {
+    color:#fff;
+}
+
+.gb-footer-bottom {
+    width:100%;
+    padding-top:28px;
+    border-top:1px solid #2c2f35;
+    text-align:left;
+    color:#8d9199;
+    font-size:15px;
 }

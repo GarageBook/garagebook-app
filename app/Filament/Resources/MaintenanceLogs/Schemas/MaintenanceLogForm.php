@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 use App\Models\Vehicle;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 
 class MaintenanceLogForm
 {
@@ -12,6 +13,7 @@ class MaintenanceLogForm
     {
         return $schema
             ->components([
+
                 Forms\Components\Select::make('vehicle_id')
                     ->label('Voertuig')
                     ->options(
@@ -65,6 +67,30 @@ class MaintenanceLogForm
                 Forms\Components\Textarea::make('notes')
                     ->label('Notities')
                     ->columnSpanFull(),
+
+                // 🔥 REMINDERS (FIXED PROPERLY)
+                Section::make('Herinnering')
+                    ->description('Laat GarageBook je helpen herinneren aan toekomstig onderhoud')
+                    ->schema([
+
+                        Forms\Components\Toggle::make('reminder_enabled')
+                            ->label('Herinnering inschakelen')
+                            ->reactive(), // 👈 DIT IS DE FIX
+
+                        Forms\Components\TextInput::make('interval_months')
+                            ->label('Interval (maanden)')
+                            ->numeric()
+                            ->placeholder('bijv. 12')
+                            ->visible(fn ($get) => $get('reminder_enabled')),
+
+                        Forms\Components\TextInput::make('interval_km')
+                            ->label('Interval (km)')
+                            ->numeric()
+                            ->placeholder('bijv. 6000')
+                            ->visible(fn ($get) => $get('reminder_enabled')),
+
+                    ])
+                    ->collapsed(),
             ]);
     }
 }

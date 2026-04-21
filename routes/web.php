@@ -3,6 +3,7 @@
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\Blog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -58,4 +59,54 @@ Route::get('/maintenance/pdf', function () {
         Str::slug($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model)
         . '-onderhoud.pdf'
     );
+});
+
+/*
+|--------------------------------------------------------------------------
+| BLOGS
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/blogs', function () {
+    $blogs = Blog::whereNotNull('published_at')
+        ->latest('published_at')
+        ->get();
+
+    return view('blogs.index', compact('blogs'));
+});
+
+Route::get('/blogs/{slug}', function ($slug) {
+    $blog = Blog::where('slug', $slug)
+        ->whereNotNull('published_at')
+        ->firstOrFail();
+
+    return view('blogs.show', compact('blog'));
+});
+
+/*
+|--------------------------------------------------------------------------
+| BLOG IMAGES (FIXED)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/blog-image/{path}', function ($path) {
+    $fullPath = storage_path('app/public/' . $path);
+
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+
+    return response()->file($fullPath);
+})->where('path', '.*');
+
+use App\Models\Page;
+
+Route::get('/{slug}', function ($slug) {
+    $page = Page::where('slug', $slug)->first();
+
+    if ($page) {
+        return view('pages.show', compact('page'));
+    }
+
+    abort(404);
 });

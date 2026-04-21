@@ -16,12 +16,29 @@ class MaintenanceLog extends Model
         'attachment',
         'attachments',
         'notes',
+
+        // reminders
+        'interval_months',
+        'interval_km',
+        'reminder_enabled',
+        'last_km',
+        'last_date',
     ];
 
     protected $casts = [
         'attachments' => 'array',
         'maintenance_date' => 'date',
+        'last_date' => 'date',
+        'reminder_enabled' => 'boolean',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($log) {
+            $log->last_km = $log->km_reading;
+            $log->last_date = $log->maintenance_date;
+        });
+    }
 
     public function vehicle(): BelongsTo
     {
