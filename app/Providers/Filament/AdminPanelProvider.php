@@ -132,8 +132,20 @@ class AdminPanelProvider extends PanelProvider
                     }
 
                     .gb-maintenance-media-upload .filepond--list-scroller,
-                    .gb-maintenance-media-upload .filepond--list {
+                    .gb-maintenance-media-upload .filepond--list,
+                    .gb-maintenance-media-upload .filepond--item,
+                    .gb-maintenance-media-upload .filepond--item-panel,
+                    .gb-maintenance-media-upload .filepond--file-wrapper,
+                    .gb-maintenance-media-upload .filepond--file-info,
+                    .gb-maintenance-media-upload .filepond--file {
                         display: none !important;
+                        visibility: hidden !important;
+                        height: 0 !important;
+                        min-height: 0 !important;
+                        max-height: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        border: 0 !important;
                     }
 
                     .gb-maintenance-media-gallery {
