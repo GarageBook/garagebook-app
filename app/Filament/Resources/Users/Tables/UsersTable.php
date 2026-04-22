@@ -28,6 +28,18 @@ class UsersTable
                     ->label('Voertuigen')
                     ->sortable(),
 
+                TextColumn::make('first_login_at')
+                    ->label('Eerste login')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable()
+                    ->placeholder('Nog niet'),
+
+                TextColumn::make('last_login_at')
+                    ->label('Laatste login')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable()
+                    ->placeholder('Nog niet'),
+
                 TextColumn::make('created_at')
                     ->label('Aangemaakt')
                     ->dateTime('d-m-Y H:i')
