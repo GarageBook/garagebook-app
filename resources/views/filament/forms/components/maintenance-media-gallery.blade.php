@@ -4,7 +4,7 @@
 
 <div
     x-data="{
-        state: $wire.{{ $applyStateBindingModifiers(\"\\$entangle('{$statePath}')\") }},
+        state: $wire.entangle('{{ $statePath }}'),
         storageBaseUrl: @js($storageBaseUrl),
         isImage(path) {
             return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(this.extension(path))
