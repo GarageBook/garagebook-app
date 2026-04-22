@@ -1,5 +1,5 @@
 @php
-    $attachments = $attachments ?? [];
+    $attachments = \App\Models\MaintenanceLog::normalizeAttachmentPaths($record?->attachments ?? []);
     $statePath = $mediaStatePath;
 @endphp
 

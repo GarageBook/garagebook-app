@@ -83,7 +83,6 @@ class MaintenanceLogForm
                     ->viewData(static fn (ViewField $component): array => [
                         'mediaStatePath' => (string) str($component->getStatePath())
                             ->replaceEnd('.maintenance_media_gallery', '.attachments'),
-                        'attachments' => MaintenanceLog::normalizeAttachmentPaths($component->getRecord()?->attachments),
                         'storageBaseUrl' => rtrim(Storage::url(''), '/'),
                     ])
                     ->columnSpanFull(),
