@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect('/admin');
+    }
+
     return view('welcome');
 });
 
