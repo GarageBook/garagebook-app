@@ -65,7 +65,7 @@ class MaintenanceLogForm
                     ->reorderable()
                     ->downloadable()
                     ->openable()
-                    ->previewable(true)
+                    ->previewable(false)
                     ->columnSpanFull(),
 
                 Forms\Components\Textarea::make('notes')
