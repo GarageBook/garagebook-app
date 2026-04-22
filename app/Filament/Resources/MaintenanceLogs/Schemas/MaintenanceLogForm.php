@@ -82,8 +82,8 @@ class MaintenanceLogForm
                     ->hiddenLabel()
                     ->dehydrated(false)
                     ->view('filament.forms.components.maintenance-media-gallery')
-                    ->viewData([
-                        'mediaStatePath' => static fn (ViewField $component): string => (string) str($component->getStatePath())
+                    ->viewData(static fn (ViewField $component): array => [
+                        'mediaStatePath' => (string) str($component->getStatePath())
                             ->replaceEnd('.maintenance_media_gallery', '.media_attachments'),
                         'storageBaseUrl' => rtrim(Storage::url(''), '/'),
                     ])
