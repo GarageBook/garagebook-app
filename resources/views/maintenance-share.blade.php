@@ -75,22 +75,8 @@
 
                 $imageSrc = null;
 
-                if ($firstAttachment) {
-                    if (request()->is('maintenance/pdf')) {
-                        $absolutePath = storage_path('app/public/' . ltrim($firstAttachment, '/'));
-
-                        if (is_file($absolutePath) && is_readable($absolutePath)) {
-                            $mimeType = mime_content_type($absolutePath) ?: null;
-
-                            if ($mimeType) {
-                                $imageData = base64_encode(file_get_contents($absolutePath));
-
-                                $imageSrc = 'data:' . $mimeType . ';base64,' . $imageData;
-                            }
-                        }
-                    } else {
-                        $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
-                    }
+                if ($firstAttachment && ! request()->is('maintenance/pdf')) {
+                    $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
                 }
             @endphp
 
