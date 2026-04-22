@@ -30,14 +30,12 @@ class UserResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function form(Schema $schema): Schema

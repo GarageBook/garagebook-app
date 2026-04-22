@@ -38,6 +38,11 @@ class VehiclesTable
                 Tables\Columns\TextColumn::make('year')
                     ->label('Bouwjaar'),
 
+                Tables\Columns\TextColumn::make('media_attachments_count')
+                    ->label('Bestanden')
+                    ->getStateUsing(fn ($record) => is_array($record->media_attachments) ? count($record->media_attachments) : 0)
+                    ->badge(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Aangemaakt')
                     ->dateTime('d-m-Y H:i')

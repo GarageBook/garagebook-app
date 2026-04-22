@@ -56,14 +56,11 @@ class MaintenanceLogForm
                     ->suffix(' uur'),
 
                 Forms\Components\FileUpload::make('attachments')
-                    ->label('Foto’s')
+                    ->label('Bijlagen')
                     ->disk('public')
                     ->directory('maintenance-attachments')
                     ->visibility('public')
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->maxSize(20480)
-                    ->image()
-                    ->imageEditor()
+                    ->maxSize(102400)
                     ->multiple()
                     ->reorderable()
                     ->downloadable()

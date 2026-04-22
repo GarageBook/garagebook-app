@@ -9,6 +9,7 @@ class MaintenanceLog extends Model
 {
     protected $fillable = [
         'vehicle_id',
+        'airtable_record_id',
         'description',
         'km_reading',
         'maintenance_date',
@@ -24,10 +25,12 @@ class MaintenanceLog extends Model
         'reminder_enabled',
         'last_km',
         'last_date',
+        'airtable_synced_at',
     ];
 
     protected $casts = [
         'attachments' => 'array',
+        'airtable_synced_at' => 'datetime',
         'maintenance_date' => 'date',
         'last_date' => 'date',
         'worked_hours' => 'decimal:2',

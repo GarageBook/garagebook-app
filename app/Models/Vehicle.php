@@ -9,6 +9,8 @@ class Vehicle extends Model
 {
     protected $fillable = [
         'user_id',
+        'airtable_record_id',
+        'airtable_synced_at',
         'brand',
         'model',
         'nickname',
@@ -18,10 +20,13 @@ class Vehicle extends Model
         'notes',
         'photo',
         'photos',
+        'media_attachments',
     ];
 
     protected $casts = [
         'photos' => 'array',
+        'media_attachments' => 'array',
+        'airtable_synced_at' => 'datetime',
     ];
 
     public function maintenanceLogs(): HasMany

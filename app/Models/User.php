@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'airtable_record_id', 'airtable_synced_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -24,6 +24,11 @@ class User extends Authenticatable implements FilamentUser
         return true;
     }
 
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
+    }
+
     public function vehicles(): HasMany
     {
         return $this->hasMany(\App\Models\Vehicle::class);
@@ -32,7 +37,9 @@ class User extends Authenticatable implements FilamentUser
     protected function casts(): array
     {
         return [
+            'airtable_synced_at' => 'datetime',
             'email_verified_at' => 'datetime',
+            'is_admin' => 'boolean',
             'password' => 'hashed',
         ];
     }

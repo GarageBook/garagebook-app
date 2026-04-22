@@ -33,6 +33,19 @@ class VehicleForm
                     ->previewable(false)
                     ->columnSpanFull(),
 
+                Forms\Components\FileUpload::make('media_attachments')
+                    ->label('Overige media en bestanden')
+                    ->multiple()
+                    ->reorderable()
+                    ->disk('public')
+                    ->directory('vehicle-attachments')
+                    ->visibility('public')
+                    ->maxSize(102400)
+                    ->downloadable()
+                    ->openable()
+                    ->previewable(true)
+                    ->columnSpanFull(),
+
                 Forms\Components\TextInput::make('brand')
                     ->label('Merk')
                     ->required(),

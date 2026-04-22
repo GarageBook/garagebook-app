@@ -27,32 +27,27 @@ class PageResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function canCreate(): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function canEdit(Model $record): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function canDelete(Model $record): bool
     {
-        return auth()->check()
-            && auth()->user()->email === 'willemvanveelen@icloud.com';
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function form(Schema $schema): Schema

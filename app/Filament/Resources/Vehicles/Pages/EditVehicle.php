@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Vehicles\Pages;
 
 use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\HtmlString;
@@ -35,7 +36,20 @@ class EditVehicle extends EditRecord
             }
         }
 
+        $files = [];
+
+        if (! empty($vehicle->media_attachments)) {
+            foreach ($vehicle->media_attachments as $attachment) {
+                $files[] = [
+                    'label' => MediaPath::label($attachment),
+                    'url' => Storage::url($attachment),
+                    'type' => MediaPath::isVideo($attachment) ? 'Video' : (MediaPath::isPdf($attachment) ? 'PDF' : 'Bestand'),
+                ];
+            }
+        }
+
         $photosJson = json_encode($photos);
+        $filesJson = json_encode($files);
 
         $html = '
         <div style="display:flex; flex-direction:column; gap:15px;">
@@ -55,6 +69,8 @@ class EditVehicle extends EditRecord
 
         $html .= '
             </div>
+            <div id="vehicleFiles" style="display:flex; flex-direction:column; gap:8px;">
+            </div>
             <div>Voertuig bewerken</div>
         </div>
 
@@ -67,7 +83,28 @@ class EditVehicle extends EditRecord
 
         <script>
             const photos = ' . $photosJson . ';
+            const files = ' . $filesJson . ';
             let currentPhoto = 0;
+
+            const fileContainer = document.getElementById("vehicleFiles");
+
+            if (files.length) {
+                const heading = document.createElement("div");
+                heading.style.fontWeight = "700";
+                heading.textContent = "Overige bestanden";
+                fileContainer.appendChild(heading);
+
+                files.forEach((file) => {
+                    const link = document.createElement("a");
+                    link.href = file.url;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.textContent = `${file.type}: ${file.label}`;
+                    link.style.color = "#111827";
+                    link.style.textDecoration = "underline";
+                    fileContainer.appendChild(link);
+                });
+            }
 
             function openGallery(index) {
                 currentPhoto = index;

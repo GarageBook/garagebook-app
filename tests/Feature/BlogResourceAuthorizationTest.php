@@ -111,6 +111,7 @@ class BlogResourceAuthorizationTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'willemvanveelen@icloud.com',
+            'is_admin' => true,
         ]);
 
         $blog = Blog::query()->create([

@@ -1,3 +1,4 @@
+@php use App\Support\MediaPath; @endphp
 <!DOCTYPE html>
 <html>
 <head>
@@ -54,9 +55,16 @@
                     $attachments = json_decode($attachments, true);
                 }
 
-                $firstAttachment = is_array($attachments)
-                    ? ($attachments[0] ?? null)
-                    : null;
+                $firstAttachment = null;
+
+                if (is_array($attachments)) {
+                    foreach ($attachments as $attachment) {
+                        if (MediaPath::isImage($attachment)) {
+                            $firstAttachment = $attachment;
+                            break;
+                        }
+                    }
+                }
 
                 $imageSrc = null;
 
@@ -102,6 +110,26 @@
                             <div>
                                 Kilometerstand: {{ $log->km_reading }} km
                             </div>
+
+                            @if(is_array($attachments) && count($attachments))
+                                <div style="margin-top:10px;">
+                                    Bestanden:
+                                    @foreach($attachments as $attachment)
+                                        @php
+                                            $label = MediaPath::label($attachment);
+                                            $url = asset('storage/' . ltrim($attachment, '/'));
+                                        @endphp
+
+                                        @if(request()->is('maintenance/pdf'))
+                                            <div>{{ $label }}</div>
+                                        @else
+                                            <div>
+                                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">{{ $label }}</a>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
                         </td>
                     </tr>
                 </table>

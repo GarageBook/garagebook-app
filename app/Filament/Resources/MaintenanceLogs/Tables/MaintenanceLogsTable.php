@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MaintenanceLogs\Tables;
 
+use App\Support\MediaPath;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteBulkAction;
@@ -16,15 +17,28 @@ class MaintenanceLogsTable
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('attachments')
-                    ->label('Foto')
+                    ->label('Preview')
                     ->disk('public')
                     ->width(180)
                     ->height(100)
                     ->getStateUsing(function ($record) {
-                        return is_array($record->attachments) && count($record->attachments)
-                            ? $record->attachments[0]
-                            : null;
+                        if (! is_array($record->attachments)) {
+                            return null;
+                        }
+
+                        foreach ($record->attachments as $attachment) {
+                            if (MediaPath::isImage($attachment)) {
+                                return $attachment;
+                            }
+                        }
+
+                        return null;
                     }),
+
+                Tables\Columns\TextColumn::make('attachments_count')
+                    ->label('Bestanden')
+                    ->getStateUsing(fn ($record) => is_array($record->attachments) ? count($record->attachments) : 0)
+                    ->badge(),
 
                 Tables\Columns\TextColumn::make('vehicle.model')
                     ->label('Voertuig')
