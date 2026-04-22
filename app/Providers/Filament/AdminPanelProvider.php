@@ -100,9 +100,27 @@ class AdminPanelProvider extends PanelProvider
                     }
 
                     .gb-footer-inner {
-                        width: 52%;
-                        min-width: 780px;
+                        width: min(100%, 780px);
+                        min-width: 0;
                         margin-bottom: 85px;
+                    }
+
+                    .gb-footer-brand {
+                        margin-bottom: 60px;
+                    }
+
+                    .gb-footer-logo {
+                        height: 44px;
+                    }
+
+                    .gb-footer-columns {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 70px;
+                    }
+
+                    .gb-footer-links a {
+                        overflow-wrap: anywhere;
                     }
 
                     .gb-footer-bottom {
@@ -111,6 +129,52 @@ class AdminPanelProvider extends PanelProvider
                         font-size: 15px;
                         color: #8d9199;
                         width: 100%;
+                    }
+
+                    @media (max-width: 1024px) {
+                        .gb-footer-inner {
+                            width: 100%;
+                        }
+
+                        .gb-footer-columns {
+                            gap: 36px;
+                        }
+                    }
+
+                    @media (max-width: 768px) {
+                        .gb-login-footer {
+                            padding: 48px 20px 32px;
+                            box-sizing: border-box;
+                        }
+
+                        .gb-footer-inner {
+                            margin-bottom: 48px;
+                        }
+
+                        .gb-footer-brand {
+                            margin-bottom: 32px;
+                        }
+
+                        .gb-footer-columns {
+                            grid-template-columns: 1fr;
+                            gap: 28px;
+                        }
+
+                        .gb-footer-links {
+                            gap: 10px;
+                            font-size: 16px;
+                        }
+
+                        .gb-footer-links a {
+                            word-break: break-word;
+                        }
+                    }
+
+                    @media (max-width: 480px) {
+                        .gb-login-footer {
+                            padding-left: 16px;
+                            padding-right: 16px;
+                        }
                     }
                 </style>
             ')
@@ -121,15 +185,11 @@ class AdminPanelProvider extends PanelProvider
             fn (): string => new HtmlString('
                 <footer class="gb-login-footer">
                     <div class="gb-footer-inner">
-                        <div style="margin-bottom:60px;">
-                            <img src="/images/garagebook-logo-white.png" style="height:44px;" alt="GarageBook">
+                        <div class="gb-footer-brand">
+                            <img src="/images/garagebook-logo-white.png" class="gb-footer-logo" alt="GarageBook">
                         </div>
 
-                        <div style="
-                            display:grid;
-                            grid-template-columns: 1fr 1fr 1fr;
-                            gap:70px;
-                        ">
+                        <div class="gb-footer-columns">
                             <div>
                                 <h3>Mijn GarageBook</h3>
                                 <div class="gb-footer-links">

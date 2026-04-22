@@ -619,10 +619,12 @@ p, span, div, li, a, input, textarea, button {
     color:#fff;
     padding:70px 50px 40px 50px;
     width:100%;
+    box-sizing:border-box;
+    overflow-wrap:anywhere;
 }
 
 .gb-footer-inner {
-    width:52%;
+    width:min(100%, 780px);
     min-width:780px;
     margin-bottom:85px;
 }
@@ -661,6 +663,7 @@ p, span, div, li, a, input, textarea, button {
     display:block;
     color:#9ca3af;
     text-decoration:none;
+    overflow-wrap:anywhere;
 }
 
 .gb-footer-links a:hover {
@@ -985,6 +988,10 @@ p, span, div, li, a, input, textarea, button {
     .gb-footer-links {
         gap: 10px;
         font-size: 16px;
+    }
+
+    .gb-footer-links a {
+        word-break: break-word;
     }
 }
 
