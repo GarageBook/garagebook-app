@@ -4,8 +4,20 @@
 
 <div
     x-data="{
-        state: $wire.entangle('{{ $statePath }}'),
+        state: @js($attachments ?? []),
         storageBaseUrl: @js($storageBaseUrl),
+        syncFromWire() {
+            const value = this.$wire.get('{{ $statePath }}')
+
+            if (Array.isArray(value) && value.length) {
+                this.state = value
+                return
+            }
+
+            if (Array.isArray(this.state) && this.state.length) {
+                this.$wire.set('{{ $statePath }}', [...this.state])
+            }
+        },
         isImage(path) {
             return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(this.extension(path))
         },
@@ -55,8 +67,10 @@
             }
 
             this.state.splice(index, 1)
+            this.$wire.set('{{ $statePath }}', [...this.state])
         },
     }"
+    x-init="syncFromWire()"
     x-cloak
     class="gb-maintenance-media-gallery"
 >
