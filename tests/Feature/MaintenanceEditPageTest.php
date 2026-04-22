@@ -38,6 +38,8 @@ class MaintenanceEditPageTest extends TestCase
             ->get("/admin/maintenance-logs/{$log->id}/edit")
             ->assertOk()
             ->assertSeeText("Foto's, video's en bestanden")
-            ->assertSeeText('Onderhoud verwijderen');
+            ->assertSeeText('Onderhoud verwijderen')
+            ->assertSeeText('a.jpg')
+            ->assertSeeText('b.mov');
     }
 }
