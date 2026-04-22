@@ -39,7 +39,7 @@ class MaintenanceEditPageTest extends TestCase
             ->assertOk()
             ->assertSeeText("Foto's, video's en bestanden")
             ->assertSeeText('Onderhoud verwijderen')
-            ->assertSeeText('a.jpg')
-            ->assertSeeText('b.mov');
+            ->assertSee('maintenance-attachments/a.jpg', false)
+            ->assertSee('maintenance-attachments/b.mov', false);
     }
 }
