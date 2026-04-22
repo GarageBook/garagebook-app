@@ -235,6 +235,9 @@ body.gb-public-body {
 .gb-card-link {
     color: inherit;
     text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .gb-card-surface {
@@ -253,17 +256,21 @@ body.gb-public-body {
 
 .gb-card-body {
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .gb-card-title {
     font-size: 20px;
-    margin-bottom: 10px;
+    margin: 0;
     line-height: 1.2;
 }
 
 .gb-card-text {
     color: #6b7280;
     margin: 0;
+    line-height: 1.55;
 }
 
 .gb-page-title {
@@ -307,6 +314,77 @@ body.gb-public-body {
     color: #111827;
 }
 
+.gb-page-content {
+    color: #4b5563;
+    font-size: 18px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.gb-page-content > *:first-child {
+    margin-top: 0;
+}
+
+.gb-page-content > *:last-child {
+    margin-bottom: 0;
+}
+
+.gb-page-content p,
+.gb-page-content ul,
+.gb-page-content ol,
+.gb-page-content blockquote {
+    margin: 0 0 24px;
+}
+
+.gb-page-content ul,
+.gb-page-content ol {
+    padding-left: 28px;
+}
+
+.gb-page-content ul {
+    list-style: disc;
+}
+
+.gb-page-content ol {
+    list-style: decimal;
+}
+
+.gb-page-content li + li {
+    margin-top: 6px;
+}
+
+.gb-page-content h2,
+.gb-page-content h3,
+.gb-page-content h4 {
+    color: #111827;
+    margin: 40px 0 16px;
+    line-height: 1.1;
+}
+
+.gb-page-content img,
+.gb-page-content iframe,
+.gb-page-content table,
+.gb-blog-detail__content iframe,
+.gb-blog-detail__content table {
+    max-width: 100%;
+}
+
+.gb-page-content iframe,
+.gb-blog-detail__content iframe {
+    width: 100%;
+    min-height: 240px;
+    border: 0;
+    border-radius: 18px;
+}
+
+.gb-page-content table,
+.gb-blog-detail__content table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .gb-blog-detail {
     max-width: 960px;
     margin: 60px auto;
@@ -343,6 +421,7 @@ body.gb-public-body {
     font-size: 18px !important;
     line-height: 1.6 !important;
     max-width: 72ch;
+    overflow-wrap: anywhere;
 }
 
 .gb-blog-detail__content p,
@@ -470,6 +549,8 @@ body.gb-public-body {
 .gb-banner-image {
     width: 100%;
     display: block;
+    min-height: 260px;
+    object-fit: cover;
 }
 
 /* =========================
@@ -761,6 +842,22 @@ p, span, div, li, a, input, textarea, button {
         height: 200px;
     }
 
+    .gb-card-surface {
+        border-radius: 14px;
+    }
+
+    .gb-card-body {
+        padding: 18px;
+    }
+
+    .gb-card-title {
+        font-size: 19px;
+    }
+
+    .gb-card-text {
+        font-size: 15px;
+    }
+
     .gb-page-title {
         font-size: 30px;
         margin-bottom: 20px;
@@ -790,6 +887,24 @@ p, span, div, li, a, input, textarea, button {
     .gb-blog-detail__content {
         font-size: 17px !important;
         line-height: 1.65 !important;
+    }
+
+    .gb-page-content {
+        font-size: 17px;
+        line-height: 1.65;
+    }
+
+    .gb-page-content p,
+    .gb-page-content ul,
+    .gb-page-content ol,
+    .gb-page-content blockquote {
+        margin-bottom: 18px;
+    }
+
+    .gb-page-content h2,
+    .gb-page-content h3,
+    .gb-page-content h4 {
+        margin: 32px 0 14px;
     }
 
     .gb-blog-detail__content h2,
@@ -848,6 +963,10 @@ p, span, div, li, a, input, textarea, button {
 
     .gb-login-footer {
         padding: 48px 20px 32px;
+    }
+
+    .gb-banner-image {
+        min-height: 220px;
     }
 
     .gb-footer-inner {
@@ -911,12 +1030,27 @@ p, span, div, li, a, input, textarea, button {
         height: 180px;
     }
 
+    .gb-card-title {
+        font-size: 18px;
+    }
+
+    .gb-page-content,
+    .gb-blog-detail__content {
+        font-size: 16px !important;
+    }
+
     .gb-blog-detail__title {
         font-size: 28px;
     }
 
-    .gb-blog-detail__content {
-        font-size: 16px !important;
+    .gb-page-content iframe,
+    .gb-blog-detail__content iframe {
+        min-height: 200px;
+        border-radius: 14px;
+    }
+
+    .gb-banner-image {
+        min-height: 180px;
     }
 
     .gb-login-footer {

@@ -19,7 +19,7 @@
         >
     @endif
 
-    <div>
+    <div class="gb-page-content">
         {!! $page->content !!}
     </div>
 
