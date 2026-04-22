@@ -7,12 +7,7 @@
     x-data="{
         initialState: @js($attachments ?? []),
         state: @js($attachments ?? []),
-        removedPaths: [],
-        ready: false,
         storageBaseUrl: @js($storageBaseUrl),
-        showDynamicGallery() {
-            return this.ready && JSON.stringify(this.state ?? []) !== JSON.stringify(this.initialState ?? [])
-        },
         syncFromWire() {
             const value = this.$wire.get('{{ $statePath }}')
 
@@ -24,6 +19,13 @@
             if (Array.isArray(this.state) && this.state.length) {
                 this.$wire.set('{{ $statePath }}', [...this.state])
             }
+        },
+        dynamicFiles() {
+            if (! Array.isArray(this.state)) {
+                return []
+            }
+
+            return this.state.filter((path) => ! this.initialState.includes(path))
         },
         isImage(path) {
             return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg'].includes(this.extension(path))
@@ -81,24 +83,15 @@
                 this.state = [...this.initialState]
             }
 
-            const index = this.state.findIndex((item) => item === path)
-
-            if (index === -1) {
-                return
-            }
-
-            this.removedPaths.push(path)
-            this.remove(index)
+            this.state = this.state.filter((item) => item !== path)
+            this.$wire.set('{{ $statePath }}', [...this.state])
         },
     }"
-    x-init="ready = true; syncFromWire()"
+    x-init="syncFromWire()"
     class="gb-maintenance-media-gallery"
 >
     @if ($attachments !== [])
-        <div
-            class="gb-maintenance-media-gallery__grid"
-            x-bind:class="{ 'gb-maintenance-media-gallery__grid--hidden': showDynamicGallery() }"
-        >
+        <div class="gb-maintenance-media-gallery__grid">
             @foreach ($attachments as $attachment)
                 @php
                     $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
@@ -110,7 +103,7 @@
                 @endphp
                 <div
                     class="gb-maintenance-media-gallery__card"
-                    x-show="! removedPaths.includes(@js($attachment))"
+                    x-show="state.includes(@js($attachment))"
                 >
                     @if ($isImage)
                         <img
@@ -162,10 +155,10 @@
         </div>
     @endif
 
-    <div x-show="showDynamicGallery()" x-cloak>
-        <template x-if="Array.isArray(state) && state.length">
+    <div x-cloak>
+        <template x-if="dynamicFiles().length">
             <div class="gb-maintenance-media-gallery__grid">
-                <template x-for="(file, index) in state" :key="`${file}-${index}`">
+                <template x-for="(file, index) in dynamicFiles()" :key="`${file}-${index}`">
                     <div class="gb-maintenance-media-gallery__card">
                         <template x-if="isImage(file)">
                             <img
