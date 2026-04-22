@@ -1,4 +1,7 @@
-@php use App\Support\MediaPath; @endphp
+@php
+    use App\Support\MediaPath;
+    use App\Support\PdfThumbnail;
+@endphp
 <!DOCTYPE html>
 <html>
 <head>
@@ -75,8 +78,14 @@
 
                 $imageSrc = null;
 
-                if ($firstAttachment && ! request()->is('maintenance/pdf')) {
-                    $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
+                if ($firstAttachment) {
+                    if (request()->is('maintenance/pdf')) {
+                        $imageSrc = PdfThumbnail::fromPath(
+                            storage_path('app/public/' . ltrim($firstAttachment, '/'))
+                        );
+                    } else {
+                        $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
+                    }
                 }
             @endphp
 
@@ -107,7 +116,7 @@
                                 Kilometerstand: {{ $log->km_reading }} km
                             </div>
 
-                            @if(count($attachments))
+                            @if(count($attachments) && ! request()->is('maintenance/pdf'))
                                 <div style="margin-top:10px;">
                                     Bestanden:
                                     @foreach($attachments as $attachment)
@@ -116,13 +125,9 @@
                                             $url = asset('storage/' . ltrim($attachment, '/'));
                                         @endphp
 
-                                        @if(request()->is('maintenance/pdf'))
-                                            <div>{{ $label }}</div>
-                                        @else
-                                            <div>
-                                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">{{ $label }}</a>
-                                            </div>
-                                        @endif
+                                        <div>
+                                            <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">{{ $label }}</a>
+                                        </div>
                                     @endforeach
                                 </div>
                             @endif
