@@ -55,14 +55,21 @@
                     $attachments = json_decode($attachments, true);
                 }
 
+                if (! is_array($attachments)) {
+                    $attachments = [];
+                }
+
+                $attachments = array_values(array_filter(
+                    $attachments,
+                    fn ($attachment) => is_string($attachment) && filled($attachment)
+                ));
+
                 $firstAttachment = null;
 
-                if (is_array($attachments)) {
-                    foreach ($attachments as $attachment) {
-                        if (MediaPath::isImage($attachment)) {
-                            $firstAttachment = $attachment;
-                            break;
-                        }
+                foreach ($attachments as $attachment) {
+                    if (MediaPath::isImage($attachment)) {
+                        $firstAttachment = $attachment;
+                        break;
                     }
                 }
 
@@ -72,11 +79,14 @@
                     if (request()->is('maintenance/pdf')) {
                         $absolutePath = storage_path('app/public/' . ltrim($firstAttachment, '/'));
 
-                        if (file_exists($absolutePath)) {
-                            $imageData = base64_encode(file_get_contents($absolutePath));
-                            $mimeType = mime_content_type($absolutePath);
+                        if (is_file($absolutePath) && is_readable($absolutePath)) {
+                            $mimeType = mime_content_type($absolutePath) ?: null;
 
-                            $imageSrc = 'data:' . $mimeType . ';base64,' . $imageData;
+                            if ($mimeType) {
+                                $imageData = base64_encode(file_get_contents($absolutePath));
+
+                                $imageSrc = 'data:' . $mimeType . ';base64,' . $imageData;
+                            }
                         }
                     } else {
                         $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
@@ -111,7 +121,7 @@
                                 Kilometerstand: {{ $log->km_reading }} km
                             </div>
 
-                            @if(is_array($attachments) && count($attachments))
+                            @if(count($attachments))
                                 <div style="margin-top:10px;">
                                     Bestanden:
                                     @foreach($attachments as $attachment)
