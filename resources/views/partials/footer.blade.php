@@ -22,6 +22,7 @@
                 </h3>
 
                 <div class="gb-footer-links">
+                    <a href="{{ route('website') }}">Website home</a>
                     <a href="/blogs">Blogs</a>
                     <a href="/ons-verhaal">Ons verhaal</a>
                     <a href="/privacy-statement">Privacy Statement</a>

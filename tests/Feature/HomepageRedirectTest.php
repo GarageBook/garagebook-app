@@ -25,4 +25,14 @@ class HomepageRedirectTest extends TestCase
             ->get('/')
             ->assertRedirect('/admin');
     }
+
+    public function test_authenticated_user_can_still_open_public_website(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/website')
+            ->assertOk()
+            ->assertSee('GarageBook');
+    }
 }

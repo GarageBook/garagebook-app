@@ -201,6 +201,7 @@ class AdminPanelProvider extends PanelProvider
                             <div>
                                 <h3>Over GarageBook</h3>
                                 <div class="gb-footer-links">
+                                    <a href="/website">Website home</a>
                                     <a href="/blogs">Blogs</a>
                                     <a href="/ons-verhaal">Ons verhaal</a>
                                     <a href="/privacy-statement">Privacy Statement</a>

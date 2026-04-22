@@ -51,7 +51,7 @@
     <!-- HEADER -->
     <header class="gb-public-header">
         <div class="gb-public-header__inner">
-            <a href="/">
+            <a href="{{ route('website') }}">
                 <img
                     src="{{ asset('images/garagebook-logo-white.png') }}"
                     alt="GarageBook"
@@ -60,13 +60,19 @@
             </a>
 
             <div class="gb-public-header__actions">
-                <a href="/admin/login" class="gb-public-header__login">
-                    Login
-                </a>
+                @auth
+                    <a href="/admin" class="gb-public-header__login">
+                        Dashboard
+                    </a>
+                @else
+                    <a href="/admin/login" class="gb-public-header__login">
+                        Login
+                    </a>
 
-                <a href="/admin/register" class="gb-public-header__cta">
-                    Registreer gratis
-                </a>
+                    <a href="/admin/register" class="gb-public-header__cta">
+                        Registreer gratis
+                    </a>
+                @endauth
             </div>
         </div>
     </header>

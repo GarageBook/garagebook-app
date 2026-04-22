@@ -6,7 +6,7 @@
     <title>GarageBook - Bouw aan het verhaal van jouw motor</title>
     <meta name="description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
     <meta name="robots" content="index,follow">
-    <link rel="canonical" href="{{ url('/') }}">
+    <link rel="canonical" href="{{ route('website') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
@@ -21,7 +21,7 @@
                 [
                     '@type' => 'Organization',
                     'name' => 'GarageBook',
-                    'url' => url('/'),
+                    'url' => route('website'),
                     'logo' => asset('images/garagebook-logo.png'),
                     'sameAs' => [
                         'https://www.instagram.com/garagebook.global',
@@ -32,7 +32,7 @@
                 [
                     '@type' => 'WebSite',
                     'name' => 'GarageBook',
-                    'url' => url('/'),
+                    'url' => route('website'),
                     'inLanguage' => 'nl-NL',
                 ],
             ],
@@ -52,7 +52,7 @@
     <!-- HEADER -->
     <header class="gb-public-header">
         <div class="gb-public-header__inner">
-            <a href="/" aria-label="GarageBook home">
+            <a href="{{ route('website') }}" aria-label="GarageBook home">
                 <img
                     src="{{ asset('images/garagebook-logo-white.png') }}"
                     alt="GarageBook motor onderhoud app logo"
@@ -61,13 +61,19 @@
             </a>
 
             <div class="gb-public-header__actions">
-                <a href="/admin/login" class="gb-public-header__login">
-                    Login
-                </a>
+                @auth
+                    <a href="/admin" class="gb-public-header__login">
+                        Dashboard
+                    </a>
+                @else
+                    <a href="/admin/login" class="gb-public-header__login">
+                        Login
+                    </a>
 
-                <a href="/admin/register" class="gb-public-header__cta">
-                    Registreer gratis
-                </a>
+                    <a href="/admin/register" class="gb-public-header__cta">
+                        Registreer gratis
+                    </a>
+                @endauth
             </div>
         </div>
     </header>
@@ -86,13 +92,19 @@
                     </p>
 
                     <div class="gb-home-actions">
-                        <a href="/admin/register" class="gb-button gb-button--primary">
-                            Registreer gratis!
-                        </a>
+                        @auth
+                            <a href="/admin" class="gb-button gb-button--primary">
+                                Naar dashboard
+                            </a>
+                        @else
+                            <a href="/admin/register" class="gb-button gb-button--primary">
+                                Registreer gratis!
+                            </a>
 
-                        <a href="/admin/login" class="gb-button gb-button--secondary">
-                            Login
-                        </a>
+                            <a href="/admin/login" class="gb-button gb-button--secondary">
+                                Login
+                            </a>
+                        @endauth
                     </div>
                 </div>
 

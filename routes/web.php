@@ -17,6 +17,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/website', function () {
+    return view('welcome');
+})->name('website');
+
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
     $users = User::all();
 
