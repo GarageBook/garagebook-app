@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Resources\Users\Widgets\InactiveUsersTable;
+use App\Filament\Resources\Users\Widgets\UserActivationStats;
 use App\Filament\Resources\Users\Widgets\UserGrowthChart;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -21,7 +23,9 @@ class ListUsers extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
+            UserActivationStats::class,
             UserGrowthChart::class,
+            InactiveUsersTable::class,
         ];
     }
 }
