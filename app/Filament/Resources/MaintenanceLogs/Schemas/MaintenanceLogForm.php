@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
 use App\Models\Vehicle;
+use App\Support\MediaPath;
 use Filament\Forms;
+use Filament\Forms\Components\BaseFileUpload;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 
@@ -72,6 +74,18 @@ class MaintenanceLogForm
                     ->imagePreviewHeight('160')
                     ->itemPanelAspectRatio('1:1')
                     ->previewable(true)
+                    ->getUploadedFileUsing(static function (BaseFileUpload $component, string $file): ?array {
+                        $url = $component->getVisibility() === 'private'
+                            ? null
+                            : $component->getDisk()->url($file);
+
+                        return [
+                            'name' => basename($file),
+                            'size' => 1,
+                            'type' => MediaPath::mimeType($file),
+                            'url' => $url,
+                        ];
+                    })
                     ->columnSpanFull(),
 
                 Forms\Components\FileUpload::make('file_attachments')
