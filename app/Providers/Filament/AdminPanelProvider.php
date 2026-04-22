@@ -131,13 +131,13 @@ class AdminPanelProvider extends PanelProvider
                         width: 100%;
                     }
 
-                    .gb-maintenance-media-upload .filepond--list-scroller,
-                    .gb-maintenance-media-upload .filepond--list,
-                    .gb-maintenance-media-upload .filepond--item,
-                    .gb-maintenance-media-upload .filepond--item-panel,
-                    .gb-maintenance-media-upload .filepond--file-wrapper,
-                    .gb-maintenance-media-upload .filepond--file-info,
-                    .gb-maintenance-media-upload .filepond--file {
+                    .gb-maintenance-attachments-upload .filepond--list-scroller,
+                    .gb-maintenance-attachments-upload .filepond--list,
+                    .gb-maintenance-attachments-upload .filepond--item,
+                    .gb-maintenance-attachments-upload .filepond--item-panel,
+                    .gb-maintenance-attachments-upload .filepond--file-wrapper,
+                    .gb-maintenance-attachments-upload .filepond--file-info,
+                    .gb-maintenance-attachments-upload .filepond--file {
                         display: none !important;
                         visibility: hidden !important;
                         height: 0 !important;
@@ -176,7 +176,7 @@ class AdminPanelProvider extends PanelProvider
 
                     .gb-maintenance-media-gallery__meta {
                         display: flex;
-                        align-items: center;
+                        align-items: flex-start;
                         justify-content: space-between;
                         gap: 12px;
                         padding: 12px;
@@ -190,14 +190,58 @@ class AdminPanelProvider extends PanelProvider
                         overflow-wrap: anywhere;
                     }
 
+                    .gb-maintenance-media-gallery__actions {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        flex-shrink: 0;
+                    }
+
+                    .gb-maintenance-media-gallery__link,
                     .gb-maintenance-media-gallery__remove {
                         border: 0;
                         background: transparent;
-                        color: #b91c1c;
                         font-size: 13px;
                         font-weight: 700;
+                        line-height: 1;
+                        text-decoration: none;
+                    }
+
+                    .gb-maintenance-media-gallery__link {
+                        color: #2563eb;
+                    }
+
+                    .gb-maintenance-media-gallery__remove {
+                        color: #b91c1c;
                         cursor: pointer;
-                        flex-shrink: 0;
+                    }
+
+                    .gb-maintenance-media-gallery__file {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        gap: 10px;
+                        min-height: 160px;
+                        padding: 18px;
+                        background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+                    }
+
+                    .gb-maintenance-media-gallery__file-type {
+                        align-self: flex-start;
+                        padding: 6px 10px;
+                        border-radius: 999px;
+                        background: #dbeafe;
+                        color: #1d4ed8;
+                        font-size: 12px;
+                        font-weight: 700;
+                        letter-spacing: 0.04em;
+                    }
+
+                    .gb-maintenance-media-gallery__file-name {
+                        font-size: 15px;
+                        line-height: 1.5;
+                        color: #111827;
+                        overflow-wrap: anywhere;
                     }
 
                     @media (max-width: 1024px) {

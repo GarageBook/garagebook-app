@@ -3,9 +3,7 @@
 namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
 use App\Models\Vehicle;
-use App\Support\MediaPath;
 use Filament\Forms;
-use Filament\Forms\Components\BaseFileUpload;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
@@ -59,12 +57,11 @@ class MaintenanceLogForm
                     ->placeholder('bijv. 2.5')
                     ->suffix(' uur'),
 
-                Forms\Components\FileUpload::make('media_attachments')
-                    ->label('Foto\'s en video\'s')
+                Forms\Components\FileUpload::make('attachments')
+                    ->label('Foto\'s, video\'s en bestanden')
                     ->disk('public')
                     ->directory('maintenance-attachments')
                     ->visibility('public')
-                    ->acceptedFileTypes(['image/*', 'video/*'])
                     ->fetchFileInformation(false)
                     ->maxSize(102400)
                     ->multiple()
@@ -74,7 +71,7 @@ class MaintenanceLogForm
                     ->openable()
                     ->previewable(false)
                     ->extraAttributes([
-                        'class' => 'gb-maintenance-media-upload',
+                        'class' => 'gb-maintenance-attachments-upload',
                     ])
                     ->columnSpanFull(),
 
@@ -84,23 +81,9 @@ class MaintenanceLogForm
                     ->view('filament.forms.components.maintenance-media-gallery')
                     ->viewData(static fn (ViewField $component): array => [
                         'mediaStatePath' => (string) str($component->getStatePath())
-                            ->replaceEnd('.maintenance_media_gallery', '.media_attachments'),
+                            ->replaceEnd('.maintenance_media_gallery', '.attachments'),
                         'storageBaseUrl' => rtrim(Storage::url(''), '/'),
                     ])
-                    ->columnSpanFull(),
-
-                Forms\Components\FileUpload::make('file_attachments')
-                    ->label('Bestanden')
-                    ->disk('public')
-                    ->directory('maintenance-attachments')
-                    ->visibility('public')
-                    ->fetchFileInformation(false)
-                    ->maxSize(102400)
-                    ->multiple()
-                    ->reorderable()
-                    ->downloadable()
-                    ->openable()
-                    ->previewable(false)
                     ->columnSpanFull(),
 
                 Forms\Components\Textarea::make('notes')

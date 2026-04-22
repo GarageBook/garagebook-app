@@ -12,6 +12,9 @@
         isVideo(path) {
             return ['mp4', 'mov', 'webm', 'm4v', 'avi'].includes(this.extension(path))
         },
+        isPreviewable(path) {
+            return this.isImage(path) || this.isVideo(path)
+        },
         extension(path) {
             if (! path || typeof path !== 'string') {
                 return ''
@@ -37,6 +40,15 @@
 
             return path.split('/').pop()
         },
+        fileTypeLabel(path) {
+            const extension = this.extension(path)
+
+            if (! extension) {
+                return 'Bestand'
+            }
+
+            return extension.toUpperCase()
+        },
         remove(index) {
             if (! Array.isArray(this.state)) {
                 return
@@ -57,6 +69,8 @@
                             :src="fileUrl(file)"
                             :alt="fileLabel(file)"
                             class="gb-maintenance-media-gallery__image"
+                            loading="lazy"
+                            decoding="async"
                         >
                     </template>
 
@@ -70,16 +84,34 @@
                         ></video>
                     </template>
 
+                    <template x-if="! isPreviewable(file)">
+                        <div class="gb-maintenance-media-gallery__file">
+                            <div class="gb-maintenance-media-gallery__file-type" x-text="fileTypeLabel(file)"></div>
+                            <div class="gb-maintenance-media-gallery__file-name" x-text="fileLabel(file)"></div>
+                        </div>
+                    </template>
+
                     <div class="gb-maintenance-media-gallery__meta">
                         <div class="gb-maintenance-media-gallery__label" x-text="fileLabel(file)"></div>
 
-                        <button
-                            type="button"
-                            class="gb-maintenance-media-gallery__remove"
-                            x-on:click="remove(index)"
-                        >
-                            Verwijder
-                        </button>
+                        <div class="gb-maintenance-media-gallery__actions">
+                            <a
+                                :href="fileUrl(file)"
+                                class="gb-maintenance-media-gallery__link"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Open
+                            </a>
+
+                            <button
+                                type="button"
+                                class="gb-maintenance-media-gallery__remove"
+                                x-on:click="remove(index)"
+                            >
+                                Verwijder
+                            </button>
+                        </div>
                     </div>
                 </div>
             </template>

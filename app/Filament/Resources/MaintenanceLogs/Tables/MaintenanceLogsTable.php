@@ -21,6 +21,11 @@ class MaintenanceLogsTable
                     ->disk('public')
                     ->width(180)
                     ->height(100)
+                    ->extraImgAttributes([
+                        'loading' => 'lazy',
+                        'decoding' => 'async',
+                        'fetchpriority' => 'low',
+                    ])
                     ->getStateUsing(function ($record) {
                         foreach ($record->media_attachments as $attachment) {
                             if (MediaPath::isImage($attachment)) {
