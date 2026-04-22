@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\UserResource;
 use App\Filament\Resources\Users\Widgets\InactiveUsersTable;
 use App\Filament\Resources\Users\Widgets\UserActivationStats;
 use App\Filament\Resources\Users\Widgets\UserGrowthChart;
+use App\Filament\Resources\Users\Widgets\UserRetentionStats;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
@@ -24,6 +25,7 @@ class ListUsers extends ListRecords
     {
         return [
             UserActivationStats::class,
+            UserRetentionStats::class,
             UserGrowthChart::class,
             InactiveUsersTable::class,
         ];
