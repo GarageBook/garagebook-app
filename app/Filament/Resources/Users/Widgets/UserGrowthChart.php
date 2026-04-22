@@ -13,6 +13,8 @@ class UserGrowthChart extends ChartWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected ?string $maxHeight = '300px';
+
     public function getDescription(): ?string
     {
         return 'Nieuwe gebruikers per maand in de afgelopen 12 maanden.';
