@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Vehicles\Tables;
 
+use App\Models\Vehicle;
 use Filament\Actions\EditAction;
 use Filament\Actions\CreateAction;
 use Filament\Tables;
@@ -12,6 +13,7 @@ class VehiclesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('maintenanceLogs:id,vehicle_id,attachments'))
             ->columns([
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('Foto')
@@ -40,7 +42,7 @@ class VehiclesTable
 
                 Tables\Columns\TextColumn::make('media_attachments_count')
                     ->label('Bestanden')
-                    ->getStateUsing(fn ($record) => is_array($record->media_attachments) ? count($record->media_attachments) : 0)
+                    ->getStateUsing(fn (Vehicle $record) => self::fileCount($record))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -54,5 +56,20 @@ class VehiclesTable
             ->toolbarActions([
                 CreateAction::make(),
             ]);
+    }
+
+    public static function fileCount(Vehicle $vehicle): int
+    {
+        $vehicleFiles = count(array_filter([
+            $vehicle->photo,
+            ...(is_array($vehicle->photos) ? $vehicle->photos : []),
+            ...(is_array($vehicle->media_attachments) ? $vehicle->media_attachments : []),
+        ]));
+
+        $maintenanceFiles = $vehicle->maintenanceLogs->sum(
+            fn ($log) => is_array($log->attachments) ? count($log->attachments) : 0
+        );
+
+        return $vehicleFiles + $maintenanceFiles;
     }
 }
