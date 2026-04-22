@@ -32,8 +32,10 @@ class VehiclesTableFileCountTest extends TestCase
             'description' => 'Onderhoud 1',
             'km_reading' => 54000,
             'maintenance_date' => '2026-04-22',
-            'attachments' => [
+            'media_attachments' => [
                 'maintenance-attachments/a.jpg',
+            ],
+            'file_attachments' => [
                 'maintenance-attachments/b.pdf',
             ],
         ]);
@@ -43,7 +45,7 @@ class VehiclesTableFileCountTest extends TestCase
             'description' => 'Onderhoud 2',
             'km_reading' => 54500,
             'maintenance_date' => '2026-04-23',
-            'attachments' => [
+            'media_attachments' => [
                 'maintenance-attachments/c.mov',
             ],
         ]);

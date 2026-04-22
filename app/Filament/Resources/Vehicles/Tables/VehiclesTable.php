@@ -13,7 +13,7 @@ class VehiclesTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('maintenanceLogs:id,vehicle_id,attachments'))
+            ->modifyQueryUsing(fn ($query) => $query->with('maintenanceLogs:id,vehicle_id,attachments,media_attachments,file_attachments'))
             ->columns([
                 Tables\Columns\ImageColumn::make('photo')
                     ->label('Foto')
@@ -67,7 +67,7 @@ class VehiclesTable
         ]));
 
         $maintenanceFiles = $vehicle->maintenanceLogs->sum(
-            fn ($log) => is_array($log->attachments) ? count($log->attachments) : 0
+            fn ($log) => count($log->attachments)
         );
 
         return $vehicleFiles + $maintenanceFiles;

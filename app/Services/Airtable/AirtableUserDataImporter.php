@@ -99,6 +99,7 @@ class AirtableUserDataImporter
             $fields['Attachments'] ?? [],
             'maintenance-attachments/' . $record['id']
         );
+        [$mediaAttachments, $fileAttachments] = MaintenanceLog::splitAttachments($attachments);
         $notes = trim(implode("\n\n", array_filter([
             $type !== '' ? 'Type: ' . $type : null,
             $body !== '' && $body !== $description ? $body : null,
@@ -113,6 +114,8 @@ class AirtableUserDataImporter
                 'maintenance_date' => $fields['Datum'] ?? now()->toDateString(),
                 'cost' => isset($fields['Kosten']) ? (float) $fields['Kosten'] : null,
                 'attachments' => $attachments,
+                'media_attachments' => $mediaAttachments,
+                'file_attachments' => $fileAttachments,
                 'notes' => $notes !== '' ? $notes : null,
                 'airtable_synced_at' => now(),
             ]

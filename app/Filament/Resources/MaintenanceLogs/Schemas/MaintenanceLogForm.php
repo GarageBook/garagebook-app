@@ -55,8 +55,21 @@ class MaintenanceLogForm
                     ->placeholder('bijv. 2.5')
                     ->suffix(' uur'),
 
-                Forms\Components\FileUpload::make('attachments')
-                    ->label('Bijlagen')
+                Forms\Components\FileUpload::make('media_attachments')
+                    ->label('Foto\'s en video\'s')
+                    ->disk('public')
+                    ->directory('maintenance-attachments')
+                    ->visibility('public')
+                    ->maxSize(102400)
+                    ->multiple()
+                    ->reorderable()
+                    ->downloadable()
+                    ->openable()
+                    ->previewable(true)
+                    ->columnSpanFull(),
+
+                Forms\Components\FileUpload::make('file_attachments')
+                    ->label('Bestanden')
                     ->disk('public')
                     ->directory('maintenance-attachments')
                     ->visibility('public')

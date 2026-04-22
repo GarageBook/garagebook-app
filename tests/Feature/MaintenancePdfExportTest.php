@@ -28,8 +28,10 @@ class MaintenancePdfExportTest extends TestCase
             'description' => 'Olie vervangen',
             'km_reading' => 12345,
             'maintenance_date' => now()->toDateString(),
-            'attachments' => [
-                ['url' => 'https://files.example.test/maintenance-note.pdf'],
+            'media_attachments' => [
+                'maintenance-attachments/foto.jpg',
+            ],
+            'file_attachments' => [
                 'maintenance-attachments/factuur.pdf',
             ],
         ]);

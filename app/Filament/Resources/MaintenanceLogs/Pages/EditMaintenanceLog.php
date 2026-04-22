@@ -22,32 +22,11 @@ class EditMaintenanceLog extends EditRecord
 
     public function getHeading(): string | HtmlString
     {
-        $attachments = $this->record->attachments;
-
-        if (is_string($attachments)) {
-            $attachments = json_decode($attachments, true);
-        }
-
-        if (! is_array($attachments)) {
-            return 'Onderhoud bewerken';
-        }
-
-        $attachments = array_values(array_filter(
-            $attachments,
-            fn ($attachment) => is_string($attachment) && filled($attachment)
-        ));
-
-        if ($attachments === []) {
-            return 'Onderhoud bewerken';
-        }
-
         $images = [];
         $videos = [];
-        $files = [];
 
-        foreach ($attachments as $attachment) {
+        foreach ($this->record->media_attachments as $attachment) {
             $url = Storage::url($attachment);
-            $label = e(MediaPath::label($attachment));
 
             if (MediaPath::isImage($attachment)) {
                 $images[] = $url;
@@ -58,16 +37,21 @@ class EditMaintenanceLog extends EditRecord
             if (MediaPath::isVideo($attachment)) {
                 $videos[] = [
                     'url' => $url,
-                    'label' => $label,
+                    'label' => e(MediaPath::label($attachment)),
                 ];
-
-                continue;
             }
+        }
 
-            $files[] = [
-                'url' => $url,
-                'label' => $label,
-            ];
+        $files = array_map(
+            fn (string $attachment) => [
+                'url' => Storage::url($attachment),
+                'label' => e(MediaPath::label($attachment)),
+            ],
+            $this->record->file_attachments
+        );
+
+        if ($images === [] && $videos === [] && $files === []) {
+            return 'Onderhoud bewerken';
         }
 
         $html = '<div style="display:flex; flex-direction:column; gap:18px;">';

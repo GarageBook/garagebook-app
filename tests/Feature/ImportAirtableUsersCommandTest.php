@@ -242,9 +242,11 @@ class ImportAirtableUsersCommandTest extends TestCase
         $log = \App\Models\MaintenanceLog::query()->where('airtable_record_id', 'mnt123')->firstOrFail();
 
         $this->assertSame(1, count($log->attachments ?? []));
+        $this->assertSame(1, count($log->file_attachments ?? []));
+        $this->assertSame(0, count($log->media_attachments ?? []));
         Storage::disk('public')->assertExists($vehicle->photo);
         Storage::disk('public')->assertExists($vehicle->media_attachments[0]);
-        Storage::disk('public')->assertExists($log->attachments[0]);
+        Storage::disk('public')->assertExists($log->file_attachments[0]);
     }
 
     public function test_bulk_import_command_writes_password_csv_for_new_users(): void

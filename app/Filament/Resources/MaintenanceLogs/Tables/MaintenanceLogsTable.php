@@ -22,11 +22,7 @@ class MaintenanceLogsTable
                     ->width(180)
                     ->height(100)
                     ->getStateUsing(function ($record) {
-                        if (! is_array($record->attachments)) {
-                            return null;
-                        }
-
-                        foreach ($record->attachments as $attachment) {
+                        foreach ($record->media_attachments as $attachment) {
                             if (MediaPath::isImage($attachment)) {
                                 return $attachment;
                             }
@@ -37,7 +33,7 @@ class MaintenanceLogsTable
 
                 Tables\Columns\TextColumn::make('attachments_count')
                     ->label('Bestanden')
-                    ->getStateUsing(fn ($record) => is_array($record->attachments) ? count($record->attachments) : 0)
+                    ->getStateUsing(fn ($record) => count($record->media_attachments) + count($record->file_attachments))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('vehicle.model')

@@ -54,19 +54,6 @@
             @php
                 $attachments = $log->attachments;
 
-                if (is_string($attachments)) {
-                    $attachments = json_decode($attachments, true);
-                }
-
-                if (! is_array($attachments)) {
-                    $attachments = [];
-                }
-
-                $attachments = array_values(array_filter(
-                    $attachments,
-                    fn ($attachment) => is_string($attachment) && filled($attachment)
-                ));
-
                 $firstAttachment = null;
 
                 foreach ($attachments as $attachment) {
