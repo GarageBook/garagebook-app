@@ -5,9 +5,13 @@
 
 <div
     x-data="{
+        initialState: @js($attachments ?? []),
         state: @js($attachments ?? []),
         ready: false,
         storageBaseUrl: @js($storageBaseUrl),
+        showDynamicGallery() {
+            return this.ready && JSON.stringify(this.state ?? []) !== JSON.stringify(this.initialState ?? [])
+        },
         syncFromWire() {
             const value = this.$wire.get('{{ $statePath }}')
 
@@ -76,7 +80,7 @@
     class="gb-maintenance-media-gallery"
 >
     @if ($attachments !== [])
-        <div x-show="! ready" class="gb-maintenance-media-gallery__grid">
+        <div x-show="! showDynamicGallery()" class="gb-maintenance-media-gallery__grid">
             @foreach ($attachments as $attachment)
                 @php
                     $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
@@ -129,7 +133,7 @@
         </div>
     @endif
 
-    <div x-show="ready" x-cloak>
+    <div x-show="showDynamicGallery()" x-cloak>
         <template x-if="Array.isArray(state) && state.length">
             <div class="gb-maintenance-media-gallery__grid">
                 <template x-for="(file, index) in state" :key="`${file}-${index}`">
