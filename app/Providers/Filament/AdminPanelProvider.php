@@ -158,6 +158,10 @@ class AdminPanelProvider extends PanelProvider
                         gap: 16px;
                     }
 
+                    .gb-maintenance-media-gallery__grid--hidden {
+                        display: none;
+                    }
+
                     .gb-maintenance-media-gallery__card {
                         border: 1px solid #d1d5db;
                         border-radius: 14px;

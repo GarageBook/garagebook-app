@@ -7,6 +7,7 @@
     x-data="{
         initialState: @js($attachments ?? []),
         state: @js($attachments ?? []),
+        removedPaths: [],
         ready: false,
         storageBaseUrl: @js($storageBaseUrl),
         showDynamicGallery() {
@@ -75,12 +76,29 @@
             this.state.splice(index, 1)
             this.$wire.set('{{ $statePath }}', [...this.state])
         },
+        removeByPath(path) {
+            if (! Array.isArray(this.state)) {
+                this.state = [...this.initialState]
+            }
+
+            const index = this.state.findIndex((item) => item === path)
+
+            if (index === -1) {
+                return
+            }
+
+            this.removedPaths.push(path)
+            this.remove(index)
+        },
     }"
     x-init="ready = true; syncFromWire()"
     class="gb-maintenance-media-gallery"
 >
     @if ($attachments !== [])
-        <div x-show="! showDynamicGallery()" class="gb-maintenance-media-gallery__grid">
+        <div
+            class="gb-maintenance-media-gallery__grid"
+            x-bind:class="{ 'gb-maintenance-media-gallery__grid--hidden': showDynamicGallery() }"
+        >
             @foreach ($attachments as $attachment)
                 @php
                     $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
@@ -90,7 +108,10 @@
                         ? $attachment
                         : $storageBaseUrl . '/' . ltrim($attachment, '/');
                 @endphp
-                <div class="gb-maintenance-media-gallery__card">
+                <div
+                    class="gb-maintenance-media-gallery__card"
+                    x-show="! removedPaths.includes(@js($attachment))"
+                >
                     @if ($isImage)
                         <img
                             src="{{ $url }}"
@@ -126,6 +147,14 @@
                             >
                                 Open
                             </a>
+
+                            <button
+                                type="button"
+                                class="gb-maintenance-media-gallery__remove"
+                                x-on:click="removeByPath(@js($attachment))"
+                            >
+                                Verwijder
+                            </button>
                         </div>
                     </div>
                 </div>
