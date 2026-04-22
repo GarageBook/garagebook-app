@@ -60,12 +60,17 @@ class MaintenanceLogForm
                     ->disk('public')
                     ->directory('maintenance-attachments')
                     ->visibility('public')
+                    ->acceptedFileTypes(['image/*', 'video/*'])
                     ->fetchFileInformation(false)
                     ->maxSize(102400)
                     ->multiple()
+                    ->appendFiles()
                     ->reorderable()
                     ->downloadable()
                     ->openable()
+                    ->panelLayout('grid')
+                    ->imagePreviewHeight('160')
+                    ->itemPanelAspectRatio('1:1')
                     ->previewable(true)
                     ->columnSpanFull(),
 
