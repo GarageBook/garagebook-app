@@ -6,8 +6,10 @@ use App\Models\Vehicle;
 use App\Support\MediaPath;
 use Filament\Forms;
 use Filament\Forms\Components\BaseFileUpload;
+use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
+use Illuminate\Support\Facades\Storage;
 
 class MaintenanceLogForm
 {
@@ -70,22 +72,21 @@ class MaintenanceLogForm
                     ->reorderable()
                     ->downloadable()
                     ->openable()
-                    ->panelLayout('grid')
-                    ->imagePreviewHeight('160')
-                    ->itemPanelAspectRatio('1:1')
-                    ->previewable(true)
-                    ->getUploadedFileUsing(static function (BaseFileUpload $component, string $file): ?array {
-                        $url = $component->getVisibility() === 'private'
-                            ? null
-                            : $component->getDisk()->url($file);
+                    ->previewable(false)
+                    ->extraAttributes([
+                        'class' => 'gb-maintenance-media-upload',
+                    ])
+                    ->columnSpanFull(),
 
-                        return [
-                            'name' => basename($file),
-                            'size' => 1,
-                            'type' => MediaPath::mimeType($file),
-                            'url' => $url,
-                        ];
-                    })
+                ViewField::make('maintenance_media_gallery')
+                    ->hiddenLabel()
+                    ->dehydrated(false)
+                    ->view('filament.forms.components.maintenance-media-gallery')
+                    ->viewData([
+                        'mediaStatePath' => static fn (ViewField $component): string => (string) str($component->getStatePath())
+                            ->replaceEnd('.maintenance_media_gallery', '.media_attachments'),
+                        'storageBaseUrl' => rtrim(Storage::url(''), '/'),
+                    ])
                     ->columnSpanFull(),
 
                 Forms\Components\FileUpload::make('file_attachments')

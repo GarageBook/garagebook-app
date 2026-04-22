@@ -131,6 +131,63 @@ class AdminPanelProvider extends PanelProvider
                         width: 100%;
                     }
 
+                    .gb-maintenance-media-upload .filepond--list-scroller,
+                    .gb-maintenance-media-upload .filepond--list {
+                        display: none !important;
+                    }
+
+                    .gb-maintenance-media-gallery {
+                        margin-top: -4px;
+                    }
+
+                    .gb-maintenance-media-gallery__grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                        gap: 16px;
+                    }
+
+                    .gb-maintenance-media-gallery__card {
+                        border: 1px solid #d1d5db;
+                        border-radius: 14px;
+                        overflow: hidden;
+                        background: white;
+                    }
+
+                    .gb-maintenance-media-gallery__image,
+                    .gb-maintenance-media-gallery__video {
+                        display: block;
+                        width: 100%;
+                        height: 160px;
+                        object-fit: cover;
+                        background: #111827;
+                    }
+
+                    .gb-maintenance-media-gallery__meta {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 12px;
+                        padding: 12px;
+                    }
+
+                    .gb-maintenance-media-gallery__label {
+                        min-width: 0;
+                        font-size: 13px;
+                        line-height: 1.4;
+                        color: #111827;
+                        overflow-wrap: anywhere;
+                    }
+
+                    .gb-maintenance-media-gallery__remove {
+                        border: 0;
+                        background: transparent;
+                        color: #b91c1c;
+                        font-size: 13px;
+                        font-weight: 700;
+                        cursor: pointer;
+                        flex-shrink: 0;
+                    }
+
                     @media (max-width: 1024px) {
                         .gb-footer-inner {
                             width: 100%;
@@ -145,6 +202,10 @@ class AdminPanelProvider extends PanelProvider
                         .gb-login-footer {
                             padding: 48px 20px 32px;
                             box-sizing: border-box;
+                        }
+
+                        .gb-maintenance-media-gallery__grid {
+                            grid-template-columns: 1fr 1fr;
                         }
 
                         .gb-footer-inner {
@@ -174,6 +235,10 @@ class AdminPanelProvider extends PanelProvider
                         .gb-login-footer {
                             padding-left: 16px;
                             padding-right: 16px;
+                        }
+
+                        .gb-maintenance-media-gallery__grid {
+                            grid-template-columns: 1fr;
                         }
                     }
                 </style>
