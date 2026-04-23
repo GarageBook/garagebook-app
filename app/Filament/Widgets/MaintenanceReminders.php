@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\ReminderService;
+use Filament\Facades\Filament;
 use Filament\Widgets\Widget;
 
 class MaintenanceReminders extends Widget
@@ -14,7 +15,7 @@ class MaintenanceReminders extends Widget
     public function getViewData(): array
     {
         return [
-            'reminders' => app(ReminderService::class)->getWidgetItems(),
+            'reminders' => app(ReminderService::class)->getWidgetItems(userId: Filament::auth()->id()),
         ];
     }
 }

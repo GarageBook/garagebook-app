@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\MaintenanceLog;
+use App\Models\Vehicle;
 use Carbon\Carbon;
 
 class ReminderService
@@ -53,9 +54,24 @@ class ReminderService
         return ['type' => 'none', 'text' => null];
     }
 
-    public function getWidgetItems(int $limit = 10): array
+    public function getWidgetItems(int $limit = 10, ?int $userId = null): array
     {
+        $userId ??= auth()->id();
+
+        if ($userId === null) {
+            return [];
+        }
+
+        $vehicleIds = Vehicle::query()
+            ->where('user_id', $userId)
+            ->pluck('id');
+
+        if ($vehicleIds->isEmpty()) {
+            return [];
+        }
+
         return MaintenanceLog::query()
+            ->whereIn('vehicle_id', $vehicleIds)
             ->where('reminder_enabled', true)
             ->where(function ($query) {
                 $query
