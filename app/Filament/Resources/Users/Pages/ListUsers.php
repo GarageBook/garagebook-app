@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
-use App\Filament\Resources\Users\Widgets\InactiveUsersTable;
 use App\Filament\Resources\Users\Widgets\UserActivationStats;
 use App\Filament\Resources\Users\Widgets\UserGrowthChart;
 use App\Filament\Resources\Users\Widgets\UserRetentionStats;
@@ -27,7 +26,6 @@ class ListUsers extends ListRecords
             UserActivationStats::class,
             UserRetentionStats::class,
             UserGrowthChart::class,
-            InactiveUsersTable::class,
         ];
     }
 }
