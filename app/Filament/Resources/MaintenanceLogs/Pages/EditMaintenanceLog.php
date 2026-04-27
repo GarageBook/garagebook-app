@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Jobs\OptimizeMaintenanceLogMedia;
 use App\Support\ImageThumbnail;
-use App\Support\MaintenanceMediaOptimizer;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -17,7 +17,7 @@ class EditMaintenanceLog extends EditRecord
 
     protected function afterSave(): void
     {
-        app(MaintenanceMediaOptimizer::class)->optimizeLog($this->record);
+        OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
 
     protected function getHeaderActions(): array

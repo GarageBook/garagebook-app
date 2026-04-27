@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
-use App\Support\MaintenanceMediaOptimizer;
+use App\Jobs\OptimizeMaintenanceLogMedia;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateMaintenanceLog extends CreateRecord
@@ -12,6 +12,6 @@ class CreateMaintenanceLog extends CreateRecord
 
     protected function afterCreate(): void
     {
-        app(MaintenanceMediaOptimizer::class)->optimizeLog($this->record);
+        OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
 }
