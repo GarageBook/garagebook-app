@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Support\ImageThumbnail;
+use App\Support\MaintenanceMediaOptimizer;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -13,6 +14,11 @@ use Illuminate\Support\Facades\Storage;
 class EditMaintenanceLog extends EditRecord
 {
     protected static string $resource = MaintenanceLogResource::class;
+
+    protected function afterSave(): void
+    {
+        app(MaintenanceMediaOptimizer::class)->optimizeLog($this->record);
+    }
 
     protected function getHeaderActions(): array
     {
