@@ -1,9 +1,14 @@
 @extends('layouts.public')
 
-@section('title', $page->title . ' - GarageBook')
-@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($page->content), 155))
+@section('title', $page->meta_title ?: $page->title . ' - GarageBook')
+@section('meta_description', $page->meta_description ?: \Illuminate\Support\Str::limit(strip_tags($page->content), 155))
+@section('meta_robots', $page->indexable === false ? 'noindex,nofollow' : 'index,follow')
+@section('canonical_url', $page->canonical_url ?: url('/' . $page->slug))
 
 @section('content')
+
+@php($featuredPageSlug = \App\Support\InternalContentLinks::FEATURED_PAGE_SLUG)
+@php($relatedBlogs = $page->slug === $featuredPageSlug ? \App\Support\InternalContentLinks::relatedBlogsForFeaturedPage() : collect())
 
 <article class="gb-content-shell">
 
@@ -22,6 +27,23 @@
     <div class="gb-page-content">
         {!! $page->content !!}
     </div>
+
+    @if($relatedBlogs->isNotEmpty())
+        <aside class="gb-related-content">
+            <h2 class="gb-related-content__title">
+                Relevante blogs bij dit onderwerp
+            </h2>
+
+            <div class="gb-related-content__items">
+                @foreach($relatedBlogs as $relatedBlog)
+                    <a href="/blogs/{{ $relatedBlog->slug }}" class="gb-related-content__item">
+                        <span class="gb-related-content__label">Blog</span>
+                        <strong>{{ $relatedBlog->title }}</strong>
+                    </a>
+                @endforeach
+            </div>
+        </aside>
+    @endif
 
     @if($page->slug === 'contact')
         <div class="gb-contact-card">

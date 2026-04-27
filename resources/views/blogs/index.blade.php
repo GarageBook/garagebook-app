@@ -12,6 +12,28 @@
         </h1>
     </header>
 
+    @php($featuredPage = \App\Support\InternalContentLinks::featuredPage())
+
+    @if($featuredPage)
+        <aside class="gb-content-promo gb-content-promo--inline">
+            <p class="gb-content-promo__eyebrow">
+                Aanbevolen gids
+            </p>
+
+            <h2 class="gb-content-promo__title">
+                Zoek je een slim alternatief voor een universeel onderhoudsboekje?
+            </h2>
+
+            <p class="gb-content-promo__text">
+                Lees waarom digitale onderhoudshistorie in 2026 vaak praktischer is dan een los boekje.
+            </p>
+
+            <a href="/{{ $featuredPage->slug }}" class="gb-content-promo__link">
+                Bekijk {{ $featuredPage->title }}
+            </a>
+        </aside>
+    @endif
+
     <div class="gb-card-grid">
         @foreach($blogs as $blog)
             <article class="gb-card-surface">

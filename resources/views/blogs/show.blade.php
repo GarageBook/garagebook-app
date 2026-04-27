@@ -34,6 +34,9 @@
 
 @section('content')
 
+@php($relatedBlogs = \App\Support\InternalContentLinks::relatedBlogsForBlog($blog))
+@php($featuredPage = \App\Support\InternalContentLinks::featuredPage())
+
 <article class="gb-blog-detail">
 
     <a href="/blogs" class="gb-blog-detail__back">
@@ -55,6 +58,30 @@
     <div class="gb-blog-detail__content">
         {!! $blog->rendered_content !!}
     </div>
+
+    @if($relatedBlogs->isNotEmpty() || $featuredPage)
+        <aside class="gb-related-content">
+            <h2 class="gb-related-content__title">
+                Verder lezen
+            </h2>
+
+            <div class="gb-related-content__items">
+                @foreach($relatedBlogs as $relatedBlog)
+                    <a href="/blogs/{{ $relatedBlog->slug }}" class="gb-related-content__item">
+                        <span class="gb-related-content__label">Blog</span>
+                        <strong>{{ $relatedBlog->title }}</strong>
+                    </a>
+                @endforeach
+
+                @if($featuredPage)
+                    <a href="/{{ $featuredPage->slug }}" class="gb-related-content__item gb-related-content__item--featured">
+                        <span class="gb-related-content__label">Pagina</span>
+                        <strong>{{ $featuredPage->title }}</strong>
+                    </a>
+                @endif
+            </div>
+        </aside>
+    @endif
 
 </article>
 

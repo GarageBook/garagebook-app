@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'GarageBook')</title>
     <meta name="description" content="@yield('meta_description', 'GarageBook helpt motorrijders om onderhoud, historie, upgrades en belangrijke momenten van hun motor overzichtelijk vast te leggen.')">
-    <meta name="robots" content="index,follow">
+    <meta name="robots" content="@yield('meta_robots', 'index,follow')">
     <link rel="canonical" href="@yield('canonical_url', url()->current())">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
