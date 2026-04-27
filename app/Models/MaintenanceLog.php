@@ -117,6 +117,16 @@ class MaintenanceLog extends Model
         $this->attributes['attachments'] = $attachments === [] ? null : json_encode($attachments);
     }
 
+    public function setCostAttribute($value): void
+    {
+        $this->attributes['cost'] = self::normalizeDecimal($value);
+    }
+
+    public function setWorkedHoursAttribute($value): void
+    {
+        $this->attributes['worked_hours'] = self::normalizeDecimal($value);
+    }
+
     private function resolveSeparatedAttachments(mixed $value, callable $filter): array
     {
         $attachments = self::normalizeAttachmentPaths($value);
@@ -160,5 +170,33 @@ class MaintenanceLog extends Model
         ));
 
         return [$media, $files];
+    }
+
+    private static function normalizeDecimal(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = str_replace(['EUR', '€', ' '], '', $value);
+
+        if (str_contains($value, ',') && str_contains($value, '.')) {
+            $value = str_replace('.', '', $value);
+            $value = str_replace(',', '.', $value);
+        } elseif (str_contains($value, ',')) {
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return number_format((float) $value, 2, '.', '');
     }
 }
