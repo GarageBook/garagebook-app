@@ -51,6 +51,7 @@ class MaintenanceLogForm
                 Forms\Components\TextInput::make('worked_hours')
                     ->label('Gewerkte uren')
                     ->numeric()
+                    ->maxValue(9999.99)
                     ->inputMode('decimal')
                     ->placeholder('bijv. 2.5')
                     ->suffix(' uur'),
