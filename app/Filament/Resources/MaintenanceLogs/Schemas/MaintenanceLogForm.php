@@ -4,8 +4,10 @@ namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
 use App\Models\Vehicle;
 use Filament\Forms;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
+use Illuminate\Support\Facades\Storage;
 
 class MaintenanceLogForm
 {
@@ -70,6 +72,13 @@ class MaintenanceLogForm
                     ->previewable(false)
                     ->extraAttributes([
                         'class' => 'gb-maintenance-attachments-upload',
+                    ])
+                    ->columnSpanFull(),
+
+                View::make('filament.forms.components.maintenance-media-gallery')
+                    ->viewData([
+                        'mediaStatePath' => 'attachments',
+                        'storageBaseUrl' => rtrim(Storage::disk('public')->url(''), '/'),
                     ])
                     ->columnSpanFull(),
 
