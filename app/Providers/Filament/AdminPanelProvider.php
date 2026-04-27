@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use Filament\Enums\ThemeMode;
@@ -31,7 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/garagebook-logo.png'))
             ->brandLogoHeight('2.5rem')
             ->login()
-            ->registration()
+            ->registration(Register::class)
             ->passwordReset()
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Filament\Auth\Http\Responses\RegistrationResponse as CustomRegistrationResponse;
 use App\Listeners\QueueMailerLiteSubscription;
 use App\Listeners\TrackSuccessfulLogin;
 use Filament\Auth\Events\Registered;
+use Filament\Auth\Http\Responses\Contracts\RegistrationResponse as RegistrationResponseContract;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -16,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(RegistrationResponseContract::class, CustomRegistrationResponse::class);
     }
 
     /**
