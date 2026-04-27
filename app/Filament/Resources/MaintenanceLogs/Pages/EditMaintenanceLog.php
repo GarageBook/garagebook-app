@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -32,7 +33,10 @@ class EditMaintenanceLog extends EditRecord
             $url = Storage::url($attachment);
 
             if (MediaPath::isImage($attachment)) {
-                $images[] = $url;
+                $images[] = [
+                    'full' => $url,
+                    'thumbnail' => Storage::url(ImageThumbnail::path($attachment, 240) ?: $attachment),
+                ];
 
                 continue;
             }
@@ -62,16 +66,19 @@ class EditMaintenanceLog extends EditRecord
         if ($images !== []) {
             $html .= '<div style="display:flex; gap:12px; flex-wrap:wrap;">';
 
-            foreach ($images as $imageUrl) {
-                $escapedUrl = e($imageUrl);
+            foreach ($images as $image) {
+                $escapedUrl = e($image['full']);
+                $escapedThumbnailUrl = e($image['thumbnail']);
 
                 $html .= '
                     <a href="' . $escapedUrl . '" target="_blank" rel="noopener noreferrer">
                         <img
-                            src="' . $escapedUrl . '"
+                            src="' . $escapedThumbnailUrl . '"
                             alt="Onderhoudsfoto"
                             loading="lazy"
                             decoding="async"
+                            width="120"
+                            height="120"
                             style="width:120px; height:120px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;"
                         >
                     </a>

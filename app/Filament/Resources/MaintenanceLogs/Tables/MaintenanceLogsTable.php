@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MaintenanceLogs\Tables;
 
+use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -29,7 +30,7 @@ class MaintenanceLogsTable
                     ->getStateUsing(function ($record) {
                         foreach ($record->media_attachments as $attachment) {
                             if (MediaPath::isImage($attachment)) {
-                                return $attachment;
+                                return ImageThumbnail::path($attachment, 240) ?: $attachment;
                             }
                         }
 

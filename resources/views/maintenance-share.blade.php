@@ -1,4 +1,5 @@
 @php
+    use App\Support\ImageThumbnail;
     use App\Support\MediaPath;
     use App\Support\PdfThumbnail;
 @endphp
@@ -71,7 +72,8 @@
                             storage_path('app/public/' . ltrim($firstAttachment, '/'))
                         );
                     } else {
-                        $imageSrc = asset('storage/' . ltrim($firstAttachment, '/'));
+                        $thumbnailPath = ImageThumbnail::path($firstAttachment, 240);
+                        $imageSrc = asset('storage/' . ltrim($thumbnailPath ?: $firstAttachment, '/'));
                     }
                 }
             @endphp
@@ -83,6 +85,10 @@
                             @if($imageSrc)
                                 <img
                                     src="{{ $imageSrc }}"
+                                    loading="lazy"
+                                    decoding="async"
+                                    width="120"
+                                    height="120"
                                     style="width:120px; border-radius:12px;"
                                 >
                             @else
