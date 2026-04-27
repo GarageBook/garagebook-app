@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Pages\Schemas;
 
 use Filament\Forms;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class PageForm
@@ -10,7 +11,7 @@ class PageForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Forms\Components\Section::make('Pagina')
+            Section::make('Pagina')
                 ->schema([
                     Forms\Components\TextInput::make('title')
                         ->required()
@@ -37,7 +38,7 @@ class PageForm
                 ])
                 ->columns(2),
 
-            Forms\Components\Section::make('SEO')
+            Section::make('SEO')
                 ->description('Gebruik unieke, beschrijvende metadata. Schrijf voor klikgedrag en duidelijkheid, niet voor keyword stuffing.')
                 ->schema([
                     Forms\Components\TextInput::make('meta_title')
