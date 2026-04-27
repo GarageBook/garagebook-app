@@ -2,7 +2,6 @@
 
 namespace App\Services\MailerLite;
 
-use App\Models\User;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use RuntimeException;
 
@@ -12,7 +11,7 @@ class MailerLiteClient
         private readonly HttpFactory $http,
     ) {}
 
-    public function subscribeUser(User $user): void
+    public function subscribe(string $email, ?string $name = null): void
     {
         $groupId = config('services.mailerlite.group_id');
 
@@ -21,9 +20,9 @@ class MailerLiteClient
         }
 
         $this->request()->post('/subscribers', [
-            'email' => $user->email,
+            'email' => $email,
             'fields' => [
-                'name' => $user->name,
+                'name' => $name,
             ],
             'groups' => [(string) $groupId],
         ])->throw();

@@ -20,6 +20,6 @@ class QueueMailerLiteSubscription
             return;
         }
 
-        SubscribeUserToMailerLite::dispatch($user);
+        SubscribeUserToMailerLite::dispatch($user->email, $user->name);
     }
 }

@@ -27,7 +27,8 @@ class MailerLiteRegistrationTest extends TestCase
         Event::dispatch(new Registered($user));
 
         Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job) use ($user): bool {
-            return $job->user->is($user);
+            return $job->email === $user->email
+                && $job->name === $user->name;
         });
     }
 
@@ -64,7 +65,10 @@ class MailerLiteRegistrationTest extends TestCase
             'email' => 'hello@example.com',
         ]);
 
-        app(SubscribeUserToMailerLite::class, ['user' => $user])->handle(app(\App\Services\MailerLite\MailerLiteClient::class));
+        app(SubscribeUserToMailerLite::class, [
+            'email' => $user->email,
+            'name' => $user->name,
+        ])->handle(app(\App\Services\MailerLite\MailerLiteClient::class));
 
         Http::assertSent(function ($request): bool {
             return $request->method() === 'POST'
