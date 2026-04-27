@@ -53,7 +53,7 @@ class ImageThumbnail
             (string) $quality,
         ]));
 
-        $thumbnailPath = '.thumbnails/' . $signature . '.jpg';
+        $thumbnailPath = 'thumbnails/' . $signature . '.jpg';
 
         if ($disk->exists($thumbnailPath)) {
             return $thumbnailPath;
