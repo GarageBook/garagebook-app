@@ -16,7 +16,15 @@ class SitemapTest extends TestCase
         Page::query()->create([
             'title' => 'Contact',
             'slug' => 'contact',
+            'indexable' => true,
             'content' => 'Neem contact op.',
+        ]);
+
+        Page::query()->create([
+            'title' => 'Verborgen pagina',
+            'slug' => 'verborgen-pagina',
+            'indexable' => false,
+            'content' => 'Niet indexeren.',
         ]);
 
         Blog::query()->create([
@@ -40,6 +48,7 @@ class SitemapTest extends TestCase
             ->assertSee(url('/blogs'), false)
             ->assertSee(url('/contact'), false)
             ->assertSee(url('/blogs/publieke-blog'), false)
+            ->assertDontSee(url('/verborgen-pagina'), false)
             ->assertDontSee(url('/blogs/verborgen-blog'), false);
     }
 }

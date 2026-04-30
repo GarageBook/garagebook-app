@@ -110,6 +110,7 @@ Route::get('/blog-image/{path}', function ($path) {
 
 Route::get('/sitemap.xml', function () {
     $pages = Page::query()
+        ->where('indexable', true)
         ->orderBy('slug')
         ->get();
 
