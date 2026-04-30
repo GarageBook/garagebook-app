@@ -51,7 +51,7 @@
     <!-- HEADER -->
     <header class="gb-public-header">
         <div class="gb-public-header__inner">
-            <a href="{{ route('website') }}">
+            <a href="{{ url('/') }}">
                 <img
                     src="{{ asset('images/garagebook-logo-white.png') }}"
                     alt="GarageBook"

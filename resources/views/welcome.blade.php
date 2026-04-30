@@ -6,7 +6,7 @@
     <title>GarageBook - Bouw aan het verhaal van jouw motor</title>
     <meta name="description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
     <meta name="robots" content="index,follow">
-    <link rel="canonical" href="{{ route('website') }}">
+    <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
@@ -21,7 +21,7 @@
                 [
                     '@type' => 'Organization',
                     'name' => 'GarageBook',
-                    'url' => route('website'),
+                    'url' => url('/'),
                     'logo' => asset('images/garagebook-logo.png'),
                     'sameAs' => [
                         'https://www.instagram.com/garagebook.global',
@@ -32,7 +32,7 @@
                 [
                     '@type' => 'WebSite',
                     'name' => 'GarageBook',
-                    'url' => route('website'),
+                    'url' => url('/'),
                     'inLanguage' => 'nl-NL',
                 ],
             ],
@@ -52,7 +52,7 @@
     <!-- HEADER -->
     <header class="gb-public-header">
         <div class="gb-public-header__inner">
-            <a href="{{ route('website') }}" aria-label="GarageBook home">
+            <a href="{{ url('/') }}" aria-label="GarageBook home">
                 <img
                     src="{{ asset('images/garagebook-logo-white.png') }}"
                     alt="GarageBook motor onderhoud app logo"

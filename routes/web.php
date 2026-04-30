@@ -18,7 +18,7 @@ Route::get('/', function () {
 });
 
 Route::get('/website', function () {
-    return view('welcome');
+    return redirect('/', 301);
 })->name('website');
 
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
