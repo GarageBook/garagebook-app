@@ -32,3 +32,42 @@ Explicitly flag duplicate, legacy, or dead code when you find it. In this reposi
 
 ## Review Focus
 Prioritize findings around security, ownership boundaries, broken assumptions, CSS/font inconsistency, and incomplete business logic. The goal is not just to ship changes, but to steer GarageBook toward a reliable, maintainable product within 3 months.
+
+## Session Status
+Status bijgewerkt op 2026-05-04.
+
+### Live SEO/content werk afgerond
+- `/start` redirectt naar `/admin/register`; `/admin/register` is weer de echte Filament registratiepagina.
+- `privacy-statement` en `algemene-voorwaarden` staan live op `noindex,nofollow`.
+- Metadata live aangescherpt voor:
+  - `/ons-verhaal`
+  - `/contact`
+  - `/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026`
+- Alle live blog-excerpts zijn aangescherpt voor betere snippets / AI-samenvattingen.
+- Thematische interne linkstructuur voor blogs is in code verbeterd.
+
+### Live/performance werk afgerond
+- Homepage-afbeeldingen omgezet naar `webp` en gekoppeld.
+- Publieke caching toegevoegd voor anonieme marketingpagina’s zonder querystring.
+- `/blog-image/{path}` levert nu `webp`-varianten met sterke cache-headers waar mogelijk.
+- Zware fallback-afbeelding in `resources/views/filament/widgets/my-vehicles.blade.php` omgezet naar `webp`.
+
+### Relevante commits al gepusht
+- `fd982dc` Improve public SEO templates and structured data
+- `54bae43` Refine brand copy from onderhoudsboekje to onderhoudsboek
+- `1ca3e55` Improve thematic internal content links
+- `2113d8f` Optimize homepage images for performance
+- `6ccc590` Add public caching and optimized blog images
+- `e5ce14a` Optimize fallback vehicle widget image
+
+### Belangrijk openstaand punt voor volgende sessie
+- Diepere herschrijving van de rich-text body’s van de topblogs is nog niet veilig gelukt.
+- Pogingen om live `data.content` via de Filament/Livewire editor op te slaan gaven `500` terug, terwijl excerpt- en metadata-updates wel werken.
+- Volgende stap: eerst exact uitzoeken welk payloadformaat of welke save-route de rich-text editor accepteert, liefst via één gecontroleerde testwijziging, en pas daarna de blogbody’s inhoudelijk herschrijven.
+
+### Lokale worktree-opmerking
+- Er staan niet-gerelateerde lokale wijzigingen buiten dit werk:
+  - verwijderde bestanden in `temp/...`
+  - ongetrackte bestanden:
+    - `app/Console/Commands/ExportNeverLoggedInUsersCommand.php`
+    - `tests/Feature/ExportNeverLoggedInUsersCommandTest.php`
