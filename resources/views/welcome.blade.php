@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digitaal onderhoudsboekje voor je motor | GarageBook</title>
+    <title>Digitaal onderhoudsboek voor je motor | GarageBook</title>
     <meta name="description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Digitaal onderhoudsboekje voor je motor | GarageBook">
+    <meta property="og:title" content="Digitaal onderhoudsboek voor je motor | GarageBook">
     <meta property="og:description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
     <meta property="og:url" content="{{ url('/') }}">
     <meta name="twitter:card" content="summary_large_image">
@@ -41,7 +41,7 @@
                     'applicationCategory' => 'BusinessApplication',
                     'operatingSystem' => 'Web',
                     'url' => url('/'),
-                    'description' => 'Digitaal onderhoudsboekje voor motorrijders om onderhoud, reparaties, kilometerstanden, foto’s en facturen overzichtelijk vast te leggen.',
+                    'description' => 'Digitaal onderhoudsboek voor motorrijders om onderhoud, reparaties, kilometerstanden, foto’s en facturen overzichtelijk vast te leggen.',
                 ],
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
@@ -92,7 +92,7 @@
             <div class="gb-section-shell gb-section-grid gb-home-grid">
                 <div>
                     <h1 class="gb-home-title">
-                        Het digitale onderhoudsboekje voor je motor
+                        Het digitale onderhoudsboek voor je motor
                     </h1>
 
                     <p class="gb-home-lead">
