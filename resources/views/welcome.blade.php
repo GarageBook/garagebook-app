@@ -6,13 +6,13 @@
     <title>GarageBook - Bouw aan het verhaal van jouw motor</title>
     <meta name="description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
     <meta name="robots" content="index,follow">
-    <link rel="canonical" href="{{ $canonicalUrl ?? url('/') }}">
+    <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
     <meta property="og:title" content="GarageBook - Bouw aan het verhaal van jouw motor">
     <meta property="og:description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
-    <meta property="og:url" content="{{ $ogUrl ?? ($canonicalUrl ?? url('/')) }}">
+    <meta property="og:url" content="{{ url('/') }}">
     <meta name="twitter:card" content="summary_large_image">
     <script type="application/ld+json">
         {!! json_encode([

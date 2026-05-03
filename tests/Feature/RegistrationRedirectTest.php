@@ -20,14 +20,14 @@ class RegistrationRedirectTest extends TestCase
 
     public function test_admin_register_redirects_permanently_to_start(): void
     {
-        $this->get('/admin/register')
+        $this->get('/start')
             ->assertStatus(301)
-            ->assertRedirect('/start');
+            ->assertRedirect('/admin/register');
     }
 
-    public function test_start_page_is_publicly_available(): void
+    public function test_admin_register_page_is_publicly_available(): void
     {
-        $this->get('/start')
+        $this->get('/admin/register')
             ->assertOk()
             ->assertSee('GarageBook');
     }

@@ -18,17 +18,12 @@ Route::get('/', function () {
 });
 
 Route::get('/start', function () {
-    return view('welcome', [
-        'canonicalUrl' => url('/start'),
-        'ogUrl' => url('/start'),
-    ]);
+    return redirect('/admin/register', 301);
 });
 
 Route::get('/website', function () {
     return redirect('/', 301);
 })->name('website');
-
-Route::redirect('/admin/register', '/start', 301);
 
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
     $users = User::all();
