@@ -17,4 +17,11 @@ class RegistrationRedirectTest extends TestCase
 
         $this->assertSame(url('/admin'), $response->getTargetUrl());
     }
+
+    public function test_admin_register_redirects_permanently_to_start(): void
+    {
+        $this->get('/admin/register')
+            ->assertStatus(301)
+            ->assertRedirect('/start');
+    }
 }

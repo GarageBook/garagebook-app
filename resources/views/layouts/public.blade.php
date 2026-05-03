@@ -69,7 +69,7 @@
                         Login
                     </a>
 
-                    <a href="/admin/register" class="gb-public-header__cta">
+                    <a href="/start" class="gb-public-header__cta">
                         Registreer gratis
                     </a>
                 @endauth

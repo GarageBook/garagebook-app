@@ -21,6 +21,8 @@ Route::get('/website', function () {
     return redirect('/', 301);
 })->name('website');
 
+Route::redirect('/admin/register', '/start', 301);
+
 Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
     $users = User::all();
 

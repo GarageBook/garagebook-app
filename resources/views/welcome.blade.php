@@ -70,7 +70,7 @@
                         Login
                     </a>
 
-                    <a href="/admin/register" class="gb-public-header__cta">
+                    <a href="/start" class="gb-public-header__cta">
                         Registreer gratis
                     </a>
                 @endauth
@@ -97,7 +97,7 @@
                                 Naar dashboard
                             </a>
                         @else
-                            <a href="/admin/register" class="gb-button gb-button--primary">
+                            <a href="/start" class="gb-button gb-button--primary">
                                 Registreer gratis!
                             </a>
 
