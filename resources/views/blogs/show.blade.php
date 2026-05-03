@@ -6,7 +6,7 @@
 @section('structured_data')
     <script type="application/ld+json">
         {!! json_encode([
-            '@context' => 'https://schema.org',
+            '@' . 'context' => 'https://schema.org',
             '@type' => 'Article',
             'headline' => $blog->title,
             'description' => $blog->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($blog->rendered_content), 155),

@@ -1,15 +1,19 @@
 @extends('layouts.public')
 
-@section('title', 'Blogs - GarageBook')
-@section('meta_description', 'Lees blogs van GarageBook over motoronderhoud, onderhoudshistorie, documentatie en de waarde van een goed bijgehouden motor.')
+@section('title', 'Blogs over motoronderhoud en onderhoudshistorie | GarageBook')
+@section('meta_description', 'Lees praktische blogs over motoronderhoud, onderhoudshistorie, digitaal onderhoud bijhouden en de invloed daarvan op vertrouwen en verkoopwaarde.')
 
 @section('content')
 
 <section class="gb-page-shell">
     <header>
         <h1 class="gb-page-title gb-page-title--tight">
-            Blogs
+            Blogs over motoronderhoud en onderhoudshistorie
         </h1>
+
+        <p class="gb-home-lead">
+            Praktische gidsen voor motorrijders die onderhoud slimmer willen bijhouden, hun historie beter willen documenteren en de waarde van hun motor zichtbaar willen maken.
+        </p>
     </header>
 
     @php($featuredPage = \App\Support\InternalContentLinks::featuredPage())

@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GarageBook - Bouw aan het verhaal van jouw motor</title>
-    <meta name="description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
+    <title>Digitaal onderhoudsboekje voor je motor | GarageBook</title>
+    <meta name="description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="GarageBook - Bouw aan het verhaal van jouw motor">
-    <meta property="og:description" content="GarageBook helpt motorrijders om onderhoud, reparaties, upgrades en kilometerstanden overzichtelijk vast te leggen op één plek.">
+    <meta property="og:title" content="Digitaal onderhoudsboekje voor je motor | GarageBook">
+    <meta property="og:description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
     <meta property="og:url" content="{{ url('/') }}">
     <meta name="twitter:card" content="summary_large_image">
     <script type="application/ld+json">
         {!! json_encode([
-            '@context' => 'https://schema.org',
+            '@' . 'context' => 'https://schema.org',
             '@graph' => [
                 [
                     '@type' => 'Organization',
@@ -34,6 +34,14 @@
                     'name' => 'GarageBook',
                     'url' => url('/'),
                     'inLanguage' => 'nl-NL',
+                ],
+                [
+                    '@type' => 'SoftwareApplication',
+                    'name' => 'GarageBook',
+                    'applicationCategory' => 'BusinessApplication',
+                    'operatingSystem' => 'Web',
+                    'url' => url('/'),
+                    'description' => 'Digitaal onderhoudsboekje voor motorrijders om onderhoud, reparaties, kilometerstanden, foto’s en facturen overzichtelijk vast te leggen.',
                 ],
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
@@ -84,11 +92,11 @@
             <div class="gb-section-shell gb-section-grid gb-home-grid">
                 <div>
                     <h1 class="gb-home-title">
-                        Alle onderhoud van je motor op één plek
+                        Het digitale onderhoudsboekje voor je motor
                     </h1>
 
                     <p class="gb-home-lead">
-                        Van onderhoud en reparaties tot upgrades en foto's: bouw het volledige verhaal van je motor digitaal op.
+                        Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor overzichtelijk bij in één digitale tijdlijn.
                     </p>
 
                     <div class="gb-home-actions">
@@ -133,7 +141,7 @@
                     <div class="gb-feature-grid">
 
                         <p class="gb-home-feature-intro">
-                            Houd onderhoud, reparaties en upgrades overzichtelijk bij en zie in één oogopslag wat er aan je motor is gedaan.
+                            Bouw een complete onderhoudshistorie op die je zelf terugvindt, makkelijker deelt en later ook helpt bij verkoop of taxatie.
                         </p>
 
                         <div class="gb-feature-card">
