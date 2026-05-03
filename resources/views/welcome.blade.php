@@ -118,9 +118,13 @@
 
                 <div>
                     <img
-                        src="{{ asset('images/garagebook-sleutelen-motor-garage.png') }}"
-                        alt="Motor in garage"
+                        src="{{ asset('images/garagebook-sleutelen-motor-garage.webp') }}"
+                        alt="Motor in garage met onderhoudswerkzaamheden"
                         class="gb-media-rounded gb-media-elevated"
+                        width="1536"
+                        height="1024"
+                        fetchpriority="high"
+                        decoding="async"
                     >
                 </div>
             </div>
@@ -132,9 +136,13 @@
                 <div class="gb-section-grid gb-home-grid--features">
                     <div>
                         <img
-                            src="{{ asset('images/garagebook-motor-display.png') }}"
-                            alt="Kilometer dashboard motor"
+                            src="{{ asset('images/garagebook-motor-display.webp') }}"
+                            alt="Digitaal overzicht van onderhoud en kilometerstanden op een motor display"
                             class="gb-media-rounded"
+                            width="1024"
+                            height="1536"
+                            loading="lazy"
+                            decoding="async"
                         >
                     </div>
 
@@ -172,9 +180,13 @@
         <section>
             <div>
                 <img
-                    src="{{ asset('images/garagebook-cinematic-story-banner.jpg') }}"
-                    alt="Motor garage banner"
+                    src="{{ asset('images/garagebook-cinematic-story-banner.webp') }}"
+                    alt="Cinematische banner van een motor in werkplaatssetting"
                     class="gb-banner-image"
+                    width="7262"
+                    height="2875"
+                    loading="lazy"
+                    decoding="async"
                 >
             </div>
         </section>
