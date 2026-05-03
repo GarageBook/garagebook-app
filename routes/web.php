@@ -5,6 +5,7 @@ use App\Models\Page;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Blog;
+use App\Http\Controllers\PublicImageController;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -102,15 +103,8 @@ Route::get('/blogs/{slug}', function ($slug) {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/blog-image/{path}', function ($path) {
-    $fullPath = storage_path('app/public/' . $path);
-
-    if (!file_exists($fullPath)) {
-        abort(404);
-    }
-
-    return response()->file($fullPath);
-})->where('path', '.*');
+Route::get('/blog-image/{path}', [PublicImageController::class, 'blog'])
+    ->where('path', '.*');
 
 Route::get('/sitemap.xml', function () {
     $pages = Page::query()

@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CachePublicResponses;
 use App\Http\Middleware\CanonicalizePublicUrl;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             CanonicalizePublicUrl::class,
+            CachePublicResponses::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
