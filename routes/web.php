@@ -17,6 +17,13 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/start', function () {
+    return view('welcome', [
+        'canonicalUrl' => url('/start'),
+        'ogUrl' => url('/start'),
+    ]);
+});
+
 Route::get('/website', function () {
     return redirect('/', 301);
 })->name('website');

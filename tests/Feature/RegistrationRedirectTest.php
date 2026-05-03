@@ -24,4 +24,11 @@ class RegistrationRedirectTest extends TestCase
             ->assertStatus(301)
             ->assertRedirect('/start');
     }
+
+    public function test_start_page_is_publicly_available(): void
+    {
+        $this->get('/start')
+            ->assertOk()
+            ->assertSee('GarageBook');
+    }
 }
