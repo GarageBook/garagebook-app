@@ -17,8 +17,12 @@
                 <img
                     src="{{ $vehicle->photo 
                         ? asset('storage/' . $vehicle->photo) 
-                        : asset('images/garagebook-hero-workshop-motor.jpg') }}"
+                        : asset('images/garagebook-hero-workshop-motor.webp') }}"
                     alt="{{ $vehicle->brand }} {{ $vehicle->model }}"
+                    width="7262"
+                    height="2875"
+                    loading="lazy"
+                    decoding="async"
                     style="
                         width:100%;
                         height:400px;
