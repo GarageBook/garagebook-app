@@ -9,6 +9,9 @@ use Illuminate\Support\Collection;
 class InternalContentLinks
 {
     public const FEATURED_PAGE_SLUG = 'universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026';
+    public const SITEMAP_EXCLUDED_PAGE_SLUGS = [
+        self::FEATURED_PAGE_SLUG,
+    ];
 
     private const RELATED_BLOG_SLUGS = [
         'digitaal-onderhoudsboekje-voor-je-motor-wat-is-het-en-hoe-werkt-het' => [

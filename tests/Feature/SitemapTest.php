@@ -21,10 +21,24 @@ class SitemapTest extends TestCase
         ]);
 
         Page::query()->create([
+            'title' => 'Ons verhaal',
+            'slug' => 'ons-verhaal',
+            'indexable' => true,
+            'content' => 'Ons verhaal.',
+        ]);
+
+        Page::query()->create([
             'title' => 'Verborgen pagina',
             'slug' => 'verborgen-pagina',
             'indexable' => false,
             'content' => 'Niet indexeren.',
+        ]);
+
+        Page::query()->create([
+            'title' => 'Featured pagina',
+            'slug' => 'universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026',
+            'indexable' => true,
+            'content' => 'Niet in sitemap tonen.',
         ]);
 
         Blog::query()->create([
@@ -47,7 +61,9 @@ class SitemapTest extends TestCase
             ->assertSee(url('/'), false)
             ->assertSee(url('/blogs'), false)
             ->assertSee(url('/contact'), false)
+            ->assertSee(url('/ons-verhaal'), false)
             ->assertDontSee(url('/blogs/publieke-blog'), false)
+            ->assertDontSee(url('/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026'), false)
             ->assertDontSee(url('/verborgen-pagina'), false)
             ->assertDontSee(url('/blogs/verborgen-blog'), false);
     }

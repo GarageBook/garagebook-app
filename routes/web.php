@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Blog;
 use App\Http\Controllers\PublicImageController;
+use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -109,6 +110,7 @@ Route::get('/blog-image/{path}', [PublicImageController::class, 'blog'])
 Route::get('/sitemap.xml', function () {
     $pages = Page::query()
         ->where('indexable', true)
+        ->whereNotIn('slug', InternalContentLinks::SITEMAP_EXCLUDED_PAGE_SLUGS)
         ->orderBy('slug')
         ->get();
 
