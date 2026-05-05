@@ -41,7 +41,7 @@
     <div class="gb-card-grid">
         @foreach($blogs as $blog)
             <article class="gb-card-surface">
-                <a href="/blogs/{{ $blog->slug }}" class="gb-card-link">
+                <a href="https://garagebook.nl/blog/{{ $blog->slug }}/" class="gb-card-link">
                     @if($blog->hero_image)
                         <img
                             src="/blog-image/{{ $blog->hero_image }}"

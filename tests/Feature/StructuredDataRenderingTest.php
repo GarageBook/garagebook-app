@@ -30,9 +30,16 @@ class StructuredDataRenderingTest extends TestCase
         ]);
 
         $response = $this->get('/blogs/' . $blog->slug);
+        $canonicalUrl = 'https://garagebook.nl/blog/' . $blog->slug . '/';
 
         $response->assertOk();
         $response->assertSee('"@context": "https://schema.org"', false);
+        $response->assertSee('<link rel="canonical" href="' . $canonicalUrl . '">', false);
+        $response->assertSee('<meta property="og:url" content="' . $canonicalUrl . '">', false);
+        $response->assertSee('<meta name="twitter:url" content="' . $canonicalUrl . '">', false);
+        $response->assertDontSee('<meta name="robots" content="noindex"', false);
+        $response->assertSee('"url": "' . $canonicalUrl . '"', false);
+        $response->assertSee('"mainEntityOfPage": "' . $canonicalUrl . '"', false);
         $response->assertDontSee('__contextArgs', false);
     }
 }

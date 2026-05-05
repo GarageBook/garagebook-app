@@ -12,10 +12,4 @@
         <lastmod>{{ $page->updated_at?->toAtomString() }}</lastmod>
     </url>
     @endforeach
-    @foreach($blogs as $blog)
-    <url>
-        <loc>{{ url('/blogs/' . $blog->slug) }}</loc>
-        <lastmod>{{ ($blog->updated_at ?? $blog->published_at)?->toAtomString() }}</lastmod>
-    </url>
-    @endforeach
 </urlset>

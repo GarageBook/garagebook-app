@@ -54,10 +54,10 @@ class BlogInternalLinksTest extends TestCase
         $response = $this->get('/blogs/' . $primaryBlog->slug);
 
         $response->assertOk();
-        $response->assertSee('/blogs/' . $relatedBlog->slug, false);
-        $response->assertSee('/blogs/' . $secondaryRelatedBlog->slug, false);
+        $response->assertSee('https://garagebook.nl/blog/' . $relatedBlog->slug . '/', false);
+        $response->assertSee('https://garagebook.nl/blog/' . $secondaryRelatedBlog->slug . '/', false);
         $response->assertSee('/' . $featuredPage->slug, false);
-        $response->assertDontSee('/blogs/niet-relevant-maar-nieuwer', false);
+        $response->assertDontSee('https://garagebook.nl/blog/niet-relevant-maar-nieuwer/', false);
     }
 
     public function test_featured_page_shows_related_blog_links(): void
@@ -87,7 +87,7 @@ class BlogInternalLinksTest extends TestCase
         $response = $this->get('/' . $page->slug);
 
         $response->assertOk();
-        $response->assertSee('/blogs/' . $blog->slug, false);
-        $response->assertDontSee('/blogs/niet-geselecteerde-blog', false);
+        $response->assertSee('https://garagebook.nl/blog/' . $blog->slug . '/', false);
+        $response->assertDontSee('https://garagebook.nl/blog/niet-geselecteerde-blog/', false);
     }
 }

@@ -1,8 +1,11 @@
 @extends('layouts.public')
 
+@php($blogCanonicalUrl = 'https://garagebook.nl/blog/' . $blog->slug . '/')
+
 @section('title', $blog->title . ' - GarageBook')
 @section('meta_description', $blog->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($blog->rendered_content), 155))
 @section('og_type', 'article')
+@section('canonical_url', $blogCanonicalUrl)
 @section('structured_data')
     <script type="application/ld+json">
         {!! json_encode([
@@ -10,7 +13,7 @@
             '@type' => 'Article',
             'headline' => $blog->title,
             'description' => $blog->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($blog->rendered_content), 155),
-            'url' => url('/blogs/' . $blog->slug),
+            'url' => $blogCanonicalUrl,
             'datePublished' => optional($blog->published_at)->toAtomString(),
             'dateModified' => optional($blog->updated_at)->toAtomString(),
             'inLanguage' => 'nl-NL',
@@ -27,7 +30,7 @@
                 ],
             ],
             'image' => $blog->hero_image ? [url('/blog-image/' . $blog->hero_image)] : null,
-            'mainEntityOfPage' => url('/blogs/' . $blog->slug),
+            'mainEntityOfPage' => $blogCanonicalUrl,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
     </script>
 @endsection
@@ -67,7 +70,7 @@
 
             <div class="gb-related-content__items">
                 @foreach($relatedBlogs as $relatedBlog)
-                    <a href="/blogs/{{ $relatedBlog->slug }}" class="gb-related-content__item">
+                    <a href="https://garagebook.nl/blog/{{ $relatedBlog->slug }}/" class="gb-related-content__item">
                         <span class="gb-related-content__label">Blog</span>
                         <strong>{{ $relatedBlog->title }}</strong>
                     </a>

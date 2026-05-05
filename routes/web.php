@@ -112,13 +112,8 @@ Route::get('/sitemap.xml', function () {
         ->orderBy('slug')
         ->get();
 
-    $blogs = Blog::query()
-        ->whereNotNull('published_at')
-        ->latest('published_at')
-        ->get();
-
     return response()
-        ->view('sitemap', compact('pages', 'blogs'))
+        ->view('sitemap', compact('pages'))
         ->header('Content-Type', 'application/xml');
 });
 

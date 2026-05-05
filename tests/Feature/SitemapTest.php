@@ -11,7 +11,7 @@ class SitemapTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_sitemap_includes_public_pages_and_published_blogs(): void
+    public function test_sitemap_includes_public_pages_and_excludes_blog_detail_pages(): void
     {
         Page::query()->create([
             'title' => 'Contact',
@@ -47,7 +47,7 @@ class SitemapTest extends TestCase
             ->assertSee(url('/'), false)
             ->assertSee(url('/blogs'), false)
             ->assertSee(url('/contact'), false)
-            ->assertSee(url('/blogs/publieke-blog'), false)
+            ->assertDontSee(url('/blogs/publieke-blog'), false)
             ->assertDontSee(url('/verborgen-pagina'), false)
             ->assertDontSee(url('/blogs/verborgen-blog'), false);
     }

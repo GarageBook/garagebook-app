@@ -36,7 +36,7 @@
 
             <div class="gb-related-content__items">
                 @foreach($relatedBlogs as $relatedBlog)
-                    <a href="/blogs/{{ $relatedBlog->slug }}" class="gb-related-content__item">
+                    <a href="https://garagebook.nl/blog/{{ $relatedBlog->slug }}/" class="gb-related-content__item">
                         <span class="gb-related-content__label">Blog</span>
                         <strong>{{ $relatedBlog->title }}</strong>
                     </a>
