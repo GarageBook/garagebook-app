@@ -7,8 +7,25 @@
 <html>
 <head>
     <title>GarageBook Onderhoud</title>
+    @if(! request()->is('maintenance/pdf'))
+        <style>
+            @font-face {
+                font-family: "ZalandoSans";
+                src: url("/fonts/zalandosans/ZalandoSans-Light.woff2") format("woff2");
+                font-weight: 300;
+                font-style: normal;
+            }
+
+            @font-face {
+                font-family: "ZalandoSans";
+                src: url("/fonts/zalandosans/ZalandoSans-Bold.woff2") format("woff2");
+                font-weight: 700;
+                font-style: normal;
+            }
+        </style>
+    @endif
 </head>
-<body style="font-family:Arial, sans-serif; margin:0; background:#fff;">
+<body style="font-family:'ZalandoSans', Arial, sans-serif; margin:0; background:#fff;">
 
     <div style="background:black; color:white; padding:20px 40px;">
         <table style="width:100%;">
@@ -31,7 +48,7 @@
                             text-decoration:none;
                             border-radius:12px;
                             font-weight:700;
-                            font-family:Arial, sans-serif;
+                            font-family:'ZalandoSans', Arial, sans-serif;
                             display:inline-block;
                         "
                     >
@@ -58,6 +75,11 @@
                 $imageAttachments = array_values(array_filter(
                     $attachments,
                     fn (string $attachment) => MediaPath::isImage($attachment)
+                ));
+
+                $fileAttachments = array_values(array_filter(
+                    $attachments,
+                    fn (string $attachment) => ! MediaPath::isImage($attachment)
                 ));
 
                 $firstAttachment = $imageAttachments[0] ?? null;
@@ -242,10 +264,10 @@
                                 Kilometerstand: {{ $log->km_reading }} km
                             </div>
 
-                            @if(count($attachments) && ! request()->is('maintenance/pdf'))
+                            @if(count($fileAttachments) && ! request()->is('maintenance/pdf'))
                                 <div style="margin-top:10px;">
                                     Bestanden:
-                                    @foreach($attachments as $attachment)
+                                    @foreach($fileAttachments as $attachment)
                                         @php
                                             $label = MediaPath::label($attachment);
                                             $url = asset('storage/' . ltrim($attachment, '/'));
