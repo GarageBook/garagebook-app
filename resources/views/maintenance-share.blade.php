@@ -237,7 +237,8 @@
                                                     background:rgba(17,24,39,0.7);
                                                     color:#fff;
                                                     font-size:12px;
-                                                    font-weight:600;
+                                                    font-family:'ZalandoSans', Arial, sans-serif;
+                                                    font-weight:300;
                                                     z-index:2;
                                                 "
                                             >
