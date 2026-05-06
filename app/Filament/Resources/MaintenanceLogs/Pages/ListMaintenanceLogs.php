@@ -28,6 +28,9 @@ class ListMaintenanceLogs extends ListRecords
     public function updatedActiveVehicleId(): void
     {
         $this->activeVehicleId = $this->resolveActiveVehicleId($this->activeVehicleId);
+        $this->cachedHeaderActions = [];
+        $this->cachedActions = [];
+        $this->cacheInteractsWithHeaderActions();
         $this->resetPage();
     }
 

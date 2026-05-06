@@ -95,4 +95,43 @@ class MaintenanceListVehicleContextTest extends TestCase
             $actions->get('exportPdf')->getUrl(),
         );
     }
+
+    public function test_maintenance_list_header_actions_update_after_switching_vehicle(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Willem Garage',
+        ]);
+
+        $firstVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+            'nickname' => 'Circuitfiets',
+        ]);
+
+        $secondVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1200 GS',
+            'nickname' => 'Allroad',
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::withQueryParams(['vehicle_id' => $firstVehicle->id])
+            ->test(ListMaintenanceLogs::class)
+            ->set('activeVehicleId', $secondVehicle->id);
+
+        $cachedActions = collect($component->instance()->getCachedHeaderActions())
+            ->keyBy(fn ($action) => $action->getName());
+
+        $this->assertSame(
+            url('/share/willem-garage/allroad'),
+            $cachedActions->get('openSharePage')->getUrl(),
+        );
+        $this->assertSame(
+            url('/maintenance/pdf?vehicle_id=' . $secondVehicle->id),
+            $cachedActions->get('exportPdf')->getUrl(),
+        );
+    }
 }
