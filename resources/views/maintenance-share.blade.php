@@ -55,57 +55,177 @@
             @php
                 $attachments = $log->attachments;
 
-                $firstAttachment = null;
+                $imageAttachments = array_values(array_filter(
+                    $attachments,
+                    fn (string $attachment) => MediaPath::isImage($attachment)
+                ));
 
-                foreach ($attachments as $attachment) {
-                    if (MediaPath::isImage($attachment)) {
-                        $firstAttachment = $attachment;
-                        break;
-                    }
-                }
+                $firstAttachment = $imageAttachments[0] ?? null;
 
                 $imageSrc = null;
+                $galleryImages = [];
 
-                if ($firstAttachment) {
-                    if (request()->is('maintenance/pdf')) {
-                        $imageSrc = PdfThumbnail::fromPath(
-                            storage_path('app/public/' . ltrim($firstAttachment, '/'))
-                        );
-                    } else {
-                        $thumbnailPath = ImageThumbnail::path($firstAttachment, 240);
-                        $imageSrc = asset('storage/' . ltrim($thumbnailPath ?: $firstAttachment, '/'));
-                    }
+                if ($firstAttachment && request()->is('maintenance/pdf')) {
+                    $imageSrc = PdfThumbnail::fromPath(
+                        storage_path('app/public/' . ltrim($firstAttachment, '/'))
+                    );
+                }
+
+                if (! request()->is('maintenance/pdf')) {
+                    $galleryImages = array_map(function (string $attachment): array {
+                        $thumbnailPath = ImageThumbnail::path($attachment, 480) ?: $attachment;
+
+                        return [
+                            'thumbnail' => asset('storage/' . ltrim($thumbnailPath, '/')),
+                            'full' => asset('storage/' . ltrim($attachment, '/')),
+                        ];
+                    }, $imageAttachments);
                 }
             @endphp
 
             <div style="border-bottom:1px solid #ddd; padding:25px 0;">
                 <table style="width:100%;">
                     <tr>
-                        <td style="width:140px; vertical-align:top;">
-                            @if($imageSrc)
-                                <div style="
-                                    width:120px;
-                                    height:120px;
-                                    border-radius:12px;
-                                    overflow:hidden;
-                                    background:#f3f4f6;
-                                ">
-                                    <img
-                                        src="{{ $imageSrc }}"
-                                        loading="lazy"
-                                        decoding="async"
-                                        width="120"
-                                        height="120"
-                                        style="
-                                            width:100%;
-                                            height:100%;
-                                            display:block;
-                                            object-fit:cover;
-                                        "
-                                    >
-                                </div>
+                        <td style="width:260px; vertical-align:top;">
+                            @if(request()->is('maintenance/pdf'))
+                                @if($imageSrc)
+                                    <div style="
+                                        width:240px;
+                                        height:160px;
+                                        border-radius:12px;
+                                        overflow:hidden;
+                                        background:#f3f4f6;
+                                    ">
+                                        <img
+                                            src="{{ $imageSrc }}"
+                                            loading="lazy"
+                                            decoding="async"
+                                            width="240"
+                                            height="160"
+                                            style="
+                                                width:100%;
+                                                height:100%;
+                                                display:block;
+                                                object-fit:cover;
+                                            "
+                                        >
+                                    </div>
+                                @else
+                                    <div style="width:240px; height:160px; background:#f3f4f6; border-radius:12px;"></div>
+                                @endif
                             @else
-                                <div style="width:120px; height:120px; background:#f3f4f6; border-radius:12px;"></div>
+                                @if(count($galleryImages))
+                                    <div
+                                        class="gb-share-gallery"
+                                        data-gallery='@json($galleryImages)'
+                                        style="position:relative; width:240px;"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="gb-share-gallery-prev"
+                                            aria-label="Vorige foto"
+                                            style="
+                                                position:absolute;
+                                                left:12px;
+                                                top:50%;
+                                                transform:translateY(-50%);
+                                                width:42px;
+                                                height:42px;
+                                                border:none;
+                                                border-radius:999px;
+                                                background:rgba(17,24,39,0.7);
+                                                color:#fff;
+                                                font-size:28px;
+                                                line-height:1;
+                                                cursor:pointer;
+                                                z-index:2;
+                                                display:none;
+                                            "
+                                        >‹</button>
+
+                                        <button
+                                            type="button"
+                                            class="gb-share-gallery-open"
+                                            aria-label="Open fotogalerij"
+                                            style="
+                                                width:100%;
+                                                padding:0;
+                                                border:none;
+                                                background:transparent;
+                                                cursor:pointer;
+                                                display:block;
+                                            "
+                                        >
+                                            <div style="
+                                                width:240px;
+                                                height:160px;
+                                                border-radius:12px;
+                                                overflow:hidden;
+                                                background:#f3f4f6;
+                                            ">
+                                                <img
+                                                    src="{{ $galleryImages[0]['thumbnail'] }}"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    width="240"
+                                                    height="160"
+                                                    class="gb-share-gallery-image"
+                                                    style="
+                                                        width:100%;
+                                                        height:100%;
+                                                        display:block;
+                                                        object-fit:cover;
+                                                    "
+                                                >
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="gb-share-gallery-next"
+                                            aria-label="Volgende foto"
+                                            style="
+                                                position:absolute;
+                                                right:12px;
+                                                top:50%;
+                                                transform:translateY(-50%);
+                                                width:42px;
+                                                height:42px;
+                                                border:none;
+                                                border-radius:999px;
+                                                background:rgba(17,24,39,0.7);
+                                                color:#fff;
+                                                font-size:28px;
+                                                line-height:1;
+                                                cursor:pointer;
+                                                z-index:2;
+                                                display:none;
+                                            "
+                                        >›</button>
+
+                                        @if(count($galleryImages) > 1)
+                                            <div
+                                                class="gb-share-gallery-counter"
+                                                style="
+                                                    position:absolute;
+                                                    left:12px;
+                                                    bottom:12px;
+                                                    padding:6px 10px;
+                                                    border-radius:999px;
+                                                    background:rgba(17,24,39,0.7);
+                                                    color:#fff;
+                                                    font-size:12px;
+                                                    font-weight:600;
+                                                    z-index:2;
+                                                "
+                                            >
+                                                1 / {{ count($galleryImages) }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div style="width:240px; height:160px; background:#f3f4f6; border-radius:12px;"></div>
+                                @endif
                             @endif
                         </td>
 
@@ -143,6 +263,247 @@
             </div>
         @endforeach
     </div>
+
+    @if(! request()->is('maintenance/pdf'))
+        <div
+            id="shareGalleryLightbox"
+            style="
+                display:none;
+                position:fixed;
+                inset:0;
+                background:rgba(0,0,0,0.9);
+                z-index:9999;
+            "
+        >
+            <div
+                id="shareGalleryLightboxCenter"
+                style="
+                    position:absolute;
+                    inset:0;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    padding:24px;
+                "
+            >
+                <img
+                    id="shareGalleryLightboxImage"
+                    alt=""
+                    style="
+                        display:block;
+                        margin:auto;
+                        max-width:90vw;
+                        max-height:90vh;
+                        border-radius:12px;
+                        object-fit:contain;
+                    "
+                >
+            </div>
+
+            <button
+                type="button"
+                id="shareGalleryLightboxPrev"
+                aria-label="Vorige foto in vergroting"
+                style="
+                    position:absolute;
+                    left:24px;
+                    top:50%;
+                    transform:translateY(-50%);
+                    border:none;
+                    background:transparent;
+                    color:#fff;
+                    font-size:48px;
+                    cursor:pointer;
+                    z-index:1;
+                    display:none;
+                "
+            >‹</button>
+
+            <button
+                type="button"
+                id="shareGalleryLightboxNext"
+                aria-label="Volgende foto in vergroting"
+                style="
+                    position:absolute;
+                    right:24px;
+                    top:50%;
+                    transform:translateY(-50%);
+                    border:none;
+                    background:transparent;
+                    color:#fff;
+                    font-size:48px;
+                    cursor:pointer;
+                    z-index:1;
+                    display:none;
+                "
+            >›</button>
+
+            <button
+                type="button"
+                id="shareGalleryLightboxClose"
+                aria-label="Sluit fotogalerij"
+                style="
+                    position:absolute;
+                    top:24px;
+                    right:24px;
+                    border:none;
+                    background:transparent;
+                    color:#fff;
+                    font-size:36px;
+                    cursor:pointer;
+                    z-index:1;
+                "
+            >✕</button>
+        </div>
+
+        <script>
+            (function () {
+                const galleries = document.querySelectorAll('.gb-share-gallery');
+                const lightbox = document.getElementById('shareGalleryLightbox');
+                const lightboxImage = document.getElementById('shareGalleryLightboxImage');
+                const lightboxPrev = document.getElementById('shareGalleryLightboxPrev');
+                const lightboxNext = document.getElementById('shareGalleryLightboxNext');
+                const lightboxClose = document.getElementById('shareGalleryLightboxClose');
+                const canHover = window.matchMedia('(hover: hover)').matches;
+
+                let activeGallery = null;
+
+                function renderGallery(gallery) {
+                    const images = gallery.images;
+                    const hasMultiple = images.length > 1;
+
+                    gallery.image.src = images[gallery.index].thumbnail;
+
+                    if (gallery.counter) {
+                        gallery.counter.textContent = `${gallery.index + 1} / ${images.length}`;
+                    }
+
+                    gallery.prev.style.display = hasMultiple && (!canHover || gallery.hovering) ? 'block' : 'none';
+                    gallery.next.style.display = hasMultiple && (!canHover || gallery.hovering) ? 'block' : 'none';
+                }
+
+                function renderLightbox() {
+                    if (!activeGallery) {
+                        return;
+                    }
+
+                    const images = activeGallery.images;
+                    const hasMultiple = images.length > 1;
+
+                    lightboxImage.src = images[activeGallery.index].full;
+                    lightboxPrev.style.display = hasMultiple ? 'block' : 'none';
+                    lightboxNext.style.display = hasMultiple ? 'block' : 'none';
+                }
+
+                function openLightbox(gallery) {
+                    activeGallery = gallery;
+                    renderLightbox();
+                    lightbox.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closeLightbox() {
+                    activeGallery = null;
+                    lightbox.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+
+                function nextImage(gallery) {
+                    gallery.index = (gallery.index + 1) % gallery.images.length;
+                    renderGallery(gallery);
+
+                    if (activeGallery === gallery) {
+                        renderLightbox();
+                    }
+                }
+
+                function prevImage(gallery) {
+                    gallery.index = (gallery.index - 1 + gallery.images.length) % gallery.images.length;
+                    renderGallery(gallery);
+
+                    if (activeGallery === gallery) {
+                        renderLightbox();
+                    }
+                }
+
+                galleries.forEach((node) => {
+                    const gallery = {
+                        node,
+                        images: JSON.parse(node.dataset.gallery),
+                        index: 0,
+                        hovering: false,
+                        image: node.querySelector('.gb-share-gallery-image'),
+                        prev: node.querySelector('.gb-share-gallery-prev'),
+                        next: node.querySelector('.gb-share-gallery-next'),
+                        open: node.querySelector('.gb-share-gallery-open'),
+                        counter: node.querySelector('.gb-share-gallery-counter'),
+                    };
+
+                    node.addEventListener('mouseenter', function () {
+                        gallery.hovering = true;
+                        renderGallery(gallery);
+                    });
+
+                    node.addEventListener('mouseleave', function () {
+                        gallery.hovering = false;
+                        renderGallery(gallery);
+                    });
+
+                    gallery.prev.addEventListener('click', function () {
+                        prevImage(gallery);
+                    });
+
+                    gallery.next.addEventListener('click', function () {
+                        nextImage(gallery);
+                    });
+
+                    gallery.open.addEventListener('click', function () {
+                        openLightbox(gallery);
+                    });
+
+                    renderGallery(gallery);
+                });
+
+                lightboxPrev.addEventListener('click', function () {
+                    if (activeGallery) {
+                        prevImage(activeGallery);
+                    }
+                });
+
+                lightboxNext.addEventListener('click', function () {
+                    if (activeGallery) {
+                        nextImage(activeGallery);
+                    }
+                });
+
+                lightboxClose.addEventListener('click', closeLightbox);
+
+                lightbox.addEventListener('click', function (event) {
+                    if (event.target === lightbox || event.target.id === 'shareGalleryLightboxCenter') {
+                        closeLightbox();
+                    }
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (lightbox.style.display !== 'block' || !activeGallery) {
+                        return;
+                    }
+
+                    if (event.key === 'ArrowRight') {
+                        nextImage(activeGallery);
+                    }
+
+                    if (event.key === 'ArrowLeft') {
+                        prevImage(activeGallery);
+                    }
+
+                    if (event.key === 'Escape') {
+                        closeLightbox();
+                    }
+                });
+            })();
+        </script>
+    @endif
 
 </body>
 </html>
