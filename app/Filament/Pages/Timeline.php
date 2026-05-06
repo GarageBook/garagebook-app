@@ -173,6 +173,16 @@ class Timeline extends Page
             return $vehicleId;
         }
 
+        $latestMaintenanceVehicleId = MaintenanceLog::query()
+            ->whereIn('vehicle_id', $vehicles->pluck('id'))
+            ->orderByDesc('maintenance_date')
+            ->orderByDesc('id')
+            ->value('vehicle_id');
+
+        if ($latestMaintenanceVehicleId && $vehicles->contains('id', $latestMaintenanceVehicleId)) {
+            return $latestMaintenanceVehicleId;
+        }
+
         return $vehicles->first()->id;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
@@ -124,6 +125,16 @@ class ListMaintenanceLogs extends ListRecords
 
         if ($vehicleId && $vehicles->contains('id', $vehicleId)) {
             return $vehicleId;
+        }
+
+        $latestMaintenanceVehicleId = MaintenanceLog::query()
+            ->whereIn('vehicle_id', $vehicles->pluck('id'))
+            ->orderByDesc('maintenance_date')
+            ->orderByDesc('id')
+            ->value('vehicle_id');
+
+        if ($latestMaintenanceVehicleId && $vehicles->contains('id', $latestMaintenanceVehicleId)) {
+            return $latestMaintenanceVehicleId;
         }
 
         return $vehicles->first()->id;

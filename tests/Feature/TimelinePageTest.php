@@ -73,4 +73,48 @@ class TimelinePageTest extends TestCase
             ->assertDontSeeText('Nieuwe remblokken')
             ->assertDontSeeText('Bandenwissel');
     }
+
+    public function test_timeline_defaults_to_vehicle_with_most_recent_maintenance(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $olderVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+            'nickname' => 'Circuitfiets',
+        ]);
+
+        $latestVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tracer 9',
+            'nickname' => 'Tourfiets',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $olderVehicle->id,
+            'description' => 'Olie vervangen',
+            'km_reading' => 12000,
+            'maintenance_date' => '2026-01-15',
+            'cost' => 149.95,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $latestVehicle->id,
+            'description' => 'Ketting gespannen',
+            'km_reading' => 8000,
+            'maintenance_date' => '2026-02-15',
+            'cost' => 89.95,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/tijdlijn')
+            ->assertOk()
+            ->assertSeeText('Tourfiets')
+            ->assertSeeText('Ketting gespannen')
+            ->assertDontSeeText('Olie vervangen');
+    }
 }

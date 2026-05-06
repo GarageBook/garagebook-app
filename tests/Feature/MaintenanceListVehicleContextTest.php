@@ -57,6 +57,47 @@ class MaintenanceListVehicleContextTest extends TestCase
             ->assertDontSeeText('Ketting gespannen');
     }
 
+    public function test_maintenance_list_defaults_to_vehicle_with_most_recent_maintenance(): void
+    {
+        $user = User::factory()->create();
+
+        $olderVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+            'nickname' => 'Circuitfiets',
+        ]);
+
+        $latestVehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tracer 9',
+            'nickname' => 'Tourfiets',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $olderVehicle->id,
+            'description' => 'Olie vervangen',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $latestVehicle->id,
+            'description' => 'Ketting gespannen',
+            'km_reading' => 8000,
+            'maintenance_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(ListMaintenanceLogs::class)
+            ->assertSet('activeVehicleId', $latestVehicle->id)
+            ->assertSeeText('Tourfiets')
+            ->assertSeeText('Ketting gespannen')
+            ->assertDontSeeText('Olie vervangen');
+    }
+
     public function test_maintenance_list_header_actions_follow_the_selected_vehicle(): void
     {
         $user = User::factory()->create([
