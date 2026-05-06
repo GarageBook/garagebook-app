@@ -83,14 +83,27 @@
                     <tr>
                         <td style="width:140px; vertical-align:top;">
                             @if($imageSrc)
-                                <img
-                                    src="{{ $imageSrc }}"
-                                    loading="lazy"
-                                    decoding="async"
-                                    width="120"
-                                    height="120"
-                                    style="width:120px; border-radius:12px;"
-                                >
+                                <div style="
+                                    width:120px;
+                                    height:120px;
+                                    border-radius:12px;
+                                    overflow:hidden;
+                                    background:#f3f4f6;
+                                ">
+                                    <img
+                                        src="{{ $imageSrc }}"
+                                        loading="lazy"
+                                        decoding="async"
+                                        width="120"
+                                        height="120"
+                                        style="
+                                            width:100%;
+                                            height:100%;
+                                            display:block;
+                                            object-fit:cover;
+                                        "
+                                    >
+                                </div>
                             @else
                                 <div style="width:120px; height:120px; background:#f3f4f6; border-radius:12px;"></div>
                             @endif
