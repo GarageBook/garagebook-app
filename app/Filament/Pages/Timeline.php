@@ -27,14 +27,14 @@ class Timeline extends Page
     #[Url(as: 'vehicle_id')]
     public ?int $activeVehicleId = null;
 
-    public static function canAccess(): bool
+    public static function getNavigationBadge(): ?string
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return 'new!';
     }
 
-    public static function shouldRegisterNavigation(): bool
+    public static function getNavigationBadgeColor(): string | array | null
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return 'warning';
     }
 
     public function mount(): void
