@@ -70,6 +70,89 @@ class PdfThumbnail
         return $dataUri;
     }
 
+    public static function coverFromPath(
+        string $path,
+        int $targetWidth = 240,
+        int $targetHeight = 160,
+        int $quality = 75
+    ): ?string {
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+
+        $imageInfo = @getimagesize($path);
+
+        if (! is_array($imageInfo)) {
+            return null;
+        }
+
+        [$width, $height] = $imageInfo;
+        $mimeType = $imageInfo['mime'] ?? null;
+
+        if (! $mimeType || $width < 1 || $height < 1 || $targetWidth < 1 || $targetHeight < 1) {
+            return null;
+        }
+
+        if (! self::canLoadIntoMemory($width, $height)) {
+            return null;
+        }
+
+        $source = self::createSourceImage($path, $mimeType);
+
+        if (! $source) {
+            return null;
+        }
+
+        $thumbnail = imagecreatetruecolor($targetWidth, $targetHeight);
+
+        if (! $thumbnail) {
+            imagedestroy($source);
+
+            return null;
+        }
+
+        imagealphablending($thumbnail, false);
+        imagesavealpha($thumbnail, true);
+
+        $background = imagecolorallocatealpha($thumbnail, 255, 255, 255, 0);
+        imagefill($thumbnail, 0, 0, $background);
+
+        $sourceRatio = $width / $height;
+        $targetRatio = $targetWidth / $targetHeight;
+
+        if ($sourceRatio > $targetRatio) {
+            $cropHeight = $height;
+            $cropWidth = (int) round($height * $targetRatio);
+            $sourceX = (int) round(($width - $cropWidth) / 2);
+            $sourceY = 0;
+        } else {
+            $cropWidth = $width;
+            $cropHeight = (int) round($width / $targetRatio);
+            $sourceX = 0;
+            $sourceY = (int) round(($height - $cropHeight) / 2);
+        }
+
+        imagecopyresampled(
+            $thumbnail,
+            $source,
+            0,
+            0,
+            $sourceX,
+            $sourceY,
+            $targetWidth,
+            $targetHeight,
+            $cropWidth,
+            $cropHeight
+        );
+
+        $dataUri = self::encodeAsJpegDataUri($thumbnail, $quality);
+
+        imagedestroy($thumbnail);
+        imagedestroy($source);
+
+        return $dataUri;
+    }
+
     private static function canLoadIntoMemory(int $width, int $height): bool
     {
         $estimatedBytes = $width * $height * 5;

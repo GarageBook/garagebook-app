@@ -88,8 +88,10 @@
                 $galleryImages = [];
 
                 if ($firstAttachment && request()->is('maintenance/pdf')) {
-                    $imageSrc = PdfThumbnail::fromPath(
-                        storage_path('app/public/' . ltrim($firstAttachment, '/'))
+                    $imageSrc = PdfThumbnail::coverFromPath(
+                        storage_path('app/public/' . ltrim($firstAttachment, '/')),
+                        240,
+                        160
                     );
                 }
 
