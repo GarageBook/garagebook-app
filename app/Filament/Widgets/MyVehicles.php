@@ -2,7 +2,9 @@
 
 namespace App\Filament\Widgets;
 
+use App\Support\MediaPath;
 use Filament\Widgets\Widget;
+use Illuminate\Support\Facades\Storage;
 
 class MyVehicles extends Widget
 {
@@ -13,9 +15,33 @@ class MyVehicles extends Widget
     public function getViewData(): array
     {
         $user = auth()->user();
+        $vehicles = $user->vehicles()->latest()->get()->map(function ($vehicle) {
+            $paths = [
+                $vehicle->photo,
+                ...(is_array($vehicle->photos) ? $vehicle->photos : []),
+                ...(is_array($vehicle->media_attachments) ? $vehicle->media_attachments : []),
+            ];
+
+            $galleryPhotos = collect($paths)
+                ->filter(fn (?string $path) => filled($path) && MediaPath::isImage($path))
+                ->map(fn (string $path) => Storage::url($path))
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($galleryPhotos === []) {
+                $galleryPhotos = [
+                    asset('images/garagebook-hero-workshop-motor.webp'),
+                ];
+            }
+
+            $vehicle->dashboard_gallery_photos = $galleryPhotos;
+
+            return $vehicle;
+        });
 
         return [
-            'vehicles' => $user->vehicles()->latest()->get(),
+            'vehicles' => $vehicles,
         ];
     }
 }

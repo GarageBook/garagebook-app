@@ -5,31 +5,142 @@
         </h2>
 
         @forelse($vehicles as $vehicle)
+            @php
+                $galleryPhotos = $vehicle->dashboard_gallery_photos ?? [asset('images/garagebook-hero-workshop-motor.webp')];
+                $hasMultiplePhotos = count($galleryPhotos) > 1;
+            @endphp
             <div style="
                 border-radius:16px;
                 overflow:hidden;
                 border:1px solid #e5e7eb;
                 background:#fff;
                 margin-bottom:16px;
-            ">
+            "
+            x-data="{
+                photos: @js($galleryPhotos),
+                currentIndex: 0,
+                lightboxOpen: false,
+                hovering: false,
+                canHover: window.matchMedia('(hover: hover)').matches,
+                next() {
+                    this.currentIndex = (this.currentIndex + 1) % this.photos.length;
+                },
+                prev() {
+                    this.currentIndex = (this.currentIndex - 1 + this.photos.length) % this.photos.length;
+                },
+                openLightbox() {
+                    this.lightboxOpen = true;
+                    document.body.style.overflow = 'hidden';
+                },
+                closeLightbox() {
+                    this.lightboxOpen = false;
+                    document.body.style.overflow = '';
+                }
+            }"
+            @mouseenter="hovering = true"
+            @mouseleave="hovering = false"
+            @keydown.window.prevent.arrow-right="lightboxOpen && next()"
+            @keydown.window.prevent.arrow-left="lightboxOpen && prev()"
+            @keydown.window.prevent.escape="lightboxOpen && closeLightbox()"
+            >
 
-                <!-- IMAGE -->
-                <img
-                    src="{{ $vehicle->photo 
-                        ? asset('storage/' . $vehicle->photo) 
-                        : asset('images/garagebook-hero-workshop-motor.webp') }}"
-                    alt="{{ $vehicle->brand }} {{ $vehicle->model }}"
-                    width="7262"
-                    height="2875"
-                    loading="lazy"
-                    decoding="async"
-                    style="
-                        width:100%;
-                        height:400px;
-                        object-fit:cover;
-                        display:block;
-                    "
-                >
+                <div style="position:relative;">
+                    <button
+                        type="button"
+                        x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }} && (!canHover || hovering)"
+                        x-cloak
+                        @click="prev()"
+                        aria-label="Vorige foto"
+                        style="
+                            position:absolute;
+                            left:16px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            width:42px;
+                            height:42px;
+                            border:none;
+                            border-radius:999px;
+                            background:rgba(17,24,39,0.7);
+                            color:#fff;
+                            font-size:28px;
+                            line-height:1;
+                            cursor:pointer;
+                            z-index:2;
+                        "
+                    >‹</button>
+
+                    <button
+                        type="button"
+                        x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }} && (!canHover || hovering)"
+                        x-cloak
+                        @click="next()"
+                        aria-label="Volgende foto"
+                        style="
+                            position:absolute;
+                            right:16px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            width:42px;
+                            height:42px;
+                            border:none;
+                            border-radius:999px;
+                            background:rgba(17,24,39,0.7);
+                            color:#fff;
+                            font-size:28px;
+                            line-height:1;
+                            cursor:pointer;
+                            z-index:2;
+                        "
+                    >›</button>
+
+                    <button
+                        type="button"
+                        @click="openLightbox()"
+                        aria-label="Open fotogalerij"
+                        style="
+                            width:100%;
+                            padding:0;
+                            border:none;
+                            background:transparent;
+                            cursor:pointer;
+                            display:block;
+                        "
+                    >
+                        <img
+                            x-bind:src="photos[currentIndex]"
+                            alt="{{ $vehicle->brand }} {{ $vehicle->model }}"
+                            width="7262"
+                            height="2875"
+                            loading="lazy"
+                            decoding="async"
+                            style="
+                                width:100%;
+                                height:400px;
+                                object-fit:cover;
+                                display:block;
+                            "
+                        >
+                    </button>
+
+                    <div
+                        x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }}"
+                        x-cloak
+                        style="
+                            position:absolute;
+                            left:16px;
+                            bottom:16px;
+                            padding:6px 10px;
+                            border-radius:999px;
+                            background:rgba(17,24,39,0.7);
+                            color:#fff;
+                            font-size:12px;
+                            font-weight:600;
+                            z-index:2;
+                        "
+                    >
+                        <span x-text="`${currentIndex + 1} / ${photos.length}`"></span>
+                    </div>
+                </div>
 
                 <!-- CONTENT -->
                 <div style="padding:18px;">
@@ -75,6 +186,103 @@
                             + Onderhoud
                         </a>
                     </div>
+                </div>
+
+                <div
+                    x-show="lightboxOpen"
+                    x-cloak
+                    @click.self="closeLightbox()"
+                    style="
+                        position:fixed;
+                        inset:0;
+                        background:rgba(0,0,0,0.9);
+                        z-index:9999;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        padding:24px;
+                    "
+                >
+                    <div
+                        style="
+                            position:absolute;
+                            inset:0;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            padding:24px;
+                        "
+                    >
+                        <img
+                            x-bind:src="photos[currentIndex]"
+                            alt="{{ $vehicle->brand }} {{ $vehicle->model }}"
+                            style="
+                                display:block;
+                                margin:auto;
+                                max-width:90vw;
+                                max-height:90vh;
+                                border-radius:12px;
+                                object-fit:contain;
+                            "
+                        >
+                    </div>
+
+                    <button
+                        type="button"
+                        x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }}"
+                        x-cloak
+                        @click="prev()"
+                        aria-label="Vorige foto in vergroting"
+                        style="
+                            position:absolute;
+                            left:24px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            border:none;
+                            background:transparent;
+                            color:#fff;
+                            font-size:48px;
+                            cursor:pointer;
+                            z-index:1;
+                        "
+                    >‹</button>
+
+                    <button
+                        type="button"
+                        x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }}"
+                        x-cloak
+                        @click="next()"
+                        aria-label="Volgende foto in vergroting"
+                        style="
+                            position:absolute;
+                            right:24px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            border:none;
+                            background:transparent;
+                            color:#fff;
+                            font-size:48px;
+                            cursor:pointer;
+                            z-index:1;
+                        "
+                    >›</button>
+
+                    <button
+                        type="button"
+                        @click="closeLightbox()"
+                        aria-label="Sluit fotogalerij"
+                        style="
+                            position:absolute;
+                            top:24px;
+                            right:24px;
+                            border:none;
+                            background:transparent;
+                            color:#fff;
+                            font-size:36px;
+                            cursor:pointer;
+                            z-index:1;
+                        "
+                    >✕</button>
                 </div>
             </div>
 
