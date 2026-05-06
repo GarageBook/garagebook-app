@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Register;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
@@ -40,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                Timeline::class,
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
                 BlogResource::class,
