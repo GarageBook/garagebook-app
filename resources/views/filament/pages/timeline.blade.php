@@ -154,6 +154,8 @@
             overflow-x: auto;
             overflow-y: visible;
             padding-bottom: 0.5rem;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
             scrollbar-color: rgba(15, 23, 42, 0.22) transparent;
         }
@@ -395,17 +397,18 @@
         }
 
         .gb-timeline-card__button {
-            width: 100%;
+            width: fit-content;
             margin-top: 0.2rem;
-            padding: 0.8rem 1rem;
-            border: none;
-            border-radius: 16px;
-            background: linear-gradient(135deg, rgba(255, 210, 0, 0.95), rgba(245, 183, 0, 0.95));
-            color: #111827;
-            font-size: 0.9rem;
-            font-weight: 700;
+            padding: 0.58rem 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.7);
+            color: #0f172a;
+            font-size: 0.82rem;
+            font-weight: 600;
             cursor: pointer;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
 
         .gb-timeline-empty {
@@ -633,18 +636,18 @@
     <div
         class="gb-timeline-page"
         x-data="{
-            entries: {{ $entriesJson ?? '[]' }},
+            entries: @js($entries),
             selectedEntry: null,
             selectedImageIndex: 0,
             openEntry(entryId) {
                 this.selectedEntry = this.entries.find((entry) => entry.id === entryId) ?? null;
                 this.selectedImageIndex = 0;
-                document.body.style.overflow = this.selectedEntry ? 'hidden' : '';
+                this.syncBodyScroll();
             },
             closeEntry() {
                 this.selectedEntry = null;
                 this.selectedImageIndex = 0;
-                document.body.style.overflow = '';
+                this.syncBodyScroll();
             },
             nextImage() {
                 if (! this.selectedEntry || this.selectedEntry.images.length < 2) {
@@ -659,6 +662,9 @@
                 }
 
                 this.selectedImageIndex = (this.selectedImageIndex - 1 + this.selectedEntry.images.length) % this.selectedEntry.images.length;
+            },
+            syncBodyScroll() {
+                document.body.style.overflow = this.selectedEntry ? 'hidden' : '';
             }
         }"
         @keydown.window.prevent.escape="selectedEntry && closeEntry()"
@@ -789,7 +795,12 @@
             @endif
         </div>
 
-        <div class="gb-timeline-modal" x-show="selectedEntry" x-cloak @click.self="closeEntry()" x-transition.opacity>
+        <div
+            class="gb-timeline-modal"
+            x-cloak
+            x-bind:style="selectedEntry ? 'display:flex;' : 'display:none;'"
+            @click.self="closeEntry()"
+        >
             <div class="gb-timeline-modal__dialog">
                 <div class="gb-timeline-modal__grid" x-show="selectedEntry">
                     <div class="gb-timeline-modal__gallery">
