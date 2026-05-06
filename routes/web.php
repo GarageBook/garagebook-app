@@ -60,9 +60,18 @@ Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug)
 });
 
 Route::get('/maintenance/pdf', function () {
-    $vehicle = Vehicle::where('user_id', auth()->id())
+    $vehicles = Vehicle::query()
+        ->where('user_id', auth()->id())
         ->latest()
-        ->firstOrFail();
+        ->get();
+
+    $requestedVehicleId = request()->integer('vehicle_id');
+
+    $vehicle = $requestedVehicleId
+        ? $vehicles->firstWhere('id', $requestedVehicleId)
+        : $vehicles->first();
+
+    abort_if(! $vehicle, 404);
 
     $logs = MaintenanceLog::where('vehicle_id', $vehicle->id)
         ->latest('maintenance_date')
