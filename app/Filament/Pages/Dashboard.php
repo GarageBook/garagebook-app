@@ -3,9 +3,13 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\MyVehicles;
+use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Livewire;
+use Filament\Schemas\Schema;
 
 class Dashboard extends BaseDashboard
 {
@@ -19,16 +23,18 @@ class Dashboard extends BaseDashboard
         return 'Beheer je voertuigen en voeg onderhoud toe.';
     }
 
-    protected function getHeaderWidgets(): array
+    public function headerWidgets(Schema $schema): Schema
     {
-        return [
-            MyVehicles::class,
-            MaintenanceReminders::class,
-        ];
-    }
-
-    public function getColumns(): int | array
-    {
-        return 2;
+        return $schema->components([
+            Grid::make([
+                'md' => 2,
+            ])->schema([
+                Livewire::make(MyVehicles::class),
+                Grid::make(1)->schema([
+                    Livewire::make(MaintenanceReminders::class),
+                    Livewire::make(MaintenanceCosts::class),
+                ]),
+            ]),
+        ]);
     }
 }
