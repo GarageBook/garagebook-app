@@ -45,6 +45,11 @@ class Vehicle extends Model
         return $this->hasMany(FuelLog::class);
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(VehicleDocument::class);
+    }
+
     public function setPurchasePriceAttribute(mixed $value): void
     {
         $this->attributes['purchase_price'] = self::normalizeDecimal($value);

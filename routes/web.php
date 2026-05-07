@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Blog;
 use App\Http\Controllers\PublicImageController;
+use App\Http\Controllers\VehicleDocumentController;
 use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
@@ -83,6 +84,14 @@ Route::get('/maintenance/pdf', function () {
         Str::slug($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model)
         . '-onderhoud.pdf'
     );
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/documents/{document}', [VehicleDocumentController::class, 'show'])
+        ->name('vehicle-documents.show');
+
+    Route::get('/documents/{document}/download', [VehicleDocumentController::class, 'download'])
+        ->name('vehicle-documents.download');
 });
 
 /*
