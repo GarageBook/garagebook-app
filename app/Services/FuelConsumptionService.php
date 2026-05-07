@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FuelLog;
 use App\Models\Vehicle;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class FuelConsumptionService
@@ -123,5 +124,72 @@ class FuelConsumptionService
                 ->latest('id')])
             ->latest()
             ->get();
+    }
+
+    public function getTrendVehicleOptionsForUser(int $userId): array
+    {
+        return Vehicle::query()
+            ->where('user_id', $userId)
+            ->whereHas('fuelLogs')
+            ->latest()
+            ->get()
+            ->mapWithKeys(fn (Vehicle $vehicle) => [
+                (string) $vehicle->id => $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model),
+            ])
+            ->all();
+    }
+
+    public function resolveDefaultTrendVehicleId(int $userId): ?int
+    {
+        $vehicleIds = Vehicle::query()
+            ->where('user_id', $userId)
+            ->whereHas('fuelLogs')
+            ->pluck('id');
+
+        if ($vehicleIds->isEmpty()) {
+            return null;
+        }
+
+        return FuelLog::query()
+            ->whereIn('vehicle_id', $vehicleIds)
+            ->orderByDesc('fuel_date')
+            ->orderByDesc('id')
+            ->value('vehicle_id');
+    }
+
+    public function getRecentConsumptionTrendForUser(int $userId, ?string $unit, ?int $vehicleId = null, int $limit = 8): array
+    {
+        $unit = $this->normalizeUnit($unit);
+        $limit = max(1, $limit);
+
+        $query = FuelLog::query()
+            ->whereHas('vehicle', fn ($vehicleQuery) => $vehicleQuery->where('user_id', $userId))
+            ->where('distance_km', '>', 0)
+            ->where('fuel_liters', '>', 0)
+            ->with('vehicle')
+            ->orderByDesc('fuel_date')
+            ->orderByDesc('id');
+
+        if ($vehicleId) {
+            $query->where('vehicle_id', $vehicleId);
+        }
+
+        $logs = $query
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+
+        return [
+            'labels' => $logs
+                ->map(fn (FuelLog $log) => CarbonImmutable::parse($log->fuel_date)->translatedFormat('d M'))
+                ->all(),
+            'averages' => $logs
+                ->map(fn (FuelLog $log) => round(
+                    $this->calculateAverage((float) $log->distance_km, (float) $log->fuel_liters, $unit) ?? 0,
+                    2
+                ))
+                ->all(),
+        ];
     }
 }

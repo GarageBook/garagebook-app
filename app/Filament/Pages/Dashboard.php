@@ -2,8 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\CostBreakdownByVehicleChart;
+use App\Filament\Widgets\CumulativeCostTrendChart;
 use App\Filament\Widgets\MyVehicles;
 use App\Filament\Widgets\FuelConsumptionOverview;
+use App\Filament\Widgets\FuelConsumptionTrendChart;
+use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use Filament\Facades\Filament;
@@ -26,13 +30,25 @@ class Dashboard extends BaseDashboard
 
     public function headerWidgets(Schema $schema): Schema
     {
+        $hasFuelLogs = Filament::auth()->user()?->vehicles()->whereHas('fuelLogs')->exists();
+
         $secondaryWidgets = [
             Livewire::make(MaintenanceReminders::class),
             Livewire::make(MaintenanceCosts::class),
         ];
 
-        if (Filament::auth()->user()?->vehicles()->whereHas('fuelLogs')->exists()) {
+        if ($hasFuelLogs) {
             $secondaryWidgets[] = Livewire::make(FuelConsumptionOverview::class);
+        }
+
+        $chartWidgets = [
+            Livewire::make(CostBreakdownByVehicleChart::class),
+            Livewire::make(MaintenanceActivityChart::class),
+            Livewire::make(CumulativeCostTrendChart::class),
+        ];
+
+        if ($hasFuelLogs) {
+            $chartWidgets[] = Livewire::make(FuelConsumptionTrendChart::class);
         }
 
         return $schema->components([
@@ -42,6 +58,9 @@ class Dashboard extends BaseDashboard
                 Livewire::make(MyVehicles::class),
                 Grid::make(1)->schema($secondaryWidgets),
             ]),
+            Grid::make([
+                'md' => 2,
+            ])->schema($chartWidgets),
         ]);
     }
 }
