@@ -36,7 +36,7 @@ class FuelLogResource extends Resource
 
     public static function getNavigationBadgeColor(): string | array | null
     {
-        return 'warning';
+        return 'info';
     }
 
     public static function form(Schema $schema): Schema

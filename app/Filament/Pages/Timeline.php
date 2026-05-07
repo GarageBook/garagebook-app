@@ -35,7 +35,7 @@ class Timeline extends Page
 
     public static function getNavigationBadgeColor(): string | array | null
     {
-        return 'warning';
+        return 'info';
     }
 
     public function mount(): void
