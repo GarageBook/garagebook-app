@@ -116,4 +116,71 @@ class MaintenanceReminderScopeTest extends TestCase
 
         $this->assertSame([], app(ReminderService::class)->getWidgetItems());
     }
+
+    public function test_reminder_service_combines_date_and_km_into_actionable_upcoming_text(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'RSV Mille',
+            'current_km' => 14900,
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie en oliefilter vervangen',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subMonths(11)->subWeeks(1)->toDateString(),
+            'reminder_enabled' => true,
+            'interval_months' => 12,
+            'interval_km' => 3000,
+        ]);
+
+        $status = app(ReminderService::class)->getStatus($log);
+
+        $this->assertSame('upcoming', $status['type']);
+        $this->assertSame('Olie en oliefilter vervangen', $status['heading']);
+        $this->assertStringStartsWith('Over ', $status['text']);
+        $this->assertStringContainsString('100 km', $status['text']);
+    }
+
+    public function test_overdue_reminders_are_sorted_ahead_of_upcoming_items(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'RSV Mille',
+            'current_km' => 18000,
+        ]);
+
+        $upcoming = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Koelvloeistof verversen',
+            'km_reading' => 15000,
+            'maintenance_date' => now()->subMonths(10)->toDateString(),
+            'reminder_enabled' => true,
+            'interval_months' => 12,
+        ]);
+
+        $overdue = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie en filter',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subMonths(15)->toDateString(),
+            'reminder_enabled' => true,
+            'interval_months' => 12,
+        ]);
+
+        $this->actingAs($user);
+
+        $items = app(ReminderService::class)->getWidgetItems();
+
+        $this->assertCount(2, $items);
+        $this->assertTrue($overdue->is($items[0]['log']));
+        $this->assertTrue($upcoming->is($items[1]['log']));
+    }
 }
