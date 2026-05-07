@@ -247,6 +247,19 @@ class AdminPanelProvider extends PanelProvider
                         overflow-wrap: anywhere;
                     }
 
+                    .fi-sidebar-group[data-group-label="Beheer"] {
+                        margin-top: 2rem;
+                        padding-top: 1.25rem;
+                        border-top: 1px solid rgba(148, 163, 184, 0.32);
+                    }
+
+                    .fi-sidebar-group[data-group-label="Beheer"] .fi-sidebar-group-label {
+                        color: #64748b;
+                        font-weight: 700;
+                        letter-spacing: 0.08em;
+                        text-transform: uppercase;
+                    }
+
                     @media (max-width: 1024px) {
                         .gb-footer-inner {
                             width: 100%;
