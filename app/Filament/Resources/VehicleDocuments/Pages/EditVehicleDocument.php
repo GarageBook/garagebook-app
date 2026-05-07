@@ -11,6 +11,8 @@ class EditVehicleDocument extends EditRecord
 {
     protected static string $resource = VehicleDocumentResource::class;
 
+    protected string | \Filament\Support\Enums\Width | null $maxContentWidth = 'full';
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         return VehicleDocumentMetadata::hydrate($data);

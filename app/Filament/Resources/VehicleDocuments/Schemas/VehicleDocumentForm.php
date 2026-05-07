@@ -61,7 +61,8 @@ class VehicleDocumentForm
                             ->preserveFilenames(false)
                             ->storeFileNamesIn('original_filename')
                             ->downloadable(false)
-                            ->openable(false),
+                            ->openable(false)
+                            ->columnSpanFull(),
 
                         Forms\Components\Hidden::make('original_filename'),
                         Forms\Components\Hidden::make('mime_type'),
