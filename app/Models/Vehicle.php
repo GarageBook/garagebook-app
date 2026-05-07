@@ -16,6 +16,7 @@ class Vehicle extends Model
         'nickname',
         'license_plate',
         'current_km',
+        'distance_unit',
         'year',
         'purchase_price',
         'insurance_cost_per_month',

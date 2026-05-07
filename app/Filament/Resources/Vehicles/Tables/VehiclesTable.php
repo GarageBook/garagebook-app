@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Vehicles\Tables;
 
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use Filament\Actions\EditAction;
 use Filament\Actions\CreateAction;
 use Filament\Tables;
@@ -35,7 +36,12 @@ class VehiclesTable
                     ->label('Kenteken'),
 
                 Tables\Columns\TextColumn::make('current_km')
-                    ->label('KM'),
+                    ->label('Afstand')
+                    ->formatStateUsing(fn ($state, Vehicle $record) => app(DistanceUnitService::class)->formatFromKilometers(
+                        $state,
+                        $record->distance_unit,
+                        0
+                    )),
 
                 Tables\Columns\TextColumn::make('year')
                     ->label('Bouwjaar'),

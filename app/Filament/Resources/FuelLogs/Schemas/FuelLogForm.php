@@ -4,6 +4,7 @@ namespace App\Filament\Resources\FuelLogs\Schemas;
 
 use App\Models\FuelLog;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
 use Filament\Forms;
 use Filament\Schemas\Components\Section;
@@ -34,7 +35,20 @@ class FuelLogForm
                             ->required()
                             ->default(fn () => request()->integer('vehicle_id') ?: null)
                             ->live()
-                            ->afterStateUpdated(fn (Set $set, Get $get, ?string $state) => self::syncDerivedDistance($set, $get, $state ? (int) $state : null)),
+                            ->afterStateUpdated(function (Set $set, Get $get, ?string $state): void {
+                                $vehicleId = $state ? (int) $state : null;
+                                $set('distance_unit', app(DistanceUnitService::class)->resolveForVehicleId($vehicleId));
+                                self::syncDerivedDistance($set, $get, $vehicleId);
+                            }),
+
+                        Forms\Components\Select::make('distance_unit')
+                            ->label('Afstandseenheid')
+                            ->options(app(DistanceUnitService::class)->getSupportedUnits())
+                            ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(request()->integer('vehicle_id') ?: null))
+                            ->required()
+                            ->selectablePlaceholder(false)
+                            ->live()
+                            ->helperText('Wordt onthouden als standaard voor dit voertuig.'),
 
                         Forms\Components\DatePicker::make('fuel_date')
                             ->label('Datum')
@@ -45,20 +59,20 @@ class FuelLogForm
                             ->afterStateUpdated(fn (Set $set, Get $get) => self::syncDerivedDistance($set, $get, self::intOrNull($get('vehicle_id')))),
 
                         Forms\Components\TextInput::make('odometer_km')
-                            ->label('Kilometerstand')
+                            ->label('Tellerstand')
                             ->numeric()
                             ->inputMode('decimal')
-                            ->suffix('km')
+                            ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
                             ->live()
                             ->afterStateUpdated(fn (Set $set, Get $get) => self::syncDerivedDistance($set, $get, self::intOrNull($get('vehicle_id')))),
 
                         Forms\Components\TextInput::make('distance_km')
-                            ->label('Aantal km gereden')
+                            ->label('Afgelegde afstand')
                             ->numeric()
                             ->inputMode('decimal')
                             ->required()
-                            ->suffix('km')
-                            ->helperText('Verplicht. Wordt automatisch voorgesteld zodra kilometerstand en een vorige tankbeurt bekend zijn, maar blijft handmatig aanpasbaar.'),
+                            ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
+                            ->helperText('Verplicht. Wordt automatisch voorgesteld zodra tellerstand en een vorige tankbeurt bekend zijn, maar blijft handmatig aanpasbaar.'),
 
                         Forms\Components\TextInput::make('fuel_liters')
                             ->label('Aantal liter brandstof')

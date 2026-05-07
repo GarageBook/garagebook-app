@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MaintenanceLogs\Tables;
 
+use App\Services\DistanceUnitService;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Actions\BulkActionGroup;
@@ -53,8 +54,12 @@ class MaintenanceLogsTable
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('km_reading')
-                    ->label('KM')
-                    ->suffix(' km')
+                    ->label('Afstand')
+                    ->formatStateUsing(fn ($state, $record) => app(DistanceUnitService::class)->formatFromKilometers(
+                        $state,
+                        $record->vehicle?->distance_unit,
+                        0
+                    ))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('maintenance_date')

@@ -116,8 +116,8 @@
 
             <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px;">
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Totaal km</div>
-                    <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ number_format((float) $summary['distance_km'], 1, ',', '.') }} km</div>
+                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Totale afstand</div>
+                    <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['distance_label'] }}</div>
                 </div>
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
                     <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Totaal liters</div>

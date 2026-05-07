@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FuelLogs\Tables;
 
 use App\Models\FuelLog;
+use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -27,13 +28,19 @@ class FuelLogsTable
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('odometer_km')
-                    ->label('Kilometerstand')
-                    ->formatStateUsing(fn ($state) => $state !== null ? number_format((float) $state, 1, ',', '.') . ' km' : 'Niet ingevuld')
+                    ->label('Tellerstand')
+                    ->formatStateUsing(fn ($state, FuelLog $record) => $state !== null
+                        ? app(DistanceUnitService::class)->formatFromKilometers($state, $record->vehicle?->distance_unit, 1)
+                        : 'Niet ingevuld')
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('distance_km')
-                    ->label('Gereden')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 1, ',', '.') . ' km')
+                    ->label('Afstand')
+                    ->formatStateUsing(fn ($state, FuelLog $record) => app(DistanceUnitService::class)->formatFromKilometers(
+                        $state,
+                        $record->vehicle?->distance_unit,
+                        1
+                    ))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('fuel_liters')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Vehicles\Pages;
 
 use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Services\DistanceUnitService;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -12,6 +13,28 @@ use Illuminate\Support\Facades\Storage;
 class EditVehicle extends EditRecord
 {
     protected static string $resource = VehicleResource::class;
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $service = app(DistanceUnitService::class);
+        $unit = $service->normalizeUnit($data['distance_unit'] ?? $this->record->distance_unit);
+
+        $data['distance_unit'] = $unit;
+        $data['current_km'] = $service->fromKilometers($data['current_km'] ?? null, $unit, 0);
+
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $service = app(DistanceUnitService::class);
+        $data['distance_unit'] = $service->normalizeUnit($data['distance_unit'] ?? null);
+        $data['current_km'] = (int) round(
+            $service->toKilometers($data['current_km'] ?? null, $data['distance_unit'], 0) ?? 0
+        );
+
+        return $data;
+    }
 
     protected function getHeaderActions(): array
     {

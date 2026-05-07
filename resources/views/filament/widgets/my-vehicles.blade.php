@@ -158,7 +158,7 @@
                                 color:#6b7280;
                                 font-size:14px;
                             ">
-                                {{ number_format($vehicle->current_km ?? 0) }} km
+                                {{ $vehicle->current_distance_label }}
                             </div>
                         </div>
 

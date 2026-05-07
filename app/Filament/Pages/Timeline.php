@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Pages\Page;
@@ -80,6 +81,8 @@ class Timeline extends Page
 
         $entries = [];
         $previousYear = null;
+        $distanceUnit = app(DistanceUnitService::class);
+        $activeDistanceUnit = $distanceUnit->normalizeUnit($activeVehicle?->distance_unit);
 
         foreach ($logs as $index => $log) {
             $images = collect($log->attachments)
@@ -120,7 +123,7 @@ class Timeline extends Page
                 'monthLabel' => $log->maintenance_date?->translatedFormat('M'),
                 'dayLabel' => $log->maintenance_date?->format('d'),
                 'title' => $log->description,
-                'kmLabel' => number_format($log->km_reading ?? 0, 0, ',', '.'),
+                'distanceLabel' => $distanceUnit->formatFromKilometers($log->km_reading, $activeDistanceUnit, 0),
                 'costLabel' => $log->cost !== null
                     ? 'EUR ' . number_format((float) $log->cost, 2, ',', '.')
                     : null,

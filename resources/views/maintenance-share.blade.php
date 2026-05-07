@@ -264,7 +264,7 @@
                             </div>
 
                             <div>
-                                Kilometerstand: {{ $log->km_reading }} km
+                                Tellerstand: {{ app(\App\Services\DistanceUnitService::class)->formatFromKilometers($log->km_reading, $log->vehicle?->distance_unit, 0) }}
                             </div>
 
                             @if(count($fileAttachments) && ! request()->is('maintenance/pdf'))

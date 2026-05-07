@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 
 class ReminderService
 {
+    public function __construct(
+        private readonly DistanceUnitService $distanceUnitService
+    ) {}
+
     public function getStatus(MaintenanceLog $log): array
     {
         if (! $log->reminder_enabled) {
@@ -123,18 +127,19 @@ class ReminderService
 
         $currentKm = $log->vehicle->current_km ?? 0;
         $remaining = (int) (($log->last_km + $log->interval_km) - $currentKm);
+        $remainingLabel = $this->distanceUnitService->formatFromKilometers(abs($remaining), $log->vehicle?->distance_unit, 0);
 
         if ($remaining <= 0) {
             return [
                 'type' => 'overdue',
-                'label' => abs($remaining) . ' km te laat',
+                'label' => $remainingLabel . ' te laat',
                 'priority' => $remaining,
             ];
         }
 
         return [
             'type' => 'upcoming',
-            'label' => $remaining . ' km',
+            'label' => $this->distanceUnitService->formatFromKilometers($remaining, $log->vehicle?->distance_unit, 0),
             'priority' => $remaining,
         ];
     }

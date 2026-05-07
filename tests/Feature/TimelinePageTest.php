@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -116,5 +117,33 @@ class TimelinePageTest extends TestCase
             ->assertSeeText('Tourfiets')
             ->assertSeeText('Ketting gespannen')
             ->assertDontSeeText('Olie vervangen');
+    }
+
+    public function test_timeline_shows_miles_for_vehicle_that_uses_miles(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Harley-Davidson',
+            'model' => 'Pan America',
+            'nickname' => 'US Bike',
+            'distance_unit' => DistanceUnitService::UNIT_MILES,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Servicebeurt',
+            'km_reading' => 160934,
+            'maintenance_date' => '2026-02-15',
+            'cost' => 149.95,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
+            ->assertOk()
+            ->assertSeeText('100.000 mi');
     }
 }

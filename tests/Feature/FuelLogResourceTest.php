@@ -8,6 +8,7 @@ use App\Filament\Resources\FuelLogs\Pages\ListFuelLogs;
 use App\Models\FuelLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -16,6 +17,19 @@ use Tests\TestCase;
 class FuelLogResourceTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_vehicle_distance_unit_defaults_to_km(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'KTM',
+            'model' => '890 Adventure',
+        ]);
+
+        $this->assertSame(DistanceUnitService::UNIT_KM, $vehicle->fresh()->distance_unit);
+    }
 
     public function test_resource_query_only_returns_fuel_logs_for_the_authenticated_users_vehicles(): void
     {
@@ -93,5 +107,31 @@ class FuelLogResourceTest extends TestCase
             ->assertSeeText('20,00 km/l');
 
         $this->assertSame(FuelConsumptionService::UNIT_KM_PER_LITER, $user->fresh()->consumption_unit);
+    }
+
+    public function test_fuel_log_index_shows_distance_in_vehicle_miles_when_vehicle_uses_miles(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'F 900 GS',
+            'distance_unit' => DistanceUnitService::UNIT_MILES,
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'fuel_date' => now()->toDateString(),
+            'odometer_km' => 160.9344,
+            'distance_km' => 80.4672,
+            'fuel_liters' => 5,
+        ]);
+
+        $this->actingAs($user)
+            ->get(ListFuelLogs::getUrl(['vehicle_id' => $vehicle->id]))
+            ->assertOk()
+            ->assertSeeText('100,0 mi')
+            ->assertSeeText('50,0 mi');
     }
 }

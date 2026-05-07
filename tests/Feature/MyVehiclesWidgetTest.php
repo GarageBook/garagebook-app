@@ -7,6 +7,7 @@ use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -60,6 +61,25 @@ class MyVehiclesWidgetTest extends TestCase
             ->assertSeeHtml('aria-label="Vorige foto"')
             ->assertSeeHtml('aria-label="Volgende foto"')
             ->assertSeeHtml('aria-label="Open fotogalerij"');
+    }
+
+    public function test_dashboard_vehicle_widget_shows_miles_for_vehicle_that_uses_miles(): void
+    {
+        $owner = User::factory()->create();
+
+        Vehicle::query()->create([
+            'user_id' => $owner->id,
+            'brand' => 'Triumph',
+            'model' => 'Tiger 900',
+            'nickname' => 'Explorer',
+            'current_km' => 160934,
+            'distance_unit' => DistanceUnitService::UNIT_MILES,
+        ]);
+
+        $this->actingAs($owner);
+
+        Livewire::test(MyVehicles::class)
+            ->assertSeeText('100.000 mi');
     }
 
     public function test_dashboard_vehicle_widget_does_not_render_another_users_vehicle(): void

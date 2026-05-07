@@ -5,6 +5,7 @@ namespace App\Filament\Resources\FuelLogs\Pages;
 use App\Filament\Resources\FuelLogs\FuelLogResource;
 use App\Models\FuelLog;
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -49,6 +50,15 @@ class ListFuelLogs extends ListRecords
     {
         $vehicle = $this->getActiveVehicle();
         $summary = $vehicle ? app(FuelConsumptionService::class)->getVehicleSummary($vehicle, $this->consumptionUnit) : null;
+        $distanceUnit = app(DistanceUnitService::class);
+
+        if ($summary && $vehicle) {
+            $summary['distance_label'] = $distanceUnit->formatFromKilometers(
+                $summary['distance_km'],
+                $vehicle->distance_unit,
+                1
+            );
+        }
 
         return view('filament.resources.fuel-logs.pages.header', [
             'actions' => $this->getCachedHeaderActions(),

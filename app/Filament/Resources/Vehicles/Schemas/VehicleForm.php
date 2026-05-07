@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Vehicles\Schemas;
 
+use App\Services\DistanceUnitService;
 use Filament\Forms;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class VehicleForm
@@ -60,10 +62,19 @@ class VehicleForm
                 Forms\Components\TextInput::make('license_plate')
                     ->label('Kenteken'),
 
+                Forms\Components\Select::make('distance_unit')
+                    ->label('Afstandseenheid')
+                    ->options(app(DistanceUnitService::class)->getSupportedUnits())
+                    ->default(DistanceUnitService::UNIT_KM)
+                    ->required()
+                    ->selectablePlaceholder(false)
+                    ->live(),
+
                 Forms\Components\TextInput::make('current_km')
-                    ->label('Huidige kilometerstand')
+                    ->label('Huidige tellerstand')
                     ->numeric()
-                    ->required(),
+                    ->required()
+                    ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit'))),
 
                 Forms\Components\TextInput::make('year')
                     ->label('Bouwjaar')

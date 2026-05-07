@@ -6,6 +6,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Filament\Widgets\MaintenanceReminders;
+use App\Services\DistanceUnitService;
 use App\Services\ReminderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -182,5 +183,31 @@ class MaintenanceReminderScopeTest extends TestCase
         $this->assertCount(2, $items);
         $this->assertTrue($overdue->is($items[0]['log']));
         $this->assertTrue($upcoming->is($items[1]['log']));
+    }
+
+    public function test_reminder_service_formats_distance_labels_in_miles_for_miles_vehicle(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Indian',
+            'model' => 'Scout',
+            'current_km' => 159325,
+            'distance_unit' => DistanceUnitService::UNIT_MILES,
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie verversen',
+            'km_reading' => 152888,
+            'maintenance_date' => now()->subMonths(11)->toDateString(),
+            'reminder_enabled' => true,
+            'interval_km' => 16093,
+        ]);
+
+        $status = app(ReminderService::class)->getStatus($log);
+
+        $this->assertStringContainsString('6.000 mi', $status['text']);
     }
 }

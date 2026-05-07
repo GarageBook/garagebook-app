@@ -755,7 +755,7 @@
                                                 <div class="gb-timeline-card__title">{{ $entry['title'] }}</div>
 
                                                 <div class="gb-timeline-card__summary">
-                                                    <span class="gb-timeline-pill">{{ $entry['kmLabel'] }} km</span>
+                                                    <span class="gb-timeline-pill">{{ $entry['distanceLabel'] }}</span>
                                                     @if($entry['workedHoursLabel'])
                                                         <span class="gb-timeline-pill">{{ $entry['workedHoursLabel'] }}</span>
                                                     @endif
@@ -841,7 +841,7 @@
                         <div class="gb-timeline-modal__title" x-text="selectedEntry?.title"></div>
 
                         <div class="gb-timeline-card__summary">
-                            <span class="gb-timeline-pill" x-text="`${selectedEntry?.kmLabel} km`"></span>
+                            <span class="gb-timeline-pill" x-text="selectedEntry?.distanceLabel"></span>
                             <template x-if="selectedEntry?.costLabel">
                                 <span class="gb-timeline-pill" x-text="selectedEntry?.costLabel"></span>
                             </template>

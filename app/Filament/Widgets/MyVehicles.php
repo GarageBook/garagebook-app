@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Services\DistanceUnitService;
 use App\Services\VehicleCostService;
 use App\Support\MediaPath;
 use Filament\Widgets\Widget;
@@ -38,6 +39,11 @@ class MyVehicles extends Widget
             }
 
             $vehicle->dashboard_gallery_photos = $galleryPhotos;
+            $vehicle->current_distance_label = app(DistanceUnitService::class)->formatFromKilometers(
+                $vehicle->current_km,
+                $vehicle->distance_unit,
+                0
+            );
 
             return $vehicle;
         });

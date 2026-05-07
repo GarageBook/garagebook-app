@@ -3,7 +3,10 @@
 namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
 use App\Models\Vehicle;
+use App\Services\DistanceUnitService;
 use Filament\Forms;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Section;
 
@@ -27,16 +30,29 @@ class MaintenanceLogForm
                             })
                     )
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
+                        'distance_unit',
+                        app(DistanceUnitService::class)->resolveForVehicleId($state ? (int) $state : null)
+                    )),
+
+                Forms\Components\Select::make('distance_unit')
+                    ->label('Afstandseenheid')
+                    ->options(app(DistanceUnitService::class)->getSupportedUnits())
+                    ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(request()->integer('vehicle_id') ?: null))
+                    ->required()
+                    ->selectablePlaceholder(false)
+                    ->helperText('Wordt onthouden als standaard voor dit voertuig.'),
 
                 Forms\Components\TextInput::make('description')
                     ->label('Omschrijving')
                     ->required(),
 
                 Forms\Components\TextInput::make('km_reading')
-                    ->label('Kilometerstand')
+                    ->label('Tellerstand')
                     ->numeric()
-                    ->suffix(' km')
+                    ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
                     ->required(),
 
                 Forms\Components\DatePicker::make('maintenance_date')
@@ -91,7 +107,7 @@ class MaintenanceLogForm
                             ->visible(fn ($get) => $get('reminder_enabled')),
 
                         Forms\Components\TextInput::make('interval_km')
-                            ->label('Interval (km)')
+                            ->label(fn (Get $get): string => 'Interval (' . app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')) . ')')
                             ->numeric()
                             ->placeholder('bijv. 6000')
                             ->visible(fn ($get) => $get('reminder_enabled')),

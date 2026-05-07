@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Jobs\OptimizeMaintenanceLogMedia;
+use App\Services\DistanceUnitService;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
@@ -14,6 +15,33 @@ use Illuminate\Support\Facades\Storage;
 class EditMaintenanceLog extends EditRecord
 {
     protected static string $resource = MaintenanceLogResource::class;
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $service = app(DistanceUnitService::class);
+        $unit = $service->resolveForVehicleId($data['vehicle_id'] ?? null);
+
+        $data['distance_unit'] = $unit;
+        $data['km_reading'] = $service->fromKilometers($data['km_reading'] ?? null, $unit, 0);
+        $data['interval_km'] = $service->fromKilometers($data['interval_km'] ?? null, $unit, 0);
+
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $service = app(DistanceUnitService::class);
+        $unit = $service->persistVehicleUnit(
+            isset($data['vehicle_id']) ? (int) $data['vehicle_id'] : null,
+            $data['distance_unit'] ?? null
+        );
+
+        $data['km_reading'] = (int) round($service->toKilometers($data['km_reading'] ?? null, $unit, 0) ?? 0);
+        $data['interval_km'] = $service->toKilometers($data['interval_km'] ?? null, $unit, 0);
+        unset($data['distance_unit']);
+
+        return $data;
+    }
 
     protected function afterSave(): void
     {
