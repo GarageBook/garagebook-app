@@ -5,6 +5,7 @@ namespace App\Filament\Resources\VehicleDocuments\Schemas;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use Filament\Forms;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -46,7 +47,7 @@ class VehicleDocumentForm
                         Forms\Components\FileUpload::make('file_path')
                             ->label('Bestand')
                             ->disk('local')
-                            ->directory(fn (Forms\Get $get) => 'vehicle-documents/' . ($get('vehicle_id') ?: 'draft'))
+                            ->directory(fn (Get $get) => 'vehicle-documents/' . ($get('vehicle_id') ?: 'draft'))
                             ->visibility('private')
                             ->acceptedFileTypes([
                                 'application/pdf',
