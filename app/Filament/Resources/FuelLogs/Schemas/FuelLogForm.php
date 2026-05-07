@@ -11,6 +11,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class FuelLogForm
 {
@@ -71,8 +72,22 @@ class FuelLogForm
                             ->numeric()
                             ->inputMode('decimal')
                             ->required()
+                            ->live()
                             ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
-                            ->helperText('Verplicht. Wordt automatisch voorgesteld zodra tellerstand en een vorige tankbeurt bekend zijn, maar blijft handmatig aanpasbaar.'),
+                            ->helperText(null),
+
+                        Forms\Components\Placeholder::make('distance_km_conversion_hint')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get): HtmlString => self::distanceHelperText($get))
+                            ->visible(fn (Get $get): bool => self::showsDistanceConversionHint($get))
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('distance_km_description_hint')
+                            ->hiddenLabel()
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<span style="display:block; font-size:0.74rem; line-height:1.35; color:rgb(107, 114, 128);">Verplicht. Wordt automatisch voorgesteld zodra tellerstand en een vorige tankbeurt bekend zijn, maar blijft handmatig aanpasbaar.</span>'
+                            ))
+                            ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('fuel_liters')
                             ->label('Aantal liter brandstof')
@@ -95,7 +110,11 @@ class FuelLogForm
                         Forms\Components\Placeholder::make('consumption_preview')
                             ->label('Berekend verbruik')
                             ->content(function (Get $get): string {
-                                $distanceKm = self::floatOrNull($get('distance_km'));
+                                $distanceKm = app(DistanceUnitService::class)->toKilometers(
+                                    self::floatOrNull($get('distance_km')),
+                                    $get('distance_unit'),
+                                    1
+                                );
                                 $fuelLiters = self::floatOrNull($get('fuel_liters'));
 
                                 return app(FuelConsumptionService::class)->formatAverage(
@@ -133,7 +152,11 @@ class FuelLogForm
         $suggestedDistance = app(FuelConsumptionService::class)->suggestDistanceKm(
             $vehicleId,
             $get('fuel_date'),
-            self::floatOrNull($get('odometer_km')),
+            app(DistanceUnitService::class)->toKilometers(
+                self::floatOrNull($get('odometer_km')),
+                $get('distance_unit'),
+                1
+            ),
             self::intOrNull($get('id'))
         );
 
@@ -141,7 +164,11 @@ class FuelLogForm
             return;
         }
 
-        $set('distance_km', $suggestedDistance);
+        $set('distance_km', app(DistanceUnitService::class)->fromKilometers(
+            $suggestedDistance,
+            $get('distance_unit'),
+            1
+        ));
     }
 
     private static function floatOrNull(mixed $value): ?float
@@ -156,5 +183,26 @@ class FuelLogForm
     private static function intOrNull(mixed $value): ?int
     {
         return filled($value) ? (int) $value : null;
+    }
+
+    private static function distanceHelperText(Get $get): HtmlString
+    {
+        $distance = self::floatOrNull($get('distance_km'));
+
+        $distanceKm = app(DistanceUnitService::class)->toKilometers($distance, DistanceUnitService::UNIT_MILES, 1);
+        $milesLabel = rtrim(rtrim(number_format($distance, 1, ',', '.'), '0'), ',');
+        $smallStyle = 'display:block; font-size:0.74rem; line-height:1.35; color:rgb(107, 114, 128);';
+
+        return new HtmlString(
+            '<strong style="' . $smallStyle . ' margin-bottom:2px; color:rgb(17, 24, 39);">'
+            . e($milesLabel . ' miles is ' . number_format((float) $distanceKm, 1, ',', '.') . ' km.')
+            . '</strong>'
+        );
+    }
+
+    private static function showsDistanceConversionHint(Get $get): bool
+    {
+        return self::floatOrNull($get('distance_km')) !== null
+            && app(DistanceUnitService::class)->normalizeUnit($get('distance_unit')) === DistanceUnitService::UNIT_MILES;
     }
 }
