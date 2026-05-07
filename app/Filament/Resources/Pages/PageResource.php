@@ -23,7 +23,7 @@ class PageResource extends Resource
 
     protected static ?string $navigationLabel = 'Pagina’s';
     protected static ?string $pluralModelLabel = 'Pagina’s';
-    protected static ?string $navigationGroup = 'Beheer';
+    protected static string|BackedEnum|null $navigationGroup = 'Beheer';
     protected static ?int $navigationSort = 210;
 
     public static function canViewAny(): bool
