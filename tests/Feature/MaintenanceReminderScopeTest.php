@@ -8,6 +8,7 @@ use App\Models\Vehicle;
 use App\Filament\Widgets\MaintenanceReminders;
 use App\Services\DistanceUnitService;
 use App\Services\ReminderService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -209,5 +210,36 @@ class MaintenanceReminderScopeTest extends TestCase
         $status = app(ReminderService::class)->getStatus($log);
 
         $this->assertStringContainsString('6.000 mi', $status['text']);
+    }
+
+    public function test_reminder_service_rounds_upcoming_date_text_to_a_single_unit(): void
+    {
+        Carbon::setTestNow('2026-05-07');
+
+        try {
+            $user = User::factory()->create();
+
+            $vehicle = Vehicle::query()->create([
+                'user_id' => $user->id,
+                'brand' => 'Yamaha',
+                'model' => 'Tenere 700',
+                'current_km' => 10000,
+            ]);
+
+            $log = MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicle->id,
+                'description' => 'Klepcontrole',
+                'km_reading' => 10000,
+                'maintenance_date' => '2025-08-11',
+                'reminder_enabled' => true,
+                'interval_months' => 12,
+            ]);
+
+            $status = app(ReminderService::class)->getStatus($log);
+
+            $this->assertSame('Over 3 maanden.', $status['text']);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }

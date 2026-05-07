@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Str;
 
 class ReminderService
@@ -99,22 +100,14 @@ class ReminderService
         if ($now->greaterThan($nextDate)) {
             return [
                 'type' => 'overdue',
-                'label' => $nextDate->diffForHumans($now, [
-                    'parts' => 2,
-                    'short' => false,
-                    'syntax' => Carbon::DIFF_ABSOLUTE,
-                ]) . ' te laat',
+                'label' => $this->formatRoundedAbsoluteDiff($nextDate, $now) . ' te laat',
                 'priority' => -1 * $nextDate->diffInDays($now),
             ];
         }
 
         return [
             'type' => 'upcoming',
-            'label' => 'over ' . $now->diffForHumans($nextDate, [
-                'parts' => 2,
-                'short' => false,
-                'syntax' => Carbon::DIFF_ABSOLUTE,
-            ]),
+            'label' => 'over ' . $this->formatRoundedAbsoluteDiff($now, $nextDate),
             'priority' => $now->diffInDays($nextDate),
         ];
     }
@@ -184,5 +177,73 @@ class ReminderService
         }
 
         return ucfirst($sentence) . '.';
+    }
+
+    private function formatRoundedAbsoluteDiff(Carbon $from, Carbon $to): string
+    {
+        $start = $from->copy();
+        $end = $to->copy();
+
+        if ($start->greaterThan($end)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        $years = (int) floor($start->diffInYears($end));
+
+        if ($years > 0) {
+            $anchor = $start->copy()->addYears($years);
+            $remainingMonths = $anchor->diffInMonths($end);
+
+            if ($remainingMonths >= 6) {
+                $years++;
+            }
+
+            return CarbonInterval::years($years)->forHumans([
+                'parts' => 1,
+                'short' => false,
+                'syntax' => Carbon::DIFF_ABSOLUTE,
+            ]);
+        }
+
+        $months = (int) floor($start->diffInMonths($end));
+
+        if ($months > 0) {
+            $anchor = $start->copy()->addMonths($months);
+            $remainingDays = $anchor->diffInDays($end);
+
+            if ($remainingDays >= 15) {
+                $months++;
+            }
+
+            return CarbonInterval::months(max(1, $months))->forHumans([
+                'parts' => 1,
+                'short' => false,
+                'syntax' => Carbon::DIFF_ABSOLUTE,
+            ]);
+        }
+
+        $days = (int) floor($start->diffInDays($end));
+        $weeks = intdiv($days, 7);
+
+        if ($weeks > 0) {
+            $anchor = $start->copy()->addWeeks($weeks);
+            $remainingDays = $anchor->diffInDays($end);
+
+            if ($remainingDays >= 4) {
+                $weeks++;
+            }
+
+            return CarbonInterval::weeks(max(1, $weeks))->forHumans([
+                'parts' => 1,
+                'short' => false,
+                'syntax' => Carbon::DIFF_ABSOLUTE,
+            ]);
+        }
+
+        return CarbonInterval::days(max(1, $days))->forHumans([
+            'parts' => 1,
+            'short' => false,
+            'syntax' => Carbon::DIFF_ABSOLUTE,
+        ]);
     }
 }
