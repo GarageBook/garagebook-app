@@ -260,6 +260,24 @@ class AdminPanelProvider extends PanelProvider
                         text-transform: uppercase;
                     }
 
+                    .fi-btn.fi-color-primary:not(.fi-outlined) {
+                        background: #ffd200 !important;
+                        color: #111827 !important;
+                        border: 0 !important;
+                        border-radius: 1.125rem !important;
+                        box-shadow: none !important;
+                    }
+
+                    .fi-btn.fi-color-primary:not(.fi-outlined):hover,
+                    .fi-btn.fi-color-primary:not(.fi-outlined):focus-visible {
+                        background: #ffc400 !important;
+                        color: #111827 !important;
+                    }
+
+                    .fi-btn.fi-color-primary:not(.fi-outlined) > .fi-icon {
+                        color: #111827 !important;
+                    }
+
                     @media (max-width: 1024px) {
                         .gb-footer-inner {
                             width: 100%;
