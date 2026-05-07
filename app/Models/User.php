@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'airtable_record_id', 'airtable_synced_at'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {

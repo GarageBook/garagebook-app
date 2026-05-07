@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\MyVehicles;
+use App\Filament\Widgets\FuelConsumptionOverview;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use Filament\Facades\Filament;
@@ -25,15 +26,21 @@ class Dashboard extends BaseDashboard
 
     public function headerWidgets(Schema $schema): Schema
     {
+        $secondaryWidgets = [
+            Livewire::make(MaintenanceReminders::class),
+            Livewire::make(MaintenanceCosts::class),
+        ];
+
+        if (Filament::auth()->user()?->vehicles()->whereHas('fuelLogs')->exists()) {
+            $secondaryWidgets[] = Livewire::make(FuelConsumptionOverview::class);
+        }
+
         return $schema->components([
             Grid::make([
                 'md' => 2,
             ])->schema([
                 Livewire::make(MyVehicles::class),
-                Grid::make(1)->schema([
-                    Livewire::make(MaintenanceReminders::class),
-                    Livewire::make(MaintenanceCosts::class),
-                ]),
+                Grid::make(1)->schema($secondaryWidgets),
             ]),
         ]);
     }

@@ -33,4 +33,9 @@ class Vehicle extends Model
     {
         return $this->hasMany(MaintenanceLog::class);
     }
+
+    public function fuelLogs(): HasMany
+    {
+        return $this->hasMany(FuelLog::class);
+    }
 }
