@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Services\VehicleCostService;
 use App\Support\MediaPath;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Storage;
@@ -14,8 +15,9 @@ class MyVehicles extends Widget
 
     public function getViewData(): array
     {
-        $user = auth()->user();
-        $vehicles = $user->vehicles()->latest()->get()->map(function ($vehicle) {
+        $vehicles = app(VehicleCostService::class)
+            ->getVehiclesWithDashboardCostsForUser(auth()->id())
+            ->map(function ($vehicle) {
             $paths = [
                 $vehicle->photo,
                 ...(is_array($vehicle->photos) ? $vehicle->photos : []),

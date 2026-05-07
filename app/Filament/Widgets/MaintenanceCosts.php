@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Services\VehicleCostService;
 use Filament\Widgets\Widget;
 
 class MaintenanceCosts extends Widget
@@ -12,17 +13,12 @@ class MaintenanceCosts extends Widget
 
     public function getViewData(): array
     {
-        $vehicles = auth()->user()
-            ->vehicles()
-            ->withSum('maintenanceLogs as maintenance_costs_total', 'cost')
-            ->latest()
-            ->get();
-
-        $totalCost = $vehicles->sum(fn ($vehicle) => (float) ($vehicle->maintenance_costs_total ?? 0));
+        $summary = app(VehicleCostService::class)->getDashboardSummaryForUser(auth()->id());
 
         return [
-            'vehicles' => $vehicles,
-            'totalCost' => $totalCost,
+            'overallTotalCost' => $summary['overall_total_cost'],
+            'overallMonthlyCost' => $summary['overall_monthly_cost'],
+            'hasVehicles' => $summary['vehicles']->isNotEmpty(),
         ];
     }
 }

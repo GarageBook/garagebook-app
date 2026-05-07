@@ -69,6 +69,24 @@ class VehicleForm
                     ->label('Bouwjaar')
                     ->numeric(),
 
+                Forms\Components\TextInput::make('purchase_price')
+                    ->label('Aanschafprijs')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->prefix('EUR'),
+
+                Forms\Components\TextInput::make('insurance_cost_per_month')
+                    ->label('Kosten verzekering per maand')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->prefix('EUR'),
+
+                Forms\Components\TextInput::make('road_tax_cost_per_month')
+                    ->label('Kosten wegenbelasting per maand')
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->prefix('EUR'),
+
                 Forms\Components\Textarea::make('notes')
                     ->label('Notities'),
             ]);

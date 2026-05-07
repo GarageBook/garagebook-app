@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Widgets\MaintenanceCosts;
+use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -14,7 +15,7 @@ class MaintenanceCostsWidgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_widget_only_shows_the_authenticated_users_vehicle_costs_and_total(): void
+    public function test_dashboard_widget_only_shows_the_authenticated_users_vehicle_costs_and_totals(): void
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -25,6 +26,9 @@ class MaintenanceCostsWidgetTest extends TestCase
             'model' => 'Tracer 9',
             'nickname' => 'Sporttourer',
             'current_km' => 18250,
+            'purchase_price' => 8500,
+            'insurance_cost_per_month' => 45,
+            'road_tax_cost_per_month' => 12,
         ]);
 
         $otherVehicle = Vehicle::query()->create([
@@ -50,6 +54,22 @@ class MaintenanceCostsWidgetTest extends TestCase
             'cost' => '279.49',
         ]);
 
+        FuelLog::query()->create([
+            'vehicle_id' => $ownerVehicle->id,
+            'fuel_date' => now()->subMonth()->toDateString(),
+            'distance_km' => 250,
+            'fuel_liters' => 14,
+            'price_per_liter' => 2.10,
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $ownerVehicle->id,
+            'fuel_date' => now()->subWeeks(2)->toDateString(),
+            'distance_km' => 220,
+            'fuel_liters' => 13,
+            'price_per_liter' => 2.00,
+        ]);
+
         MaintenanceLog::query()->create([
             'vehicle_id' => $otherVehicle->id,
             'description' => 'Remblokken',
@@ -58,15 +78,23 @@ class MaintenanceCostsWidgetTest extends TestCase
             'cost' => '999.99',
         ]);
 
+        FuelLog::query()->create([
+            'vehicle_id' => $otherVehicle->id,
+            'fuel_date' => now()->subWeek()->toDateString(),
+            'distance_km' => 300,
+            'fuel_liters' => 30,
+            'price_per_liter' => 2.00,
+        ]);
+
         $this->actingAs($owner);
 
         Livewire::test(MaintenanceCosts::class)
-            ->assertSeeText('Onderhoudskosten')
-            ->assertSeeText('Sporttourer')
-            ->assertSeeText('Yamaha Tracer 9')
-            ->assertSeeText('EUR 399,99')
-            ->assertSeeText('Totaal')
-            ->assertDontSeeText('Honda CB650R')
+            ->assertSeeText('Kosten')
+            ->assertSeeText('EUR 8.955,39')
+            ->assertSeeText('EUR 112,40')
+            ->assertSeeText('Totale kosten')
+            ->assertSeeText('Maandelijkse kosten')
+            ->assertDontSeeText('Sporttourer')
             ->assertDontSeeText('EUR 999,99');
     }
 
@@ -77,8 +105,8 @@ class MaintenanceCostsWidgetTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(MaintenanceCosts::class)
-            ->assertSeeText('Onderhoudskosten')
-            ->assertSeeText('Nog geen onderhoudskosten geregistreerd')
-            ->assertDontSeeText('Totaal');
+            ->assertSeeText('Kosten')
+            ->assertSeeText('Nog geen kosten geregistreerd')
+            ->assertDontSeeText('Totale kosten');
     }
 }

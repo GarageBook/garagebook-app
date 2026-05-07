@@ -1,62 +1,46 @@
 <x-filament::widget>
     <x-filament::card>
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
-            Onderhoudskosten
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:18px;">
+            Kosten
         </h2>
 
-        <div style="display:flex; flex-direction:column; gap:12px;">
-            @forelse($vehicles as $vehicle)
-                <div style="
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    gap:16px;
-                    padding:16px;
-                    border-radius:12px;
-                    background:#f9fafb;
-                    border:1px solid #e5e7eb;
-                ">
-                    <div>
-                        <div style="font-weight:600; color:#111827;">
-                            {{ $vehicle->nickname ?? ($vehicle->brand . ' ' . $vehicle->model) }}
-                        </div>
-
-                        <div style="font-size:13px; color:#6b7280; margin-top:4px;">
-                            {{ $vehicle->brand }} {{ $vehicle->model }}
-                        </div>
-                    </div>
-
-                    <div style="
-                        font-size:16px;
-                        font-weight:700;
-                        color:#111827;
-                        text-align:right;
-                        white-space:nowrap;
-                    ">
-                        EUR {{ number_format((float) ($vehicle->maintenance_costs_total ?? 0), 2, ',', '.') }}
-                    </div>
-                </div>
-            @empty
-                <div style="color:#9ca3af;">
-                    Nog geen onderhoudskosten geregistreerd
-                </div>
-            @endforelse
-        </div>
-
-        @if($vehicles->isNotEmpty())
+        @if($hasVehicles)
             <div style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-                margin-top:20px;
-                padding-top:16px;
-                border-top:1px solid #e5e7eb;
-                font-size:16px;
+                display:grid;
+                grid-template-columns:repeat(2, minmax(0, 1fr));
+                gap:16px;
             ">
-                <span style="font-weight:600; color:#111827;">Totaal</span>
-                <span style="font-weight:700; color:#111827;">
-                    EUR {{ number_format((float) $totalCost, 2, ',', '.') }}
-                </span>
+                <div style="
+                    padding:18px;
+                    border-radius:16px;
+                    background:linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+                    border:1px solid #e2e8f0;
+                ">
+                    <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
+                        Totale kosten
+                    </div>
+                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#0f172a;">
+                        EUR {{ number_format((float) $overallTotalCost, 2, ',', '.') }}
+                    </div>
+                </div>
+
+                <div style="
+                    padding:18px;
+                    border-radius:16px;
+                    background:linear-gradient(180deg, #fffdf2 0%, #fff7d1 100%);
+                    border:1px solid #fde68a;
+                ">
+                    <div style="font-size:12px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.08em;">
+                        Maandelijkse kosten
+                    </div>
+                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#111827;">
+                        EUR {{ number_format((float) $overallMonthlyCost, 2, ',', '.') }}
+                    </div>
+                </div>
+            </div>
+        @else
+            <div style="color:#9ca3af;">
+                Nog geen kosten geregistreerd
             </div>
         @endif
     </x-filament::card>

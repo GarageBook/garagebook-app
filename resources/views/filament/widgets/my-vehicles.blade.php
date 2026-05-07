@@ -144,20 +144,74 @@
 
                 <!-- CONTENT -->
                 <div style="padding:18px;">
-                    <div style="
-                        font-weight:700;
-                        font-size:16px;
-                        margin-bottom:4px;
-                    ">
-                        {{ $vehicle->nickname ?? ($vehicle->brand . ' ' . $vehicle->model) }}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px;">
+                        <div>
+                            <div style="
+                                font-weight:700;
+                                font-size:16px;
+                                margin-bottom:4px;
+                            ">
+                                {{ $vehicle->nickname ?? ($vehicle->brand . ' ' . $vehicle->model) }}
+                            </div>
+
+                            <div style="
+                                color:#6b7280;
+                                font-size:14px;
+                            ">
+                                {{ number_format($vehicle->current_km ?? 0) }} km
+                            </div>
+                        </div>
+
+                        <div style="
+                            padding:8px 10px;
+                            border-radius:12px;
+                            background:linear-gradient(180deg, #fffdf2 0%, #fff7d1 100%);
+                            border:1px solid #fde68a;
+                            text-align:right;
+                            min-width:140px;
+                        ">
+                            <div style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.08em;">
+                                Per maand
+                            </div>
+                            <div style="margin-top:4px; font-size:18px; line-height:1.05; font-weight:800; color:#111827;">
+                                EUR {{ number_format((float) $vehicle->dashboard_monthly_cost, 2, ',', '.') }}
+                            </div>
+                        </div>
                     </div>
 
                     <div style="
-                        color:#6b7280;
-                        font-size:14px;
-                        margin-bottom:14px;
+                        display:grid;
+                        grid-template-columns:repeat(2, minmax(0, 1fr));
+                        gap:10px;
+                        margin-bottom:16px;
                     ">
-                        {{ number_format($vehicle->current_km ?? 0) }} km
+                        <div style="
+                            padding:12px 14px;
+                            border-radius:14px;
+                            background:#f8fafc;
+                            border:1px solid #e2e8f0;
+                        ">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
+                                Totale kosten
+                            </div>
+                            <div style="margin-top:6px; font-size:18px; line-height:1.05; font-weight:800; color:#0f172a;">
+                                EUR {{ number_format((float) $vehicle->dashboard_total_cost, 2, ',', '.') }}
+                            </div>
+                        </div>
+
+                        <div style="
+                            padding:12px 14px;
+                            border-radius:14px;
+                            background:#f8fafc;
+                            border:1px solid #e2e8f0;
+                        ">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
+                                Samenstelling
+                            </div>
+                            <div style="margin-top:6px; font-size:13px; line-height:1.5; color:#334155;">
+                                Onderhoud, brandstof en aanschaf
+                            </div>
+                        </div>
                     </div>
 
                     <div style="display:flex; gap:10px;">
