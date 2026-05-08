@@ -11,6 +11,7 @@ use Tests\TestCase;
 class RunDisasterRecoveryBackupCommandTest extends TestCase
 {
     private string $databasePath;
+    private string $fakeMysqlDumpPath;
 
     protected function setUp(): void
     {
@@ -31,6 +32,7 @@ class RunDisasterRecoveryBackupCommandTest extends TestCase
         Config::set('backups.extra_paths', []);
         Config::set('filesystems.disks.backups.bucket', 'test-bucket');
         Config::set('filesystems.disks.backups.endpoint', 'https://example-b2.test');
+        $this->fakeMysqlDumpPath = rtrim(sys_get_temp_dir(), '/').'/fake-mysqldump.sh';
 
         $this->artisan('migrate:fresh', ['--force' => true])->assertSuccessful();
     }
@@ -41,6 +43,7 @@ class RunDisasterRecoveryBackupCommandTest extends TestCase
             File::deleteDirectory($temporaryDirectory);
         }
 
+        File::delete($this->fakeMysqlDumpPath);
         DB::disconnect('sqlite');
         File::delete($this->databasePath);
 
@@ -71,6 +74,46 @@ class RunDisasterRecoveryBackupCommandTest extends TestCase
         $this->assertSame([], $manifest['extra_paths']);
         $this->assertSame('daily', $manifest['remote_prefix']);
         $this->assertCount(3, $manifest['artifacts']);
+    }
+
+    public function test_command_can_create_mysql_backup_with_configured_dump_binary(): void
+    {
+        File::put($this->fakeMysqlDumpPath, <<<'BASH'
+#!/bin/bash
+set -euo pipefail
+for arg in "$@"; do
+  case "$arg" in
+    --result-file=*)
+      target="${arg#--result-file=}"
+      printf '%s\n' 'fake mysql dump' > "$target"
+      exit 0
+      ;;
+  esac
+done
+exit 1
+BASH);
+        chmod($this->fakeMysqlDumpPath, 0755);
+
+        Config::set('database.default', 'mysql');
+        Config::set('database.connections.mysql', [
+            'driver' => 'mysql',
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'garagebook',
+            'username' => 'root',
+            'password' => 'secret',
+            'unix_socket' => '',
+        ]);
+        Config::set('backups.mysql_dump_binary', $this->fakeMysqlDumpPath);
+
+        $this->artisan('backup:run-disaster-recovery')
+            ->assertSuccessful();
+
+        $files = Storage::disk('backups')->allFiles('daily');
+
+        $sqlPath = $this->findUploadedFile($files, 'database-');
+        $this->assertStringEndsWith('.sql', $sqlPath);
+        $this->assertSame('fake mysql dump'.PHP_EOL, Storage::disk('backups')->get($sqlPath));
     }
 
     public function test_command_prunes_older_remote_restore_points(): void

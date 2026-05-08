@@ -6,7 +6,9 @@ This repository now uses `php artisan backup:run-disaster-recovery` for the offs
 
 Each restore point uploads these artifacts to the configured `backups` disk:
 
-- a consistent sqlite backup created with `VACUUM INTO`
+- a database backup for the active driver
+  - `sqlite` via `VACUUM INTO`
+  - `mysql`/`mariadb` via `mysqldump`
 - a copy of `.env`
 - a tarball of the full project `storage/` directory
 - an optional tarball of extra absolute server paths from `BACKUP_EXTRA_PATHS`
@@ -21,6 +23,7 @@ BACKUP_ENABLED=true
 BACKUP_SCHEDULE_AT=02:30
 BACKUP_RETENTION_DAYS=7
 BACKUP_REMOTE_PREFIX=daily
+BACKUP_MYSQL_DUMP_BINARY=mysqldump
 BACKUP_EXTRA_PATHS=/etc/nginx,/etc/systemd/system,/etc/cron.d
 
 BACKUP_AWS_ACCESS_KEY_ID=
@@ -32,6 +35,8 @@ BACKUP_AWS_USE_PATH_STYLE_ENDPOINT=false
 ```
 
 `BACKUP_EXTRA_PATHS` is intentionally explicit. If you want full server recovery, include the real paths that matter on the live server. The command fails when a configured path is missing or unreadable so the backup does not silently give false confidence.
+
+For `mysql` or `mariadb` production environments, the server also needs the configured dump binary available on the `PATH`.
 
 ## Scheduler
 

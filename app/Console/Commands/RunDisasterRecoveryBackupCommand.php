@@ -108,10 +108,15 @@ class RunDisasterRecoveryBackupCommand extends Command
         $connection = config('database.default');
         $driver = config("database.connections.{$connection}.driver");
 
-        if ($driver !== 'sqlite') {
-            throw new \RuntimeException("The backup command currently supports sqlite only. Active driver: {$driver}");
-        }
+        return match ($driver) {
+            'sqlite' => $this->createSqliteBackup($connection, $tempDirectory, $timestamp),
+            'mysql', 'mariadb' => $this->createMySqlBackup($connection, $tempDirectory, $timestamp),
+            default => throw new \RuntimeException("The backup command does not support the active driver: {$driver}"),
+        };
+    }
 
+    private function createSqliteBackup(string $connection, string $tempDirectory, string $timestamp): string
+    {
         $databasePath = (string) config("database.connections.{$connection}.database");
 
         if ($databasePath === '' || ! is_file($databasePath)) {
@@ -127,6 +132,67 @@ class RunDisasterRecoveryBackupCommand extends Command
 
         if (! is_file($backupPath)) {
             throw new \RuntimeException('The sqlite backup file was not created.');
+        }
+
+        return $backupPath;
+    }
+
+    private function createMySqlBackup(string $connection, string $tempDirectory, string $timestamp): string
+    {
+        $config = config("database.connections.{$connection}");
+        $database = (string) ($config['database'] ?? '');
+
+        if ($database === '') {
+            throw new \RuntimeException('Could not determine the MySQL database name for the backup.');
+        }
+
+        $backupPath = "{$tempDirectory}/database-{$timestamp}.sql";
+        $command = [
+            (string) config('backups.mysql_dump_binary', 'mysqldump'),
+            '--single-transaction',
+            '--quick',
+            '--skip-lock-tables',
+            '--no-tablespaces',
+            '--result-file='.$backupPath,
+        ];
+
+        $socket = (string) ($config['unix_socket'] ?? '');
+
+        if ($socket !== '') {
+            $command[] = '--socket='.$socket;
+        } else {
+            $host = (string) ($config['host'] ?? '127.0.0.1');
+            $port = (string) ($config['port'] ?? '3306');
+            $command[] = '--host='.$host;
+            $command[] = '--port='.$port;
+        }
+
+        $username = (string) ($config['username'] ?? '');
+
+        if ($username !== '') {
+            $command[] = '--user='.$username;
+        }
+
+        $command[] = $database;
+
+        $environment = null;
+        $password = (string) ($config['password'] ?? '');
+
+        if ($password !== '') {
+            $environment = array_merge($_ENV, [
+                'MYSQL_PWD' => $password,
+            ]);
+        }
+
+        $process = new Process($command, base_path(), $environment, null, 300);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            throw new \RuntimeException('Could not create the MySQL backup: '.$process->getErrorOutput());
+        }
+
+        if (! is_file($backupPath) || filesize($backupPath) === 0) {
+            throw new \RuntimeException('The MySQL backup file was not created.');
         }
 
         return $backupPath;
@@ -210,11 +276,11 @@ class RunDisasterRecoveryBackupCommand extends Command
             'git_commit' => $this->resolveGitCommit(),
             'database_connection' => config('database.default'),
             'database_driver' => config('database.connections.'.config('database.default').'.driver'),
+            'database_backup_target' => $this->resolveDatabaseBackupTarget(),
             'remote_prefix' => $remotePrefix,
             'retention_days' => $retention,
             'included_paths' => [
                 base_path('.env'),
-                database_path('database.sqlite'),
                 storage_path(),
             ],
             'extra_paths' => $extraPaths,
@@ -242,6 +308,24 @@ class RunDisasterRecoveryBackupCommand extends Command
         $commit = trim($process->getOutput());
 
         return $commit !== '' ? $commit : null;
+    }
+
+    private function resolveDatabaseBackupTarget(): string
+    {
+        $connection = config('database.default');
+        $config = config("database.connections.{$connection}");
+        $driver = (string) ($config['driver'] ?? 'unknown');
+
+        return match ($driver) {
+            'sqlite' => (string) ($config['database'] ?? ''),
+            'mysql', 'mariadb' => sprintf(
+                '%s://%s/%s',
+                $driver,
+                ($config['host'] ?? $config['unix_socket'] ?? 'localhost'),
+                ($config['database'] ?? '')
+            ),
+            default => $driver,
+        };
     }
 
     private function pruneOldRestorePoints(string $diskName, string $remotePrefix, int $retention): void
