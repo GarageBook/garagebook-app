@@ -19,19 +19,13 @@ class VehicleDocumentResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-lock-closed';
 
-    protected static ?string $navigationLabel = 'Documentkluis';
-
-    protected static ?string $modelLabel = 'Voertuigdocument';
-
-    protected static ?string $pluralModelLabel = 'Documentkluis';
-
     protected static ?string $slug = 'documentkluis';
 
     protected static ?int $navigationSort = 5;
 
     public static function getNavigationBadge(): ?string
     {
-        return 'new!';
+        return __('documents.navigation_badge');
     }
 
     public static function getNavigationBadgeColor(): string | array | null
@@ -64,5 +58,20 @@ class VehicleDocumentResource extends Resource
             'create' => CreateVehicleDocument::route('/create'),
             'edit' => EditVehicleDocument::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('documents.navigation_label');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('documents.model_label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('documents.plural_model_label');
     }
 }

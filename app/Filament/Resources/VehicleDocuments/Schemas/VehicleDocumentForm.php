@@ -15,11 +15,11 @@ class VehicleDocumentForm
     {
         return $schema
             ->components([
-                Section::make('Privedocument')
-                    ->description('Bestanden in deze documentkluis zijn prive. Ze worden nooit openbaar gedeeld en zijn alleen zichtbaar voor jou binnen je account.')
+                Section::make(__('documents.form.section_title'))
+                    ->description(__('documents.form.section_description'))
                     ->schema([
                         Forms\Components\Select::make('vehicle_id')
-                            ->label('Voertuig')
+                            ->label(__('documents.form.vehicle'))
                             ->options(
                                 Vehicle::query()
                                     ->where('user_id', auth()->id())
@@ -34,18 +34,18 @@ class VehicleDocumentForm
                             ->default(fn () => request()->integer('vehicle_id') ?: null),
 
                         Forms\Components\TextInput::make('title')
-                            ->label('Titel')
+                            ->label(__('documents.form.title'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\Select::make('document_type')
-                            ->label('Documenttype')
+                            ->label(__('documents.form.document_type'))
                             ->options(VehicleDocument::TYPE_OPTIONS)
                             ->required()
                             ->default('other'),
 
                         Forms\Components\FileUpload::make('file_path')
-                            ->label('Bestand')
+                            ->label(__('documents.form.file'))
                             ->disk('local')
                             ->directory(fn (Get $get) => 'vehicle-documents/' . ($get('vehicle_id') ?: 'draft'))
                             ->visibility('private')
@@ -70,15 +70,15 @@ class VehicleDocumentForm
                         Forms\Components\Hidden::make('file_size'),
 
                         Forms\Components\DatePicker::make('document_date')
-                            ->label('Documentdatum')
+                            ->label(__('documents.form.document_date'))
                             ->native(false),
 
                         Forms\Components\DatePicker::make('expires_at')
-                            ->label('Vervaldatum')
+                            ->label(__('documents.form.expires_at'))
                             ->native(false),
 
                         Forms\Components\Textarea::make('notes')
-                            ->label('Notitie')
+                            ->label(__('documents.form.notes'))
                             ->rows(3)
                             ->columnSpanFull(),
                     ])

@@ -45,19 +45,19 @@ class ListVehicleDocuments extends ListRecords
 
     public function getHeading(): string
     {
-        return 'Documentkluis';
+        return __('documents.heading');
     }
 
     public function getSubheading(): ?string
     {
-        return 'Bewaar belangrijke voertuigdocumenten veilig op een prive plek. Bestanden uit deze documentkluis worden nooit gedeeld of openbaar gepubliceerd.';
+        return __('documents.subheading');
     }
 
     protected function getHeaderActions(): array
     {
         return [
             CreateAction::make()
-                ->label('Document toevoegen')
+                ->label(__('documents.actions.add_document'))
                 ->url(fn (): string => static::getResource()::getUrl('create', [
                     'vehicle_id' => $this->activeVehicleId,
                 ])),

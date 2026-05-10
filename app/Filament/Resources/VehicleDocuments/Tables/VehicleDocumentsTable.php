@@ -18,42 +18,42 @@ class VehicleDocumentsTable
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titel')
+                    ->label(__('documents.table.title'))
                     ->searchable()
                     ->weight('bold')
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('type_label')
-                    ->label('Type')
+                    ->label(__('documents.table.type'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('original_filename')
-                    ->label('Bestand')
+                    ->label(__('documents.table.file'))
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('document_date')
-                    ->label('Datum')
+                    ->label(__('documents.table.date'))
                     ->date('d-m-Y')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->label('Vervalt')
+                    ->label(__('documents.table.expires_at'))
                     ->date('d-m-Y')
                     ->badge()
                     ->color(fn (VehicleDocument $record) => $record->expires_at?->isPast() ? 'danger' : 'gray')
                     ->toggleable(),
             ])
             ->defaultSort('document_date', 'desc')
-            ->emptyStateHeading('Nog geen documenten toegevoegd')
-            ->emptyStateDescription('Voeg hier bijvoorbeeld verzekeringsbewijzen, garantiebewijzen, aankoopbewijzen, handleidingen of keuringsrapporten toe. Alles blijft prive binnen jouw account.')
+            ->emptyStateHeading(__('documents.table.empty_heading'))
+            ->emptyStateDescription(__('documents.table.empty_description'))
             ->recordActions([
                 Action::make('open')
-                    ->label('Open')
+                    ->label(__('documents.actions.open'))
                     ->icon('heroicon-o-eye')
                     ->url(fn (VehicleDocument $record) => route('vehicle-documents.show', $record))
                     ->openUrlInNewTab(),
                 Action::make('download')
-                    ->label('Download')
+                    ->label(__('documents.actions.download'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->url(fn (VehicleDocument $record) => route('vehicle-documents.download', $record))
                     ->openUrlInNewTab(),
