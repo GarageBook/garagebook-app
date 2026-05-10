@@ -18,24 +18,24 @@ class FuelLogsTable
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('fuel_date')
-                    ->label('Datum')
+                    ->label(__('fuel.table.date'))
                     ->date('d-m-Y')
                     ->sortable()
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('vehicle.model')
-                    ->label('Voertuig')
+                    ->label(__('fuel.table.vehicle'))
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('odometer_km')
-                    ->label('Tellerstand')
+                    ->label(__('fuel.table.odometer'))
                     ->formatStateUsing(fn ($state, FuelLog $record) => $state !== null
                         ? app(DistanceUnitService::class)->formatFromKilometers($state, $record->vehicle?->distance_unit, 1)
-                        : 'Niet ingevuld')
+                        : __('fuel.table.not_filled'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('distance_km')
-                    ->label('Afstand')
+                    ->label(__('fuel.table.distance'))
                     ->formatStateUsing(fn ($state, FuelLog $record) => app(DistanceUnitService::class)->formatFromKilometers(
                         $state,
                         $record->vehicle?->distance_unit,
@@ -44,12 +44,12 @@ class FuelLogsTable
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('fuel_liters')
-                    ->label('Liters')
+                    ->label(__('fuel.table.liters'))
                     ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.') . ' L')
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('average_consumption')
-                    ->label('Verbruik')
+                    ->label(__('fuel.table.consumption'))
                     ->state(fn (FuelLog $record) => app(FuelConsumptionService::class)->formatAverage(
                         (float) $record->distance_km,
                         (float) $record->fuel_liters,
@@ -58,12 +58,12 @@ class FuelLogsTable
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('price_per_liter')
-                    ->label('Prijs/L')
-                    ->formatStateUsing(fn ($state) => $state !== null ? 'EUR ' . number_format((float) $state, 3, ',', '.') : 'Niet ingevuld')
+                    ->label(__('fuel.table.price_per_liter'))
+                    ->formatStateUsing(fn ($state) => $state !== null ? 'EUR ' . number_format((float) $state, 3, ',', '.') : __('fuel.table.not_filled'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('station_location')
-                    ->label('Locatie')
+                    ->label(__('fuel.table.location'))
                     ->searchable()
                     ->wrap(),
             ])

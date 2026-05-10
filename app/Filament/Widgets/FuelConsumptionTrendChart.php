@@ -7,10 +7,6 @@ use Filament\Widgets\ChartWidget;
 
 class FuelConsumptionTrendChart extends ChartWidget
 {
-    protected ?string $heading = 'Verbruikstrend';
-
-    protected ?string $description = 'De laatste 8 tankbeurten van het geselecteerde voertuig.';
-
     protected int | string | array $columnSpan = 1;
 
     protected ?string $maxHeight = '280px';
@@ -44,7 +40,7 @@ class FuelConsumptionTrendChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Verbruik',
+                    'label' => __('fuel.widget.trend_dataset'),
                     'data' => $points['averages'],
                     'borderColor' => '#2563eb',
                     'backgroundColor' => 'rgba(37, 99, 235, 0.14)',
@@ -65,5 +61,15 @@ class FuelConsumptionTrendChart extends ChartWidget
     protected function getType(): string
     {
         return 'line';
+    }
+
+    public function getHeading(): string
+    {
+        return __('fuel.widget.trend_heading');
+    }
+
+    public function getDescription(): ?string
+    {
+        return __('fuel.widget.trend_description');
     }
 }

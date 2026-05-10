@@ -19,19 +19,13 @@ class FuelLogResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-fire';
 
-    protected static ?string $navigationLabel = 'Verbruik';
-
-    protected static ?string $modelLabel = 'Verbruiksregel';
-
-    protected static ?string $pluralModelLabel = 'Verbruik';
-
     protected static ?string $slug = 'verbruik';
 
     protected static ?int $navigationSort = 4;
 
     public static function getNavigationBadge(): ?string
     {
-        return 'new!';
+        return __('fuel.navigation_badge');
     }
 
     public static function getNavigationBadgeColor(): string | array | null
@@ -64,5 +58,20 @@ class FuelLogResource extends Resource
             'create' => CreateFuelLog::route('/create'),
             'edit' => EditFuelLog::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('fuel.navigation_label');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('fuel.model_label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('fuel.plural_model_label');
     }
 }

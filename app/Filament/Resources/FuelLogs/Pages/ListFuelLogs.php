@@ -75,19 +75,19 @@ class ListFuelLogs extends ListRecords
 
     public function getHeading(): string
     {
-        return 'Verbruik';
+        return __('fuel.heading');
     }
 
     public function getSubheading(): ?string
     {
-        return 'Houd tankbeurten per voertuig bij en bekijk direct het gemiddelde verbruik.';
+        return __('fuel.subheading');
     }
 
     protected function getHeaderActions(): array
     {
         return [
             CreateAction::make()
-                ->label('Verbruik toevoegen')
+                ->label(__('fuel.actions.add'))
                 ->url(fn (): string => static::getResource()::getUrl('create', [
                     'vehicle_id' => $this->activeVehicleId,
                 ])),

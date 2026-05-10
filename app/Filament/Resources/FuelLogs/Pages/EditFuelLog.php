@@ -42,9 +42,9 @@ class EditFuelLog extends EditRecord
     {
         return [
             DeleteAction::make()
-                ->label('Verbruiksregel verwijderen')
-                ->modalHeading('Verbruiksregel verwijderen')
-                ->modalDescription('Dit verwijdert deze tankbeurt uit je verbruiksoverzicht.'),
+                ->label(__('fuel.actions.delete'))
+                ->modalHeading(__('fuel.delete_modal.heading'))
+                ->modalDescription(__('fuel.delete_modal.description')),
         ];
     }
 }

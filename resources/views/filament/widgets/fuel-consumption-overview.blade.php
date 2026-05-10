@@ -3,10 +3,10 @@
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
             <div>
                 <h2 style="font-size:20px; font-weight:700;">
-                    Verbruik
+                    {{ __('fuel.widget.heading') }}
                 </h2>
                 <div style="font-size:13px; color:#6b7280; margin-top:4px;">
-                    Gemiddeld verbruik per voertuig
+                    {{ __('fuel.widget.subheading') }}
                 </div>
             </div>
 

@@ -19,10 +19,10 @@ class FuelLogForm
     {
         return $schema
             ->components([
-                Section::make('Tankbeurt')
+                Section::make(__('fuel.form.section_title'))
                     ->schema([
                         Forms\Components\Select::make('vehicle_id')
-                            ->label('Voertuig')
+                            ->label(__('fuel.form.vehicle'))
                             ->options(
                                 Vehicle::query()
                                     ->where('user_id', auth()->id())
@@ -43,16 +43,16 @@ class FuelLogForm
                             }),
 
                         Forms\Components\Select::make('distance_unit')
-                            ->label('Afstandseenheid')
+                            ->label(__('fuel.form.distance_unit'))
                             ->options(app(DistanceUnitService::class)->getSupportedUnits())
                             ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(request()->integer('vehicle_id') ?: null))
                             ->required()
                             ->selectablePlaceholder(false)
                             ->live()
-                            ->helperText('Wordt onthouden als standaard voor dit voertuig.'),
+                            ->helperText(__('fuel.form.distance_unit_help')),
 
                         Forms\Components\DatePicker::make('fuel_date')
-                            ->label('Datum')
+                            ->label(__('fuel.form.date'))
                             ->required()
                             ->default(now())
                             ->native(false)
@@ -60,7 +60,7 @@ class FuelLogForm
                             ->afterStateUpdated(fn (Set $set, Get $get) => self::syncDerivedDistance($set, $get, self::intOrNull($get('vehicle_id')))),
 
                         Forms\Components\TextInput::make('odometer_km')
-                            ->label('Tellerstand')
+                            ->label(__('fuel.form.odometer'))
                             ->numeric()
                             ->inputMode('decimal')
                             ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
@@ -68,7 +68,7 @@ class FuelLogForm
                             ->afterStateUpdated(fn (Set $set, Get $get) => self::syncDerivedDistance($set, $get, self::intOrNull($get('vehicle_id')))),
 
                         Forms\Components\TextInput::make('distance_km')
-                            ->label('Afgelegde afstand')
+                            ->label(__('fuel.form.distance'))
                             ->numeric()
                             ->inputMode('decimal')
                             ->required()
@@ -85,30 +85,30 @@ class FuelLogForm
                         Forms\Components\Placeholder::make('distance_km_description_hint')
                             ->hiddenLabel()
                             ->content(fn (): HtmlString => new HtmlString(
-                                '<span style="display:block; font-size:0.74rem; line-height:1.35; color:rgb(107, 114, 128);">Verplicht. Wordt automatisch voorgesteld zodra tellerstand en een vorige tankbeurt bekend zijn, maar blijft handmatig aanpasbaar.</span>'
+                                '<span style="display:block; font-size:0.74rem; line-height:1.35; color:rgb(107, 114, 128);">' . e(__('fuel.form.distance_required_hint')) . '</span>'
                             ))
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('fuel_liters')
-                            ->label('Aantal liter brandstof')
+                            ->label(__('fuel.form.liters'))
                             ->numeric()
                             ->inputMode('decimal')
                             ->required()
                             ->suffix('L'),
 
                         Forms\Components\TextInput::make('price_per_liter')
-                            ->label('Prijs per liter')
+                            ->label(__('fuel.form.price_per_liter'))
                             ->numeric()
                             ->inputMode('decimal')
                             ->prefix('EUR'),
 
                         Forms\Components\TextInput::make('station_location')
-                            ->label('Locatie benzinepomp')
+                            ->label(__('fuel.form.station_location'))
                             ->maxLength(255)
                             ->columnSpanFull(),
 
                         Forms\Components\Placeholder::make('consumption_preview')
-                            ->label('Berekend verbruik')
+                            ->label(__('fuel.form.consumption_preview'))
                             ->content(function (Get $get): string {
                                 $distanceKm = app(DistanceUnitService::class)->toKilometers(
                                     self::floatOrNull($get('distance_km')),
@@ -125,7 +125,7 @@ class FuelLogForm
                             }),
 
                         Forms\Components\Placeholder::make('cost_preview')
-                            ->label('Totale brandstofkosten')
+                            ->label(__('fuel.form.cost_preview'))
                             ->content(function (Get $get): string {
                                 $totalCost = app(FuelConsumptionService::class)->calculateTotalCost(
                                     self::floatOrNull($get('fuel_liters')),
@@ -133,7 +133,7 @@ class FuelLogForm
                                 );
 
                                 if ($totalCost === null) {
-                                    return 'Onbekend';
+                                    return __('fuel.form.worked_unknown');
                                 }
 
                                 return 'EUR ' . number_format($totalCost, 2, ',', '.');
@@ -195,7 +195,10 @@ class FuelLogForm
 
         return new HtmlString(
             '<strong style="' . $smallStyle . ' margin-bottom:2px; color:rgb(17, 24, 39);">'
-            . e($milesLabel . ' miles is ' . number_format((float) $distanceKm, 1, ',', '.') . ' km.')
+            . e(__('fuel.form.miles_conversion', [
+                'miles' => $milesLabel,
+                'kilometers' => number_format((float) $distanceKm, 1, ',', '.'),
+            ]))
             . '</strong>'
         );
     }

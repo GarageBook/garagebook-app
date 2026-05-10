@@ -32,7 +32,7 @@
                 font-weight:600;
                 color:#111827;
             ">
-                Actief voertuig
+                {{ __('fuel.header.active_vehicle') }}
             </label>
 
             <select
@@ -64,7 +64,7 @@
                         {{ $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model) }}
                     </option>
                 @empty
-                    <option value="">Geen voertuigen beschikbaar</option>
+                    <option value="">{{ __('fuel.header.no_vehicles') }}</option>
                 @endforelse
             </select>
         </div>
@@ -103,32 +103,32 @@
             <div style="display:flex; justify-content:space-between; gap:16px; align-items:end; flex-wrap:wrap;">
                 <div>
                     <div style="font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.66);">
-                        Verbruiksoverzicht
+                        {{ __('fuel.header.overview') }}
                     </div>
                     <div style="margin-top:6px; font-size:clamp(1.9rem, 4vw, 2.7rem); line-height:0.96; font-weight:700;">
                         {{ $activeVehicle->nickname ?: ($activeVehicle->brand . ' ' . $activeVehicle->model) }}
                     </div>
                     <div style="margin-top:10px; max-width:44rem; color:rgba(255,255,255,0.74); font-size:0.98rem; line-height:1.6;">
-                        Alle tankbeurten van dit voertuig samengevat in liters, kosten, afstand en gemiddeld verbruik.
+                        {{ __('fuel.header.description') }}
                     </div>
                 </div>
             </div>
 
             <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px;">
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Totale afstand</div>
+                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_distance') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['distance_label'] }}</div>
                 </div>
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Totaal liters</div>
+                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_liters') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ number_format((float) $summary['fuel_liters'], 2, ',', '.') }} L</div>
                 </div>
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Brandstofkosten</div>
+                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.fuel_costs') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">EUR {{ number_format((float) $summary['total_cost'], 2, ',', '.') }}</div>
                 </div>
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">Gemiddeld verbruik</div>
+                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.average_consumption') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['average_label'] }}</div>
                 </div>
             </div>
