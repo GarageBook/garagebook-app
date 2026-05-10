@@ -56,7 +56,7 @@
         },
         fileLabel(path) {
             if (! path || typeof path !== 'string') {
-                return 'Bestand'
+                return @js(__('maintenance.media_gallery.file_fallback'))
             }
 
             return path.split('/').pop()
@@ -65,7 +65,7 @@
             const extension = this.extension(path)
 
             if (! extension) {
-                return 'Bestand'
+                return @js(__('maintenance.media_gallery.file_fallback'))
             }
 
             return extension.toUpperCase()
@@ -138,7 +138,7 @@
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                Open
+                                {{ __('maintenance.media_gallery.open') }}
                             </a>
 
                             <button
@@ -146,7 +146,7 @@
                                 class="gb-maintenance-media-gallery__remove"
                                 x-on:click="removeByPath(@js($attachment))"
                             >
-                                Verwijder
+                                {{ __('maintenance.media_gallery.remove') }}
                             </button>
                         </div>
                     </div>
@@ -197,7 +197,7 @@
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
-                                    Open
+                                    {{ __('maintenance.media_gallery.open') }}
                                 </a>
 
                                 <button
@@ -205,7 +205,7 @@
                                     class="gb-maintenance-media-gallery__remove"
                                     x-on:click="remove(index)"
                                 >
-                                    Verwijder
+                                    {{ __('maintenance.media_gallery.remove') }}
                                 </button>
                             </div>
                         </div>

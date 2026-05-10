@@ -18,7 +18,7 @@ class MaintenanceLogForm
             ->components([
 
                 Forms\Components\Select::make('vehicle_id')
-                    ->label('Voertuig')
+                    ->label(__('maintenance.fields.vehicle'))
                     ->options(
                         Vehicle::where('user_id', auth()->id())
                             ->get()
@@ -38,42 +38,42 @@ class MaintenanceLogForm
                     )),
 
                 Forms\Components\Select::make('distance_unit')
-                    ->label('Afstandseenheid')
+                    ->label(__('maintenance.fields.distance_unit'))
                     ->options(app(DistanceUnitService::class)->getSupportedUnits())
                     ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(request()->integer('vehicle_id') ?: null))
                     ->required()
                     ->selectablePlaceholder(false)
-                    ->helperText('Wordt onthouden als standaard voor dit voertuig.'),
+                    ->helperText(__('maintenance.fields.distance_unit_help')),
 
                 Forms\Components\TextInput::make('description')
-                    ->label('Omschrijving')
+                    ->label(__('maintenance.fields.description'))
                     ->required(),
 
                 Forms\Components\TextInput::make('km_reading')
-                    ->label('Tellerstand')
+                    ->label(__('maintenance.fields.odometer'))
                     ->numeric()
                     ->suffix(fn (Get $get): string => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')))
                     ->required(),
 
                 Forms\Components\DatePicker::make('maintenance_date')
-                    ->label('Onderhoudsdatum')
+                    ->label(__('maintenance.fields.maintenance_date'))
                     ->required(),
 
                 Forms\Components\TextInput::make('cost')
-                    ->label('Kosten')
+                    ->label(__('maintenance.fields.cost'))
                     ->numeric()
                     ->prefix('€'),
 
                 Forms\Components\TextInput::make('worked_hours')
-                    ->label('Gewerkte uren')
+                    ->label(__('maintenance.fields.worked_hours'))
                     ->numeric()
                     ->maxValue(9999.99)
                     ->inputMode('decimal')
-                    ->placeholder('bijv. 2.5')
-                    ->suffix(' uur'),
+                    ->placeholder(__('maintenance.fields.worked_hours_placeholder'))
+                    ->suffix(__('maintenance.table.hours_suffix')),
 
                 Forms\Components\FileUpload::make('attachments')
-                    ->label('Foto\'s, video\'s en bestanden')
+                    ->label(__('maintenance.fields.attachments'))
                     ->disk('public')
                     ->directory('maintenance-attachments')
                     ->visibility('public')
@@ -88,28 +88,29 @@ class MaintenanceLogForm
                     ->columnSpanFull(),
 
                 Forms\Components\Textarea::make('notes')
-                    ->label('Notities')
+                    ->label(__('maintenance.fields.notes'))
                     ->columnSpanFull(),
 
-                // 🔥 REMINDERS (FIXED PROPERLY)
-                Section::make('Herinnering')
-                    ->description('Laat GarageBook je helpen herinneren aan toekomstig onderhoud')
+                Section::make(__('maintenance.reminder.section'))
+                    ->description(__('maintenance.reminder.description'))
                     ->schema([
 
                         Forms\Components\Toggle::make('reminder_enabled')
-                            ->label('Herinnering inschakelen')
-                            ->reactive(), // 👈 DIT IS DE FIX
+                            ->label(__('maintenance.reminder.enabled'))
+                            ->reactive(),
 
                         Forms\Components\TextInput::make('interval_months')
-                            ->label('Interval (maanden)')
+                            ->label(__('maintenance.reminder.interval_months'))
                             ->numeric()
-                            ->placeholder('bijv. 12')
+                            ->placeholder(__('maintenance.reminder.interval_months_placeholder'))
                             ->visible(fn ($get) => $get('reminder_enabled')),
 
                         Forms\Components\TextInput::make('interval_km')
-                            ->label(fn (Get $get): string => 'Interval (' . app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')) . ')')
+                            ->label(fn (Get $get): string => __('maintenance.reminder.interval_distance', [
+                                'unit' => app(DistanceUnitService::class)->getUnitSuffix($get('distance_unit')),
+                            ]))
                             ->numeric()
-                            ->placeholder('bijv. 6000')
+                            ->placeholder(__('maintenance.reminder.interval_distance_placeholder'))
                             ->visible(fn ($get) => $get('reminder_enabled')),
 
                     ])

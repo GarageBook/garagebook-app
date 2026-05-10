@@ -52,14 +52,16 @@ class EditMaintenanceLog extends EditRecord
     {
         return [
             DeleteAction::make()
-                ->label('Onderhoud verwijderen')
-                ->modalHeading('Onderhoud verwijderen')
-                ->modalDescription('Dit verwijdert het volledige onderhoudsitem. Media kun je hieronder per bestand verwijderen.'),
+                ->label(__('maintenance.actions.delete'))
+                ->modalHeading(__('maintenance.edit_page.delete_modal_heading'))
+                ->modalDescription(__('maintenance.edit_page.delete_modal_description')),
         ];
     }
 
     public function getHeading(): string | HtmlString
     {
+        $title = __('maintenance.edit_page.title');
+        $otherFiles = __('maintenance.edit_page.other_files');
         $images = [];
         $videos = [];
 
@@ -92,7 +94,7 @@ class EditMaintenanceLog extends EditRecord
         );
 
         if ($images === [] && $videos === [] && $files === []) {
-            return 'Onderhoud bewerken';
+            return $title;
         }
 
         $html = '<div style="display:flex; flex-direction:column; gap:18px;">';
@@ -108,7 +110,7 @@ class EditMaintenanceLog extends EditRecord
                     <a href="' . $escapedUrl . '" target="_blank" rel="noopener noreferrer">
                         <img
                             src="' . $escapedThumbnailUrl . '"
-                            alt="Onderhoudsfoto"
+                            alt="' . e(__('maintenance.edit_page.photo_alt')) . '"
                             loading="lazy"
                             decoding="async"
                             width="120"
@@ -153,7 +155,7 @@ class EditMaintenanceLog extends EditRecord
 
         if ($files !== []) {
             $html .= '<div style="display:flex; flex-direction:column; gap:8px;">';
-            $html .= '<div style="font-weight:700;">Overige bestanden</div>';
+            $html .= '<div style="font-weight:700;">' . e($otherFiles) . '</div>';
 
             foreach ($files as $file) {
                 $html .= '
@@ -171,7 +173,7 @@ class EditMaintenanceLog extends EditRecord
             $html .= '</div>';
         }
 
-        $html .= '<div>Onderhoud bewerken</div>';
+        $html .= '<div>' . e($title) . '</div>';
         $html .= '</div>';
 
         return new HtmlString($html);

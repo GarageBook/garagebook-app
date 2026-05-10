@@ -61,14 +61,14 @@ class ListMaintenanceLogs extends ListRecords
 
         return [
             Action::make('openSharePage')
-                ->label('Open als externe pagina')
+                ->label(__('maintenance.actions.open_external_page'))
                 ->url($shareUrl)
                 ->openUrlInNewTab()
                 ->color('warning')
                 ->outlined(),
 
             Action::make('copyUrl')
-                ->label('Kopieer URL')
+                ->label(__('maintenance.actions.copy_url'))
                 ->extraAttributes([
                     'onclick' => "navigator.clipboard.writeText('{$shareUrl}')",
                 ])
@@ -76,7 +76,7 @@ class ListMaintenanceLogs extends ListRecords
                 ->outlined(),
 
             Action::make('exportPdf')
-                ->label('Exporteer PDF')
+                ->label(__('maintenance.actions.export_pdf'))
                 ->url($pdfUrl)
                 ->openUrlInNewTab()
                 ->color('warning')

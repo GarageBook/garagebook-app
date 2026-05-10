@@ -32,7 +32,7 @@
                 font-weight:600;
                 color:#111827;
             ">
-                Actief voertuig
+                {{ __('maintenance.selector.active_vehicle') }}
             </label>
 
             <select
@@ -64,7 +64,7 @@
                         {{ $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model) }}
                     </option>
                 @empty
-                    <option value="">Geen voertuigen beschikbaar</option>
+                    <option value="">{{ __('maintenance.selector.no_vehicles') }}</option>
                 @endforelse
             </select>
         </div>

@@ -19,10 +19,6 @@ class MaintenanceLogResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-wrench-screwdriver';
 
-    protected static ?string $navigationLabel = 'Onderhoud';
-    protected static ?string $modelLabel = 'Onderhoudslog';
-    protected static ?string $pluralModelLabel = 'Onderhoud';
-
     public static function form(Schema $schema): Schema
     {
         return MaintenanceLogForm::configure($schema);
@@ -48,5 +44,20 @@ class MaintenanceLogResource extends Resource
             'create' => CreateMaintenanceLog::route('/create'),
             'edit' => EditMaintenanceLog::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('maintenance.navigation_label');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('maintenance.model_label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('maintenance.plural_model_label');
     }
 }

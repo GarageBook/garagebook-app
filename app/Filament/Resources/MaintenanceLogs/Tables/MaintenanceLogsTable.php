@@ -19,7 +19,7 @@ class MaintenanceLogsTable
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('attachments')
-                    ->label('Preview')
+                    ->label(__('maintenance.table.preview'))
                     ->disk('public')
                     ->width(180)
                     ->height(100)
@@ -39,22 +39,22 @@ class MaintenanceLogsTable
                     }),
 
                 Tables\Columns\TextColumn::make('attachments_count')
-                    ->label('Bestanden')
+                    ->label(__('maintenance.table.files'))
                     ->getStateUsing(fn ($record) => count($record->media_attachments) + count($record->file_attachments))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('vehicle.model')
-                    ->label('Voertuig')
+                    ->label(__('maintenance.table.vehicle'))
                     ->weight('bold')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('description')
-                    ->label('Omschrijving')
+                    ->label(__('maintenance.table.description'))
                     ->searchable()
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('km_reading')
-                    ->label('Afstand')
+                    ->label(__('maintenance.table.distance'))
                     ->formatStateUsing(fn ($state, $record) => app(DistanceUnitService::class)->formatFromKilometers(
                         $state,
                         $record->vehicle?->distance_unit,
@@ -63,18 +63,18 @@ class MaintenanceLogsTable
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('maintenance_date')
-                    ->label('Datum')
+                    ->label(__('maintenance.table.date'))
                     ->date('d-m-Y')
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('cost')
-                    ->label('Kosten')
+                    ->label(__('maintenance.table.cost'))
                     ->money('EUR')
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('worked_hours')
-                    ->label('Uren')
-                    ->suffix(' uur')
+                    ->label(__('maintenance.table.hours'))
+                    ->suffix(__('maintenance.table.hours_suffix'))
                     ->badge(),
             ])
             ->defaultSort('maintenance_date', 'desc')
