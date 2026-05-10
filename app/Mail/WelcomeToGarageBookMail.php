@@ -14,7 +14,7 @@ class WelcomeToGarageBookMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welkom bij GarageBook',
+            subject: __('emails.welcome_subject'),
         );
     }
 
