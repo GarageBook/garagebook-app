@@ -100,14 +100,18 @@ class ReminderService
         if ($now->greaterThan($nextDate)) {
             return [
                 'type' => 'overdue',
-                'label' => $this->formatRoundedAbsoluteDiff($nextDate, $now) . ' te laat',
+                'label' => __('reminders.status.overdue', [
+                    'value' => $this->formatRoundedAbsoluteDiff($nextDate, $now),
+                ]),
                 'priority' => -1 * $nextDate->diffInDays($now),
             ];
         }
 
         return [
             'type' => 'upcoming',
-            'label' => 'over ' . $this->formatRoundedAbsoluteDiff($now, $nextDate),
+            'label' => __('reminders.status.upcoming', [
+                'value' => $this->formatRoundedAbsoluteDiff($now, $nextDate),
+            ]),
             'priority' => $now->diffInDays($nextDate),
         ];
     }
@@ -125,7 +129,9 @@ class ReminderService
         if ($remaining <= 0) {
             return [
                 'type' => 'overdue',
-                'label' => $remainingLabel . ' te laat',
+                'label' => __('reminders.status.overdue', [
+                    'value' => $remainingLabel,
+                ]),
                 'priority' => $remaining,
             ];
         }
@@ -156,7 +162,7 @@ class ReminderService
         $description = trim((string) $description);
 
         if ($description === '') {
-            return 'onderhoud';
+            return __('reminders.default_heading');
         }
 
         $description = preg_replace('/\s+/', ' ', $description) ?? $description;
@@ -170,13 +176,9 @@ class ReminderService
             return '';
         }
 
-        $sentence = implode(' of ', $parts);
+        $sentence = implode(__('reminders.status.separator'), $parts);
 
-        if ($type === 'upcoming') {
-            return ucfirst($sentence) . '.';
-        }
-
-        return ucfirst($sentence) . '.';
+        return Str::ucfirst($sentence) . '.';
     }
 
     private function formatRoundedAbsoluteDiff(Carbon $from, Carbon $to): string

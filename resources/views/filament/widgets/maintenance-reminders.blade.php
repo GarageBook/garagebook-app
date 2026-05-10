@@ -1,7 +1,7 @@
 <x-filament::widget>
     <x-filament::card>
         <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
-            Toekomstig onderhoud
+            {{ __('reminders.widget_heading') }}
         </h2>
 
         <div style="display:flex; flex-direction:column; gap:12px;">
@@ -27,7 +27,7 @@
                 </a>
             @empty
                 <div style="color:#9ca3af;">
-                    Geen aankomende onderhoudsmomenten
+                    {{ __('reminders.empty_state') }}
                 </div>
             @endforelse
         </div>
