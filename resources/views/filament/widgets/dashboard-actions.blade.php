@@ -10,7 +10,7 @@
         <div class="space-y-6">
 
             <div>
-                <h2 class="text-lg font-bold mb-4"><strong>Mijn voertuigen</strong></h2>
+                <h2 class="text-lg font-bold mb-4"><strong>{{ __('dashboard.actions_widget.heading') }}</strong></h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4" style="margin:15px 0 0 0;">
                     @foreach($vehicles as $vehicle)
@@ -42,7 +42,7 @@
                         class="fi-btn rounded-xl px-5 py-3"
                         style="display:inline-flex;"
                     >
-                        Beheer je voertuigen
+                        {{ __('dashboard.actions_widget.manage_vehicles') }}
                     </a>
 
                     <a
@@ -50,7 +50,7 @@
                         class="fi-btn rounded-xl px-5 py-3"
                         style="display:inline-flex;"
                     >
-                        Voeg onderhoud toe
+                        {{ __('dashboard.actions_widget.add_maintenance') }}
                     </a>
                 </div>
             </div>

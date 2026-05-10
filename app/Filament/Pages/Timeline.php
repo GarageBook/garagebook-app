@@ -108,7 +108,7 @@ class Timeline extends Page
                     'label' => MediaPath::label($attachment),
                     'type' => MediaPath::isVideo($attachment)
                         ? 'Video'
-                        : (MediaPath::isPdf($attachment) ? 'PDF' : 'Bestand'),
+                        : (MediaPath::isPdf($attachment) ? __('dashboard.timeline.file_type_pdf') : __('dashboard.timeline.file_type_file')),
                     'url' => Storage::url($attachment),
                 ])
                 ->values()

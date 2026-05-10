@@ -675,22 +675,22 @@
             <section class="gb-timeline-hero">
                 <div class="gb-timeline-hero__top">
                     <div>
-                        <div class="gb-timeline-hero__eyebrow">Onderhoudsgeschiedenis in beeld</div>
-                        <div class="gb-timeline-hero__title">{{ $activeVehicle?->nickname ?: ($activeVehicle ? $activeVehicle->brand . ' ' . $activeVehicle->model : 'Geen voertuig') }}</div>
+                        <div class="gb-timeline-hero__eyebrow">{{ __('dashboard.timeline.hero_eyebrow') }}</div>
+                        <div class="gb-timeline-hero__title">{{ $activeVehicle?->nickname ?: ($activeVehicle ? $activeVehicle->brand . ' ' . $activeVehicle->model : __('dashboard.timeline.no_vehicle')) }}</div>
                         <div class="gb-timeline-hero__subtitle">
-                            Een horizontale, verhalende tijdlijn van je onderhoud. Niet voor data-entry, maar om in één oogopslag te zien wat er wanneer gebeurde.
+                            {{ __('dashboard.timeline.hero_subtitle') }}
                         </div>
                     </div>
 
                     <div class="gb-timeline-selector">
-                        <label class="gb-timeline-selector__label" for="timelineVehicle">Actief voertuig</label>
+                        <label class="gb-timeline-selector__label" for="timelineVehicle">{{ __('dashboard.timeline.active_vehicle') }}</label>
                         <select id="timelineVehicle" class="gb-timeline-selector__field" wire:model.live="activeVehicleId">
                             @forelse($vehicles as $vehicle)
                                 <option value="{{ $vehicle->id }}">
                                     {{ $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model) }}
                                 </option>
                             @empty
-                                <option value="">Geen voertuigen beschikbaar</option>
+                                <option value="">{{ __('dashboard.timeline.no_vehicles_available') }}</option>
                             @endforelse
                         </select>
                     </div>
@@ -698,17 +698,17 @@
 
                 <div class="gb-timeline-summary">
                     <div class="gb-timeline-summary__card">
-                        <div class="gb-timeline-summary__label">Onderhoudspunten</div>
+                        <div class="gb-timeline-summary__label">{{ __('dashboard.timeline.summary_items') }}</div>
                         <div class="gb-timeline-summary__value">{{ count($entries) }}</div>
                     </div>
 
                     <div class="gb-timeline-summary__card">
-                        <div class="gb-timeline-summary__label">Periode</div>
-                        <div class="gb-timeline-summary__value">{{ $periodLabel ?: 'Nog leeg' }}</div>
+                        <div class="gb-timeline-summary__label">{{ __('dashboard.timeline.summary_period') }}</div>
+                        <div class="gb-timeline-summary__value">{{ $periodLabel ?: __('dashboard.timeline.period_empty') }}</div>
                     </div>
 
                     <div class="gb-timeline-summary__card">
-                        <div class="gb-timeline-summary__label">Totale kosten</div>
+                        <div class="gb-timeline-summary__label">{{ __('dashboard.timeline.summary_total_cost') }}</div>
                         <div class="gb-timeline-summary__value">{{ $totalCostLabel }}</div>
                     </div>
                 </div>
@@ -760,10 +760,10 @@
                                                         <span class="gb-timeline-pill">{{ $entry['workedHoursLabel'] }}</span>
                                                     @endif
                                                     @if($entry['imageCount'])
-                                                        <span class="gb-timeline-pill">{{ $entry['imageCount'] }} foto{{ $entry['imageCount'] > 1 ? '\'s' : '' }}</span>
+                                                        <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.images_count', $entry['imageCount'], ['count' => $entry['imageCount']]) }}</span>
                                                     @endif
                                                     @if($entry['fileCount'])
-                                                        <span class="gb-timeline-pill">{{ $entry['fileCount'] }} bestand{{ $entry['fileCount'] > 1 ? 'en' : '' }}</span>
+                                                        <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.files_count', $entry['fileCount'], ['count' => $entry['fileCount']]) }}</span>
                                                     @endif
                                                 </div>
 
@@ -773,9 +773,7 @@
                                                     </div>
                                                 @endif
 
-                                                <button type="button" class="gb-timeline-card__button" @click="openEntry({{ $entry['id'] }})">
-                                                    Bekijk moment
-                                                </button>
+                                                <button type="button" class="gb-timeline-card__button" @click="openEntry({{ $entry['id'] }})">{{ __('dashboard.timeline.view_moment') }}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -787,9 +785,9 @@
             @else
                 <section class="gb-timeline-empty">
                     @if($activeVehicle)
-                        Voor dit voertuig zijn nog geen onderhoudsmomenten om als tijdlijn te tonen.
+                        {{ __('dashboard.timeline.empty_with_vehicle') }}
                     @else
-                        Voeg eerst een voertuig toe om hier een tijdlijn te kunnen bekijken.
+                        {{ __('dashboard.timeline.empty_without_vehicle') }}
                     @endif
                 </section>
             @endif
@@ -862,7 +860,7 @@
                                             <div class="gb-timeline-file__type" x-text="file.type"></div>
                                             <div class="gb-timeline-file__label" x-text="file.label"></div>
                                         </div>
-                                        <a class="gb-timeline-file__link" :href="file.url" target="_blank" rel="noopener noreferrer">Open</a>
+                                        <a class="gb-timeline-file__link" :href="file.url" target="_blank" rel="noopener noreferrer">{{ __('dashboard.timeline.open_file') }}</a>
                                     </div>
                                 </template>
                             </div>
