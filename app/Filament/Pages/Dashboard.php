@@ -20,12 +20,14 @@ class Dashboard extends BaseDashboard
 {
     public function getHeading(): string
     {
-        return 'Welkom terug, ' . Filament::auth()->user()->name;
+        return __('dashboard.welcome_back', [
+            'name' => Filament::auth()->user()->name,
+        ]);
     }
 
     public function getSubheading(): ?string
     {
-        return 'Beheer je voertuigen en voeg onderhoud toe.';
+        return __('dashboard.subheading');
     }
 
     public function headerWidgets(Schema $schema): Schema

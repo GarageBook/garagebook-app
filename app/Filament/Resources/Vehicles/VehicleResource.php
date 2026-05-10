@@ -19,10 +19,6 @@ class VehicleResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bolt';
 
-    protected static ?string $navigationLabel = 'Voertuigen';
-    protected static ?string $modelLabel = 'Voertuig';
-    protected static ?string $pluralModelLabel = 'Voertuigen';
-
     public static function form(Schema $schema): Schema
     {
         return VehicleForm::configure($schema);
@@ -46,5 +42,20 @@ class VehicleResource extends Resource
             'create' => CreateVehicle::route('/create'),
             'edit' => EditVehicle::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('vehicles.navigation_label');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('vehicles.model_label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('vehicles.plural_model_label');
     }
 }

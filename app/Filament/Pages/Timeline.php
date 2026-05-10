@@ -50,12 +50,17 @@ class Timeline extends Page
 
     public function getHeading(): string
     {
-        return 'Tijdlijn';
+        return __('dashboard.timeline_heading');
     }
 
     public function getSubheading(): ?string
     {
-        return 'Een visueel overzicht van het onderhoud van je voertuig, in chronologische volgorde.';
+        return __('dashboard.timeline_subheading');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('dashboard.timeline_label');
     }
 
     protected function getViewData(): array
