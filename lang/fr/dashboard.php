@@ -23,8 +23,11 @@ return [
         'empty_with_vehicle' => 'Il n y a pas encore de moments d entretien a afficher sous forme de chronologie pour ce vehicule.',
         'empty_without_vehicle' => 'Ajoutez d abord un vehicule pour pouvoir voir une chronologie ici.',
         'open_file' => 'Ouvrir',
+        'file_type_video' => 'Video',
         'file_type_pdf' => 'PDF',
         'file_type_file' => 'Fichier',
+        'worked_hours_suffix' => 'heures',
+        'currency_prefix' => 'EUR',
     ],
     'actions_widget' => [
         'heading' => 'Mes vehicules',

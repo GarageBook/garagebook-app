@@ -23,8 +23,11 @@ return [
         'empty_with_vehicle' => 'There are no maintenance moments for this vehicle to show as a timeline yet.',
         'empty_without_vehicle' => 'Add a vehicle first to view a timeline here.',
         'open_file' => 'Open',
+        'file_type_video' => 'Video',
         'file_type_pdf' => 'PDF',
         'file_type_file' => 'File',
+        'worked_hours_suffix' => 'hours',
+        'currency_prefix' => 'EUR',
     ],
     'actions_widget' => [
         'heading' => 'My vehicles',

@@ -107,7 +107,7 @@ class Timeline extends Page
                 ->map(fn (string $attachment): array => [
                     'label' => MediaPath::label($attachment),
                     'type' => MediaPath::isVideo($attachment)
-                        ? 'Video'
+                        ? __('dashboard.timeline.file_type_video')
                         : (MediaPath::isPdf($attachment) ? __('dashboard.timeline.file_type_pdf') : __('dashboard.timeline.file_type_file')),
                     'url' => Storage::url($attachment),
                 ])
@@ -128,10 +128,10 @@ class Timeline extends Page
                 'title' => $log->description,
                 'distanceLabel' => $distanceUnit->formatFromKilometers($log->km_reading, $activeDistanceUnit, 0),
                 'costLabel' => $log->cost !== null
-                    ? 'EUR ' . number_format((float) $log->cost, 2, ',', '.')
+                    ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) $log->cost, 2, ',', '.')
                     : null,
                 'workedHoursLabel' => $log->worked_hours !== null
-                    ? rtrim(rtrim(number_format((float) $log->worked_hours, 2, ',', '.'), '0'), ',') . ' uur'
+                    ? rtrim(rtrim(number_format((float) $log->worked_hours, 2, ',', '.'), '0'), ',') . ' ' . __('dashboard.timeline.worked_hours_suffix')
                     : null,
                 'notes' => $log->notes,
                 'images' => $images,
@@ -159,8 +159,8 @@ class Timeline extends Page
             'entriesJson' => json_encode($entries, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'periodLabel' => $periodLabel,
             'totalCostLabel' => $activeVehicle
-                ? 'EUR ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')
-                : 'EUR 0,00',
+                ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')
+                : __('dashboard.timeline.currency_prefix') . ' 0,00',
         ];
     }
 

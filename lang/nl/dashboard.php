@@ -23,8 +23,11 @@ return [
         'empty_with_vehicle' => 'Voor dit voertuig zijn nog geen onderhoudsmomenten om als tijdlijn te tonen.',
         'empty_without_vehicle' => 'Voeg eerst een voertuig toe om hier een tijdlijn te kunnen bekijken.',
         'open_file' => 'Open',
+        'file_type_video' => 'Video',
         'file_type_pdf' => 'PDF',
         'file_type_file' => 'Bestand',
+        'worked_hours_suffix' => 'uur',
+        'currency_prefix' => 'EUR',
     ],
     'actions_widget' => [
         'heading' => 'Mijn voertuigen',

@@ -23,8 +23,11 @@ return [
         'empty_with_vehicle' => 'Fur dieses Fahrzeug gibt es noch keine Wartungsmomente, die als Zeitachse angezeigt werden konnen.',
         'empty_without_vehicle' => 'Fuge zuerst ein Fahrzeug hinzu, um hier eine Zeitachse ansehen zu konnen.',
         'open_file' => 'Offnen',
+        'file_type_video' => 'Video',
         'file_type_pdf' => 'PDF',
         'file_type_file' => 'Datei',
+        'worked_hours_suffix' => 'Stunden',
+        'currency_prefix' => 'EUR',
     ],
     'actions_widget' => [
         'heading' => 'Meine Fahrzeuge',
