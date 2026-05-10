@@ -23,12 +23,12 @@ class BlogResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return false;
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return auth()->user()?->isAdmin() ?? false;
     }
 
     public static function canCreate(): bool
