@@ -15,8 +15,6 @@ class Timeline extends Page
 {
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
-    protected static ?string $navigationLabel = 'Tijdlijn';
-
     protected static ?int $navigationSort = 1;
 
     protected static ?string $slug = 'tijdlijn';
@@ -30,7 +28,7 @@ class Timeline extends Page
 
     public static function getNavigationBadge(): ?string
     {
-        return 'new!';
+        return __('dashboard.timeline_badge');
     }
 
     public static function getNavigationBadgeColor(): string | array | null

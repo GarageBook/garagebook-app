@@ -4,6 +4,18 @@ return [
     'navigation' => [
         'management' => 'Verwaltung',
     ],
+    'footer' => [
+        'my_garagebook' => 'Mein GarageBook',
+        'about_garagebook' => 'Uber GarageBook',
+        'follow_us' => 'Folge uns in sozialen Medien',
+        'website_home' => 'Website Startseite',
+        'blogs' => 'Blogs',
+        'our_story' => 'Unsere Geschichte',
+        'privacy_statement' => 'Datenschutzerklarung',
+        'terms' => 'Bedingungen',
+        'contact' => 'Kontakt',
+        'all_rights_reserved' => 'Alle Rechte vorbehalten',
+    ],
     'locales' => [
         'navigation_label' => 'Sprachen und Ubersetzungen',
         'page_title' => 'Sprachen und Ubersetzungen',

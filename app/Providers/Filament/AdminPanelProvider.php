@@ -70,6 +70,18 @@ class AdminPanelProvider extends PanelProvider
 
     public function boot(): void
     {
+        $managementLabel = e(__('app.navigation.management'));
+        $myGarageBookLabel = e(__('app.footer.my_garagebook'));
+        $aboutGarageBookLabel = e(__('app.footer.about_garagebook'));
+        $followUsLabel = e(__('app.footer.follow_us'));
+        $websiteHomeLabel = e(__('app.footer.website_home'));
+        $blogsLabel = e(__('app.footer.blogs'));
+        $ourStoryLabel = e(__('app.footer.our_story'));
+        $privacyStatementLabel = e(__('app.footer.privacy_statement'));
+        $termsLabel = e(__('app.footer.terms'));
+        $contactLabel = e(__('app.footer.contact'));
+        $allRightsReservedLabel = e(__('app.footer.all_rights_reserved'));
+
         FilamentView::registerRenderHook(
             'panels::head.end',
             fn (): string => new HtmlString('
@@ -249,13 +261,13 @@ class AdminPanelProvider extends PanelProvider
                         overflow-wrap: anywhere;
                     }
 
-                    .fi-sidebar-group[data-group-label="Beheer"] {
+                    .fi-sidebar-group[data-group-label="' . $managementLabel . '"] {
                         margin-top: 2rem;
                         padding-top: 1.25rem;
                         border-top: 1px solid rgba(148, 163, 184, 0.32);
                     }
 
-                    .fi-sidebar-group[data-group-label="Beheer"] .fi-sidebar-group-label {
+                    .fi-sidebar-group[data-group-label="' . $managementLabel . '"] .fi-sidebar-group-label {
                         color: #64748b;
                         font-weight: 700;
                         letter-spacing: 0.08em;
@@ -400,7 +412,7 @@ class AdminPanelProvider extends PanelProvider
 
                         <div class="gb-footer-columns">
                             <div>
-                                <h3>Mijn GarageBook</h3>
+                                <h3>' . $myGarageBookLabel . '</h3>
                                 <div class="gb-footer-links">
                                     <a href="/admin/vehicles">Mijn voertuigen</a>
                                     <a href="/admin/maintenance-logs">Onderhoud</a>
@@ -408,19 +420,19 @@ class AdminPanelProvider extends PanelProvider
                             </div>
 
                             <div>
-                                <h3>Over GarageBook</h3>
+                                <h3>' . $aboutGarageBookLabel . '</h3>
                                 <div class="gb-footer-links">
-                                    <a href="/">Website home</a>
-                                    <a href="/blogs">Blogs</a>
-                                    <a href="/ons-verhaal">Ons verhaal</a>
-                                    <a href="/privacy-statement">Privacy Statement</a>
-                                    <a href="/algemene-voorwaarden">Voorwaarden</a>
-                                    <a href="/contact">Contact</a>
+                                    <a href="/">' . $websiteHomeLabel . '</a>
+                                    <a href="/blogs">' . $blogsLabel . '</a>
+                                    <a href="/ons-verhaal">' . $ourStoryLabel . '</a>
+                                    <a href="/privacy-statement">' . $privacyStatementLabel . '</a>
+                                    <a href="/algemene-voorwaarden">' . $termsLabel . '</a>
+                                    <a href="/contact">' . $contactLabel . '</a>
                                 </div>
                             </div>
 
                             <div>
-                                <h3>Volg ons op social media</h3>
+                                <h3>' . $followUsLabel . '</h3>
                                 <div class="gb-footer-links">
                                 <a href="https://www.instagram.com/garagebook.global" target="_blank">Instagram</a>
                                 <a href="https://linkedin.com/company/thegaragebook/" target="_blank">LinkedIn</a>
@@ -431,7 +443,7 @@ class AdminPanelProvider extends PanelProvider
                     </div>
 
                     <div class="gb-footer-bottom">
-                        © GarageBook 2026 - Alle rechten voorbehouden
+                        © GarageBook 2026 - ' . $allRightsReservedLabel . '
                     </div>
                 </footer>
             ')

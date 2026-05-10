@@ -4,6 +4,18 @@ return [
     'navigation' => [
         'management' => 'Beheer',
     ],
+    'footer' => [
+        'my_garagebook' => 'Mijn GarageBook',
+        'about_garagebook' => 'Over GarageBook',
+        'follow_us' => 'Volg ons op social media',
+        'website_home' => 'Website home',
+        'blogs' => 'Blogs',
+        'our_story' => 'Ons verhaal',
+        'privacy_statement' => 'Privacy Statement',
+        'terms' => 'Voorwaarden',
+        'contact' => 'Contact',
+        'all_rights_reserved' => 'Alle rechten voorbehouden',
+    ],
     'locales' => [
         'navigation_label' => 'Talen en vertalingen',
         'page_title' => 'Talen en vertalingen',

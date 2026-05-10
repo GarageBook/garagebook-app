@@ -4,6 +4,18 @@ return [
     'navigation' => [
         'management' => 'Gestion',
     ],
+    'footer' => [
+        'my_garagebook' => 'Mon GarageBook',
+        'about_garagebook' => 'A propos de GarageBook',
+        'follow_us' => 'Suivez-nous sur les reseaux sociaux',
+        'website_home' => 'Accueil du site',
+        'blogs' => 'Blogs',
+        'our_story' => 'Notre histoire',
+        'privacy_statement' => 'Declaration de confidentialite',
+        'terms' => 'Conditions',
+        'contact' => 'Contact',
+        'all_rights_reserved' => 'Tous droits reserves',
+    ],
     'locales' => [
         'navigation_label' => 'Langues et traductions',
         'page_title' => 'Langues et traductions',
