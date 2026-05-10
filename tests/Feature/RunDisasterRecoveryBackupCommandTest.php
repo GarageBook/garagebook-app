@@ -12,10 +12,18 @@ class RunDisasterRecoveryBackupCommandTest extends TestCase
 {
     private string $databasePath;
     private string $fakeMysqlDumpPath;
+    private string $originalStoragePath;
+    private string $isolatedStoragePath;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->originalStoragePath = $this->app->storagePath();
+        $this->isolatedStoragePath = rtrim(sys_get_temp_dir(), '/').'/garagebook-test-storage-'.uniqid('', true);
+        File::deleteDirectory($this->isolatedStoragePath);
+        File::ensureDirectoryExists($this->isolatedStoragePath.'/app/public');
+        $this->app->useStoragePath($this->isolatedStoragePath);
 
         $this->databasePath = database_path('testing-backup.sqlite');
         File::delete($this->databasePath);
@@ -43,6 +51,8 @@ class RunDisasterRecoveryBackupCommandTest extends TestCase
             File::deleteDirectory($temporaryDirectory);
         }
 
+        $this->app->useStoragePath($this->originalStoragePath);
+        File::deleteDirectory($this->isolatedStoragePath);
         File::delete($this->fakeMysqlDumpPath);
         DB::disconnect('sqlite');
         File::delete($this->databasePath);
