@@ -10,7 +10,12 @@ class CreateVehicle extends CreateRecord
 {
     protected static string $resource = VehicleResource::class;
 
-    protected static ?string $title = 'Voertuig toevoegen';
+    protected static ?string $title = null;
+
+    public function getTitle(): string
+    {
+        return __('vehicles.create_title');
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {

@@ -46,6 +46,11 @@ class EditVehicle extends EditRecord
     public function getHeading(): string | HtmlString
     {
         $vehicle = $this->record;
+        $editTitle = e(__('vehicles.edit_title'));
+        $otherFilesLabel = e(__('vehicles.edit_page.other_files'));
+        $videoTypeLabel = __('vehicles.edit_page.file_type_video');
+        $pdfTypeLabel = __('vehicles.edit_page.file_type_pdf');
+        $fileTypeLabel = __('vehicles.edit_page.file_type_file');
 
         $photos = [];
 
@@ -66,7 +71,7 @@ class EditVehicle extends EditRecord
                 $files[] = [
                     'label' => MediaPath::label($attachment),
                     'url' => Storage::url($attachment),
-                    'type' => MediaPath::isVideo($attachment) ? 'Video' : (MediaPath::isPdf($attachment) ? 'PDF' : 'Bestand'),
+                    'type' => MediaPath::isVideo($attachment) ? $videoTypeLabel : (MediaPath::isPdf($attachment) ? $pdfTypeLabel : $fileTypeLabel),
                 ];
             }
         }
@@ -94,7 +99,7 @@ class EditVehicle extends EditRecord
             </div>
             <div id="vehicleFiles" style="display:flex; flex-direction:column; gap:8px;">
             </div>
-            <div>Voertuig bewerken</div>
+            <div>' . $editTitle . '</div>
         </div>
 
         <div id="galleryOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center;">
@@ -114,7 +119,7 @@ class EditVehicle extends EditRecord
             if (files.length) {
                 const heading = document.createElement("div");
                 heading.style.fontWeight = "700";
-                heading.textContent = "Overige bestanden";
+                heading.textContent = ' . json_encode($otherFilesLabel) . ';
                 fileContainer.appendChild(heading);
 
                 files.forEach((file) => {

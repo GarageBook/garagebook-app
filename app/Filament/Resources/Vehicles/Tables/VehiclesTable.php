@@ -17,26 +17,26 @@ class VehiclesTable
             ->modifyQueryUsing(fn ($query) => $query->with('maintenanceLogs:id,vehicle_id,attachments,media_attachments,file_attachments'))
             ->columns([
                 Tables\Columns\ImageColumn::make('photo')
-                    ->label('Foto')
+                    ->label(__('vehicles.table.photo'))
                     ->disk('public')
                     ->square()
                     ->size(80),
 
                 Tables\Columns\TextColumn::make('brand')
-                    ->label('Merk')
+                    ->label(__('vehicles.table.brand'))
                     ->sortable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('model')
-                    ->label('Model')
+                    ->label(__('vehicles.table.model'))
                     ->sortable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('license_plate')
-                    ->label('Kenteken'),
+                    ->label(__('vehicles.table.license_plate')),
 
                 Tables\Columns\TextColumn::make('current_km')
-                    ->label('Afstand')
+                    ->label(__('vehicles.table.distance'))
                     ->formatStateUsing(fn ($state, Vehicle $record) => app(DistanceUnitService::class)->formatFromKilometers(
                         $state,
                         $record->distance_unit,
@@ -44,15 +44,15 @@ class VehiclesTable
                     )),
 
                 Tables\Columns\TextColumn::make('year')
-                    ->label('Bouwjaar'),
+                    ->label(__('vehicles.table.year')),
 
                 Tables\Columns\TextColumn::make('media_attachments_count')
-                    ->label('Bestanden')
+                    ->label(__('vehicles.table.files'))
                     ->getStateUsing(fn (Vehicle $record) => self::fileCount($record))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Aangemaakt')
+                    ->label(__('vehicles.table.created_at'))
                     ->dateTime('d-m-Y H:i')
                     ->sortable(),
             ])

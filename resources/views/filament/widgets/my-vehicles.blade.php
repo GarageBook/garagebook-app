@@ -1,7 +1,7 @@
 <x-filament::widget>
     <x-filament::card>
         <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
-            Mijn voertuigen
+            {{ $translations['heading'] }}
         </h2>
 
         @forelse($vehicles as $vehicle)
@@ -50,7 +50,7 @@
                         x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }} && (!canHover || hovering)"
                         x-cloak
                         @click="prev()"
-                        aria-label="Vorige foto"
+                        aria-label="{{ $translations['aria_previous_photo'] }}"
                         style="
                             position:absolute;
                             left:16px;
@@ -74,7 +74,7 @@
                         x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }} && (!canHover || hovering)"
                         x-cloak
                         @click="next()"
-                        aria-label="Volgende foto"
+                        aria-label="{{ $translations['aria_next_photo'] }}"
                         style="
                             position:absolute;
                             right:16px;
@@ -96,7 +96,7 @@
                     <button
                         type="button"
                         @click="openLightbox()"
-                        aria-label="Open fotogalerij"
+                        aria-label="{{ $translations['aria_open_gallery'] }}"
                         style="
                             width:100%;
                             padding:0;
@@ -171,7 +171,7 @@
                             min-width:140px;
                         ">
                             <div style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.08em;">
-                                Per maand
+                                {{ $translations['monthly'] }}
                             </div>
                             <div style="margin-top:4px; font-size:18px; line-height:1.05; font-weight:800; color:#111827;">
                                 EUR {{ number_format((float) $vehicle->dashboard_monthly_cost, 2, ',', '.') }}
@@ -192,7 +192,7 @@
                             border:1px solid #e2e8f0;
                         ">
                             <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
-                                Totale kosten
+                                {{ $translations['total_costs'] }}
                             </div>
                             <div style="margin-top:6px; font-size:18px; line-height:1.05; font-weight:800; color:#0f172a;">
                                 EUR {{ number_format((float) $vehicle->dashboard_total_cost, 2, ',', '.') }}
@@ -206,10 +206,10 @@
                             border:1px solid #e2e8f0;
                         ">
                             <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
-                                Samenstelling
+                                {{ $translations['composition'] }}
                             </div>
                             <div style="margin-top:6px; font-size:13px; line-height:1.5; color:#334155;">
-                                Onderhoud, brandstof en aanschaf
+                                {{ $translations['composition_value'] }}
                             </div>
                         </div>
                     </div>
@@ -224,7 +224,7 @@
                             font-size:13px;
                             color:#111827;
                            ">
-                            Bekijken
+                            {{ $translations['view'] }}
                         </a>
 
                         <a href="/admin/maintenance-logs/create?vehicle_id={{ $vehicle->id }}"
@@ -237,7 +237,7 @@
                             font-size:13px;
                             font-weight:600;
                            ">
-                            + Onderhoud
+                            {{ $translations['add_maintenance'] }}
                         </a>
                     </div>
                 </div>
@@ -286,7 +286,7 @@
                         x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }}"
                         x-cloak
                         @click="prev()"
-                        aria-label="Vorige foto in vergroting"
+                        aria-label="{{ $translations['aria_previous_photo_zoom'] }}"
                         style="
                             position:absolute;
                             left:24px;
@@ -306,7 +306,7 @@
                         x-show="{{ $hasMultiplePhotos ? 'true' : 'false' }}"
                         x-cloak
                         @click="next()"
-                        aria-label="Volgende foto in vergroting"
+                        aria-label="{{ $translations['aria_next_photo_zoom'] }}"
                         style="
                             position:absolute;
                             right:24px;
@@ -324,7 +324,7 @@
                     <button
                         type="button"
                         @click="closeLightbox()"
-                        aria-label="Sluit fotogalerij"
+                        aria-label="{{ $translations['aria_close_gallery'] }}"
                         style="
                             position:absolute;
                             top:24px;
@@ -342,7 +342,7 @@
 
         @empty
             <div style="color:#9ca3af;">
-                Geen voertuigen toegevoegd
+                {{ $translations['empty'] }}
             </div>
         @endforelse
 

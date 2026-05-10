@@ -14,7 +14,29 @@ class MyVehicles extends Widget
 
     protected int | string | array $columnSpan = 1;
 
-    public function getViewData(): array
+    protected function getViewData(): array
+    {
+        return [
+            'translations' => [
+                'heading' => __('vehicles.widget.heading'),
+                'monthly' => __('vehicles.widget.monthly'),
+                'total_costs' => __('vehicles.widget.total_costs'),
+                'composition' => __('vehicles.widget.composition'),
+                'composition_value' => __('vehicles.widget.composition_value'),
+                'view' => __('vehicles.widget.view'),
+                'add_maintenance' => __('vehicles.widget.add_maintenance'),
+                'empty' => __('vehicles.widget.empty'),
+                'aria_previous_photo' => __('vehicles.widget.aria_previous_photo'),
+                'aria_next_photo' => __('vehicles.widget.aria_next_photo'),
+                'aria_open_gallery' => __('vehicles.widget.aria_open_gallery'),
+                'aria_previous_photo_zoom' => __('vehicles.widget.aria_previous_photo_zoom'),
+                'aria_next_photo_zoom' => __('vehicles.widget.aria_next_photo_zoom'),
+                'aria_close_gallery' => __('vehicles.widget.aria_close_gallery'),
+            ],
+        ] + $this->getVehicleData();
+    }
+
+    protected function getVehicleData(): array
     {
         $vehicles = app(VehicleCostService::class)
             ->getVehiclesWithDashboardCostsForUser(auth()->id())
