@@ -1,9 +1,9 @@
 <?php
 
 return [
-    'navigation_label' => 'Brandstof',
+    'navigation_label' => 'Verbruik',
     'model_label' => 'Tankbeurt',
-    'plural_model_label' => 'Brandstof',
+    'plural_model_label' => 'Verbruik',
     'navigation_badge' => 'nieuw!',
     'heading' => 'Verbruik',
     'subheading' => 'Houd tankbeurten per voertuig bij en bekijk direct het gemiddelde verbruik.',
