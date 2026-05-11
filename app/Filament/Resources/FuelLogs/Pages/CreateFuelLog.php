@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FuelLogs\Pages;
 
 use App\Filament\Resources\FuelLogs\FuelLogResource;
+use App\Support\AnalyticsEventTracker;
 use App\Services\DistanceUnitService;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -27,5 +28,10 @@ class CreateFuelLog extends CreateRecord
         unset($data['distance_unit']);
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        app(AnalyticsEventTracker::class)->queueFuelEntryCreated($this->record);
     }
 }

@@ -8,6 +8,7 @@
 <head>
     @if(! request()->is('maintenance/pdf'))
         @include('partials.google-tag')
+        @include('partials.analytics-tracking')
     @endif
     <title>GarageBook Onderhoud</title>
     @if(! request()->is('maintenance/pdf'))

@@ -90,6 +90,11 @@ class AdminPanelProvider extends PanelProvider
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
+            fn (): HtmlString => new HtmlString(view('partials.analytics-tracking')->render()),
+        );
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_END,
             fn (): string => new HtmlString('
                 <style>
                     .gb-login-footer {

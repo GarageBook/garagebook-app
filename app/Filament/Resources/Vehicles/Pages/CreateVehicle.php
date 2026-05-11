@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Vehicles\Pages;
 
 use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Support\AnalyticsEventTracker;
 use App\Services\DistanceUnitService;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -26,5 +27,10 @@ class CreateVehicle extends CreateRecord
         );
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        app(AnalyticsEventTracker::class)->queueVehicleCreated($this->record);
     }
 }

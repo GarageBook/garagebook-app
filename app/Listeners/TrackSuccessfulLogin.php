@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Support\AnalyticsEventTracker;
 use Illuminate\Auth\Events\Login;
 
 class TrackSuccessfulLogin
@@ -20,5 +21,7 @@ class TrackSuccessfulLogin
             'first_login_at' => $user->first_login_at ?: $now,
             'last_login_at' => $now,
         ])->save();
+
+        app(AnalyticsEventTracker::class)->queueLogin(method: 'email');
     }
 }

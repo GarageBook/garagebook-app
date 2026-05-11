@@ -3,6 +3,7 @@
 namespace App\Filament\Auth;
 
 use App\Filament\Auth\Http\Responses\RegistrationResponse;
+use App\Support\AnalyticsEventTracker;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Auth\Events\Registered;
 use Filament\Auth\Pages\Register as BaseRegister;
@@ -53,6 +54,7 @@ class Register extends BaseRegister
         Filament::auth()->login($user, true);
         session()->regenerate();
         RateLimiter::clear('filament-register:' . sha1((string) $user->email));
+        app(AnalyticsEventTracker::class)->queueSignUp(method: 'email');
 
         return app(RegistrationResponse::class);
     }

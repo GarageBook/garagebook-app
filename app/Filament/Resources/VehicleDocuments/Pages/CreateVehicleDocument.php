@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\VehicleDocuments\Pages;
 
 use App\Filament\Resources\VehicleDocuments\VehicleDocumentResource;
+use App\Support\AnalyticsEventTracker;
 use App\Support\VehicleDocumentMetadata;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -15,5 +16,10 @@ class CreateVehicleDocument extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         return VehicleDocumentMetadata::hydrate($data);
+    }
+
+    protected function afterCreate(): void
+    {
+        app(AnalyticsEventTracker::class)->queueDocumentUploaded($this->record);
     }
 }

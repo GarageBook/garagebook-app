@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Jobs\OptimizeMaintenanceLogMedia;
+use App\Support\AnalyticsEventTracker;
 use App\Services\DistanceUnitService;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -28,6 +29,7 @@ class CreateMaintenanceLog extends CreateRecord
 
     protected function afterCreate(): void
     {
+        app(AnalyticsEventTracker::class)->queueMaintenanceLogCreated($this->record);
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
 }
