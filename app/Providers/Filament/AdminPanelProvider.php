@@ -15,6 +15,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -83,7 +84,12 @@ class AdminPanelProvider extends PanelProvider
         $allRightsReservedLabel = e(__('app.footer.all_rights_reserved'));
 
         FilamentView::registerRenderHook(
-            'panels::head.end',
+            PanelsRenderHook::HEAD_START,
+            fn (): HtmlString => new HtmlString(view('partials.google-tag')->render()),
+        );
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_END,
             fn (): string => new HtmlString('
                 <style>
                     .gb-login-footer {
