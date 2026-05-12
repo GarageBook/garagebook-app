@@ -15,9 +15,11 @@
 /node_modules
 /public/build
 /public/hot
+/public/temp-downloads
 /public/storage
 /storage/*.key
 /storage/pail
+/temp
 /vendor
 _ide_helper.php
 Homestead.json
