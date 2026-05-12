@@ -71,7 +71,9 @@ class TripLogResourceTest extends TestCase
         $this->get(TripLogResource::getUrl('view', ['record' => $trip]))
             ->assertOk()
             ->assertSeeText('Tripoverzicht')
-            ->assertSeeText('Routekaart');
+            ->assertSeeText('Routekaart')
+            ->assertSee('trip-route-map-'.$trip->id)
+            ->assertSee('build/assets/app-');
     }
 
     public function test_trip_resource_query_only_returns_authenticated_users_trips(): void
