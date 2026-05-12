@@ -156,7 +156,7 @@ class FuelLogResourceTest extends TestCase
             ->assertSeeText('EUR 2,350')
             ->assertSeeText('Argos, Bleiswijk')
             ->assertSeeText('Verbruik over tijd')
-            ->assertSeeText('Miles-invoer wordt intern in kilometers opgeslagen');
+            ->assertSeeText('Bij voertuigen in miles rekenen we automatisch om naar kilometers voor verbruiksberekeningen');
     }
 
     public function test_fuel_log_index_shows_clear_chart_empty_state_when_there_are_too_few_consumption_points(): void

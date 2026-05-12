@@ -1,4 +1,4 @@
-<div style="display:flex; flex-direction:column; gap:10px; min-width:0;">
+<div style="display:flex; flex-direction:column; gap:10px; min-width:0; align-items:{{ ($align ?? 'start') === 'center' ? 'center' : 'flex-start' }}; text-align:{{ ($align ?? 'start') === 'center' ? 'center' : 'left' }};">
     <span style="
         display:inline-flex;
         align-self:flex-start;

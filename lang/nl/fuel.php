@@ -64,7 +64,7 @@ return [
     'chart' => [
         'heading' => 'Verbruik over tijd',
         'description_metric' => 'Ontwikkeling van L/100 km per tankbeurt op basis van de huidige verbruiksgegevens.',
-        'description_miles' => 'Primair L/100 km per tankbeurt, met MPG (US) als extra context. Miles-invoer wordt intern in kilometers opgeslagen; kleine afrondingsverschillen zijn daardoor mogelijk.',
+        'description_miles' => 'Bij voertuigen in miles rekenen we automatisch om naar kilometers voor verbruiksberekeningen. Daardoor kunnen afgeronde waarden minimaal afwijken.',
         'empty' => 'Nog niet genoeg tankbeurten met afstand om een verbruiksgrafiek te tonen. Minimaal 2 regels met afstand en liters zijn nodig.',
     ],
 ];

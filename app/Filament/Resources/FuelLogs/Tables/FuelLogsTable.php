@@ -31,7 +31,8 @@ class FuelLogsTable
                 Tables\Columns\TextColumn::make('odometer_km')
                     ->label(__('fuel.table.odometer'))
                     ->formatStateUsing(fn ($state, FuelLog $record): HtmlString => self::renderMeasurementCell(
-                        ...self::measurementDisplay((float) $state, $record, 'odometer')
+                        ...self::measurementDisplay((float) $state, $record, 'odometer'),
+                        align: 'center'
                     ))
                     ->html()
                     ->extraAttributes(self::cellAttributes()),
@@ -39,7 +40,8 @@ class FuelLogsTable
                 Tables\Columns\TextColumn::make('distance_km')
                     ->label(__('fuel.table.distance'))
                     ->formatStateUsing(fn ($state, FuelLog $record): HtmlString => self::renderMeasurementCell(
-                        ...self::measurementDisplay((float) $state, $record, 'distance')
+                        ...self::measurementDisplay((float) $state, $record, 'distance'),
+                        align: 'center'
                     ))
                     ->html()
                     ->extraAttributes(self::cellAttributes()),
@@ -123,11 +125,12 @@ class FuelLogsTable
         ];
     }
 
-    private static function renderMeasurementCell(string $primary, ?string $secondary = null): HtmlString
+    private static function renderMeasurementCell(string $primary, ?string $secondary = null, string $align = 'start'): HtmlString
     {
         return new HtmlString((string) view('filament.resources.fuel-logs.tables.measurement-cell', [
             'primary' => $primary,
             'secondary' => $secondary,
+            'align' => $align,
         ]));
     }
 
