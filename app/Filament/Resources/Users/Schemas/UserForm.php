@@ -21,7 +21,14 @@ class UserForm
                 DateTimePicker::make('email_verified_at'),
                 TextInput::make('password')
                     ->password()
-                    ->required(),
+                    ->confirmed()
+                    ->dehydrated(fn (?string $state): bool => filled($state))
+                    ->required(fn (string $operation): bool => $operation === 'create'),
+                TextInput::make('password_confirmation')
+                    ->password()
+                    ->label('Bevestig wachtwoord')
+                    ->dehydrated(false)
+                    ->required(fn (string $operation): bool => $operation === 'create'),
             ]);
     }
 }
