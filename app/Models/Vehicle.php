@@ -46,6 +46,11 @@ class Vehicle extends Model
         return $this->hasMany(FuelLog::class);
     }
 
+    public function tripLogs(): HasMany
+    {
+        return $this->hasMany(TripLog::class);
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(VehicleDocument::class);

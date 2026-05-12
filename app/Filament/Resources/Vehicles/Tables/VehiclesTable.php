@@ -4,8 +4,9 @@ namespace App\Filament\Resources\Vehicles\Tables;
 
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
-use Filament\Actions\EditAction;
 use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -57,6 +58,7 @@ class VehiclesTable
                     ->sortable(),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

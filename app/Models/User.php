@@ -31,7 +31,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function vehicles(): HasMany
     {
-        return $this->hasMany(\App\Models\Vehicle::class);
+        return $this->hasMany(Vehicle::class);
+    }
+
+    public function tripLogs(): HasMany
+    {
+        return $this->hasMany(TripLog::class);
     }
 
     protected function casts(): array

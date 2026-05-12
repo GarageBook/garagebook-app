@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GarageBook Test" xmlns="http://www.topografix.com/GPX/1/1">
+    <trk>
+        <name>Sample route</name>
+        <trkseg>
+            <trkpt lat="52.0907" lon="5.1214">
+                <ele>3.1</ele>
+                <time>2026-05-12T08:00:00Z</time>
+            </trkpt>
+            <trkpt lat="52.0912" lon="5.1314">
+                <ele>3.8</ele>
+                <time>2026-05-12T08:05:00Z</time>
+            </trkpt>
+            <trkpt lat="52.0950" lon="5.1410">
+                <ele>4.2</ele>
+                <time>2026-05-12T08:12:00Z</time>
+            </trkpt>
+            <trkpt lat="52.1010" lon="5.1515">
+                <ele>5.0</ele>
+                <time>2026-05-12T08:20:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>
