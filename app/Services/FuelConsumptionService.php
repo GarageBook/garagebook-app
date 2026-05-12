@@ -11,6 +11,8 @@ class FuelConsumptionService
 {
     public const UNIT_L_PER_100_KM = 'l_per_100km';
     public const UNIT_KM_PER_LITER = 'km_per_liter';
+    public const KILOMETERS_PER_MILE = 1.609344;
+    public const LITERS_PER_US_GALLON = 3.785411784;
 
     public function getSupportedUnits(): array
     {
@@ -40,6 +42,66 @@ class FuelConsumptionService
         }
 
         return ($fuelLiters / $distanceKm) * 100;
+    }
+
+    public function calculateLitersPer100Km(?float $distanceKm, ?float $fuelLiters): ?float
+    {
+        return $this->calculateAverage($distanceKm, $fuelLiters, self::UNIT_L_PER_100_KM);
+    }
+
+    public function calculateKilometersPerLiter(?float $distanceKm, ?float $fuelLiters): ?float
+    {
+        return $this->calculateAverage($distanceKm, $fuelLiters, self::UNIT_KM_PER_LITER);
+    }
+
+    public function calculateRoundedKilometersPerLiterRatio(?float $distanceKm, ?float $fuelLiters): ?int
+    {
+        $kilometersPerLiter = $this->calculateKilometersPerLiter($distanceKm, $fuelLiters);
+
+        if ($kilometersPerLiter === null) {
+            return null;
+        }
+
+        return max(1, (int) round($kilometersPerLiter));
+    }
+
+    public function convertKilometersToMiles(?float $kilometers): ?float
+    {
+        if ($kilometers === null) {
+            return null;
+        }
+
+        return $kilometers / self::KILOMETERS_PER_MILE;
+    }
+
+    public function convertMilesToKilometers(?float $miles): ?float
+    {
+        if ($miles === null) {
+            return null;
+        }
+
+        return $miles * self::KILOMETERS_PER_MILE;
+    }
+
+    public function convertLitersToUsGallons(?float $liters): ?float
+    {
+        if ($liters === null) {
+            return null;
+        }
+
+        return $liters / self::LITERS_PER_US_GALLON;
+    }
+
+    public function calculateMilesPerUsGallon(?float $distanceKm, ?float $fuelLiters): ?float
+    {
+        $distanceMiles = $this->convertKilometersToMiles($distanceKm);
+        $gallons = $this->convertLitersToUsGallons($fuelLiters);
+
+        if (! $distanceMiles || ! $gallons || $distanceMiles <= 0 || $gallons <= 0) {
+            return null;
+        }
+
+        return $distanceMiles / $gallons;
     }
 
     public function formatAverage(?float $distanceKm, ?float $fuelLiters, ?string $unit): string
@@ -190,6 +252,42 @@ class FuelConsumptionService
                     2
                 ))
                 ->all(),
+        ];
+    }
+
+    public function getConsumptionTrendForVehicle(int $userId, int $vehicleId, int $limit = 12): array
+    {
+        $limit = max(1, $limit);
+
+        $logs = FuelLog::query()
+            ->where('vehicle_id', $vehicleId)
+            ->whereHas('vehicle', fn ($vehicleQuery) => $vehicleQuery->where('user_id', $userId))
+            ->where('distance_km', '>', 0)
+            ->where('fuel_liters', '>', 0)
+            ->orderByDesc('fuel_date')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+
+        return [
+            'labels' => $logs
+                ->map(fn (FuelLog $log) => CarbonImmutable::parse($log->fuel_date)->translatedFormat('d M'))
+                ->all(),
+            'liters_per_100_km' => $logs
+                ->map(fn (FuelLog $log) => round(
+                    $this->calculateLitersPer100Km((float) $log->distance_km, (float) $log->fuel_liters) ?? 0,
+                    2
+                ))
+                ->all(),
+            'mpg_us' => $logs
+                ->map(fn (FuelLog $log) => round(
+                    $this->calculateMilesPerUsGallon((float) $log->distance_km, (float) $log->fuel_liters) ?? 0,
+                    1
+                ))
+                ->all(),
+            'has_enough_points' => $logs->count() >= 2,
         ];
     }
 }

@@ -122,16 +122,64 @@ class FuelLogResourceTest extends TestCase
 
         FuelLog::query()->create([
             'vehicle_id' => $vehicle->id,
+            'fuel_date' => now()->subDays(8)->toDateString(),
+            'odometer_km' => 281757.5,
+            'distance_km' => 520.0,
+            'fuel_liters' => 45,
+            'price_per_liter' => 2.35,
+            'station_location' => 'Argos, Waddinxveen',
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
             'fuel_date' => now()->toDateString(),
-            'odometer_km' => 160.9344,
-            'distance_km' => 80.4672,
-            'fuel_liters' => 5,
+            'odometer_km' => 282357.8,
+            'distance_km' => 600.3,
+            'fuel_liters' => 52,
+            'price_per_liter' => 2.35,
+            'station_location' => 'Argos, Bleiswijk',
         ]);
 
         $this->actingAs($user)
             ->get(ListFuelLogs::getUrl(['vehicle_id' => $vehicle->id]))
             ->assertOk()
-            ->assertSeeText('100,0 mi')
-            ->assertSeeText('50,0 mi');
+            ->assertSeeText('175.449')
+            ->assertSeeText('175.076')
+            ->assertSeeText('373 mi')
+            ->assertSeeText('600 km')
+            ->assertSeeText('52,00 L')
+            ->assertSeeText('13,74 gal (US)')
+            ->assertSeeText('27,2')
+            ->assertSeeText('MPG')
+            ->assertSeeText('8,66 L/100 km')
+            ->assertSeeText('1:12')
+            ->assertSeeText('EUR 2,350')
+            ->assertSeeText('Argos, Bleiswijk')
+            ->assertSeeText('Verbruik over tijd')
+            ->assertSeeText('Miles-invoer wordt intern in kilometers opgeslagen');
+    }
+
+    public function test_fuel_log_index_shows_clear_chart_empty_state_when_there_are_too_few_consumption_points(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tenere 700',
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'fuel_date' => now()->toDateString(),
+            'distance_km' => 0,
+            'fuel_liters' => 20,
+        ]);
+
+        $this->actingAs($user)
+            ->get(ListFuelLogs::getUrl(['vehicle_id' => $vehicle->id]))
+            ->assertOk()
+            ->assertSeeText('Verbruik over tijd')
+            ->assertSeeText('Nog niet genoeg tankbeurten met afstand om een verbruiksgrafiek te tonen.');
     }
 }

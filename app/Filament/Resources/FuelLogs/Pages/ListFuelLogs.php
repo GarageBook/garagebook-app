@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FuelLogs\Pages;
 
 use App\Filament\Resources\FuelLogs\FuelLogResource;
+use App\Filament\Resources\FuelLogs\Widgets\FuelLogConsumptionTrendChart;
 use App\Models\FuelLog;
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
@@ -92,6 +93,27 @@ class ListFuelLogs extends ListRecords
                     'vehicle_id' => $this->activeVehicleId,
                 ])),
         ];
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        $vehicle = $this->getActiveVehicle();
+
+        if (! $vehicle) {
+            return [];
+        }
+
+        return [
+            FuelLogConsumptionTrendChart::make([
+                'vehicleId' => $vehicle->id,
+                'distanceUnit' => $vehicle->distance_unit,
+            ]),
+        ];
+    }
+
+    public function getFooterWidgetsColumns(): int | array
+    {
+        return 1;
     }
 
     protected function getTableQuery(): Builder

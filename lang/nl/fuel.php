@@ -38,6 +38,7 @@ return [
         'odometer' => 'Tellerstand',
         'distance' => 'Afstand',
         'liters' => 'Liters',
+        'fueled' => 'Getankt',
         'consumption' => 'Verbruik',
         'price_per_liter' => 'Prijs/L',
         'location' => 'Locatie',
@@ -59,5 +60,11 @@ return [
         'trend_heading' => 'Verbruikstrend',
         'trend_description' => 'De laatste 8 tankbeurten van het geselecteerde voertuig.',
         'trend_dataset' => 'Verbruik',
+    ],
+    'chart' => [
+        'heading' => 'Verbruik over tijd',
+        'description_metric' => 'Ontwikkeling van L/100 km per tankbeurt op basis van de huidige verbruiksgegevens.',
+        'description_miles' => 'Primair L/100 km per tankbeurt, met MPG (US) als extra context. Miles-invoer wordt intern in kilometers opgeslagen; kleine afrondingsverschillen zijn daardoor mogelijk.',
+        'empty' => 'Nog niet genoeg tankbeurten met afstand om een verbruiksgrafiek te tonen. Minimaal 2 regels met afstand en liters zijn nodig.',
     ],
 ];
