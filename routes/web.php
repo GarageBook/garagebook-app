@@ -21,7 +21,7 @@ Route::get('/', function () {
 });
 
 Route::get('/start', function () {
-    $queryString = request()->getQueryString();
+    $queryString = request()->server('QUERY_STRING');
     $targetUrl = '/admin/register';
 
     if ($queryString) {

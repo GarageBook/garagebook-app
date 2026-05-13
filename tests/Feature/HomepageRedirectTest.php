@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class HomepageRedirectTest extends TestCase
@@ -33,18 +32,11 @@ class HomepageRedirectTest extends TestCase
             ->assertRedirect('/');
     }
 
-    public function test_start_redirect_preserves_utm_query_parameters(): void
+    public function test_start_redirect_preserves_all_query_parameters(): void
     {
-        $response = $this->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=brand');
+        $queryString = '_gl=abc123.def456&utm_source=test&utm_medium=test&utm_campaign=crossdomain_test&utm_content=cta-top&utm_term=garagebook+app&ref=partner42';
 
-        $response->assertRedirect();
-
-        $location = $response->headers->get('Location');
-
-        $this->assertNotNull($location);
-        $this->assertStringContainsString('/admin/register?', $location);
-        $this->assertTrue(Str::contains($location, 'utm_source=google'));
-        $this->assertTrue(Str::contains($location, 'utm_medium=cpc'));
-        $this->assertTrue(Str::contains($location, 'utm_campaign=brand'));
+        $this->get('/start?'.$queryString)
+            ->assertRedirect('/admin/register?'.$queryString);
     }
 }
