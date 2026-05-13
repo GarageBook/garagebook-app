@@ -341,8 +341,16 @@
             </div>
 
         @empty
-            <div style="color:#9ca3af;">
-                {{ $translations['empty'] }}
+            <div style="color:#9ca3af; display:flex; flex-direction:column; align-items:flex-start; gap:14px;">
+                <div>{{ $translations['empty'] }}</div>
+
+                <x-filament::button
+                    :href="$createVehicleUrl"
+                    tag="a"
+                    color="warning"
+                >
+                    {{ $translations['empty_cta'] }}
+                </x-filament::button>
             </div>
         @endforelse
 

@@ -26,8 +26,9 @@
                     </div>
                 </a>
             @empty
-                <div style="color:#9ca3af;">
+                <div style="color:#9ca3af; line-height:1.5;">
                     {{ __('reminders.empty_state') }}
+                    Voeg eerst een voertuig en onderhoudslogs toe.
                 </div>
             @endforelse
         </div>

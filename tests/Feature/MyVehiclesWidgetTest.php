@@ -100,6 +100,8 @@ class MyVehiclesWidgetTest extends TestCase
         Livewire::test(MyVehicles::class)
             ->assertSeeText('Mijn voertuigen')
             ->assertSeeText('Geen voertuigen toegevoegd')
+            ->assertSeeText('Voeg je eerste voertuig toe')
+            ->assertSeeHtml('/admin/vehicles/create')
             ->assertDontSeeText('Ducati Monster')
             ->assertDontSeeText('Rosso');
     }

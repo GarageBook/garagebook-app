@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Services\DistanceUnitService;
 use App\Services\VehicleCostService;
 use App\Support\MediaPath;
@@ -26,6 +27,7 @@ class MyVehicles extends Widget
                 'view' => __('vehicles.widget.view'),
                 'add_maintenance' => __('vehicles.widget.add_maintenance'),
                 'empty' => __('vehicles.widget.empty'),
+                'empty_cta' => 'Voeg je eerste voertuig toe',
                 'aria_previous_photo' => __('vehicles.widget.aria_previous_photo'),
                 'aria_next_photo' => __('vehicles.widget.aria_next_photo'),
                 'aria_open_gallery' => __('vehicles.widget.aria_open_gallery'),
@@ -72,6 +74,7 @@ class MyVehicles extends Widget
 
         return [
             'vehicles' => $vehicles,
+            'createVehicleUrl' => VehicleResource::getUrl('create'),
         ];
     }
 }

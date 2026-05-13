@@ -106,7 +106,27 @@ class MaintenanceCostsWidgetTest extends TestCase
 
         Livewire::test(MaintenanceCosts::class)
             ->assertSeeText('Kosten')
-            ->assertSeeText('Nog geen kosten geregistreerd')
+            ->assertSeeText('Zodra je voertuig en bijbehorende onderhoudslogs zijn geregistreerd, verschijnen hier de kosten.')
             ->assertDontSeeText('Totale kosten');
+    }
+
+    public function test_dashboard_widget_shows_onboarding_empty_state_when_user_has_vehicle_but_no_cost_data(): void
+    {
+        $user = User::factory()->create();
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Suzuki',
+            'model' => 'V-Strom 800',
+            'current_km' => 2500,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MaintenanceCosts::class)
+            ->assertSeeText('Kosten')
+            ->assertSeeText('Zodra je voertuig en bijbehorende onderhoudslogs zijn geregistreerd, verschijnen hier de kosten.')
+            ->assertDontSeeText('Totale kosten')
+            ->assertDontSeeText('Maandelijkse kosten');
     }
 }

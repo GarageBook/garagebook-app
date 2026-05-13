@@ -89,8 +89,28 @@ class MaintenanceReminderScopeTest extends TestCase
         Livewire::test(MaintenanceReminders::class)
             ->assertSeeText('Toekomstig onderhoud')
             ->assertSeeText('Geen aankomende onderhoudsmomenten')
+            ->assertSeeText('Voeg eerst een voertuig en onderhoudslogs toe.')
             ->assertDontSeeText('Aprilia RSV Mille')
             ->assertDontSeeText('Nieuwe olie Motul 300V 15W50 met lang oliefilter');
+    }
+
+    public function test_dashboard_widget_explains_empty_state_when_user_has_vehicles_but_no_maintenance_logs(): void
+    {
+        $user = User::factory()->create();
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Moto Guzzi',
+            'model' => 'V85 TT',
+            'current_km' => 5000,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MaintenanceReminders::class)
+            ->assertSeeText('Toekomstig onderhoud')
+            ->assertSeeText('Geen aankomende onderhoudsmomenten')
+            ->assertSeeText('Voeg eerst een voertuig en onderhoudslogs toe.');
     }
 
     public function test_user_without_vehicles_never_gets_reminders(): void

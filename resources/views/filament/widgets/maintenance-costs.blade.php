@@ -4,7 +4,7 @@
             Kosten
         </h2>
 
-        @if($hasVehicles)
+        @if($hasVehicles && $hasCosts)
             <div style="
                 display:grid;
                 grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -39,8 +39,8 @@
                 </div>
             </div>
         @else
-            <div style="color:#9ca3af;">
-                Nog geen kosten geregistreerd
+            <div style="color:#9ca3af; line-height:1.5;">
+                Zodra je voertuig en bijbehorende onderhoudslogs zijn geregistreerd, verschijnen hier de kosten.
             </div>
         @endif
     </x-filament::card>

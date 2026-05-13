@@ -14,11 +14,13 @@ class MaintenanceCosts extends Widget
     public function getViewData(): array
     {
         $summary = app(VehicleCostService::class)->getDashboardSummaryForUser(auth()->id());
+        $hasCosts = (float) $summary['overall_total_cost'] > 0 || (float) $summary['overall_monthly_cost'] > 0;
 
         return [
             'overallTotalCost' => $summary['overall_total_cost'],
             'overallMonthlyCost' => $summary['overall_monthly_cost'],
             'hasVehicles' => $summary['vehicles']->isNotEmpty(),
+            'hasCosts' => $hasCosts,
         ];
     }
 }
