@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Vehicles\Pages;
 
 use App\Filament\Resources\Vehicles\VehicleResource;
-use App\Support\AnalyticsEventTracker;
 use App\Services\DistanceUnitService;
+use App\Support\AnalyticsEventTracker;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateVehicle extends CreateRecord

@@ -344,13 +344,20 @@
             <div style="color:#9ca3af; display:flex; flex-direction:column; align-items:flex-start; gap:14px;">
                 <div>{{ $translations['empty'] }}</div>
 
-                <x-filament::button
-                    :href="$createVehicleUrl"
-                    tag="a"
-                    color="warning"
+                <a
+                    href="{{ $createVehicleUrl }}"
+                    style="
+                        padding:10px 14px;
+                        border-radius:10px;
+                        background:#ffd200;
+                        color:#000;
+                        text-decoration:none;
+                        font-size:13px;
+                        font-weight:600;
+                    "
                 >
                     {{ $translations['empty_cta'] }}
-                </x-filament::button>
+                </a>
             </div>
         @endforelse
 

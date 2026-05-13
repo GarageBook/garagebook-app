@@ -7,8 +7,8 @@ use App\Services\DistanceUnitService;
 use App\Support\MediaPath;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class EditVehicle extends EditRecord
 {
@@ -43,7 +43,7 @@ class EditVehicle extends EditRecord
         ];
     }
 
-    public function getHeading(): string | HtmlString
+    public function getHeading(): string|HtmlString
     {
         $vehicle = $this->record;
         $editTitle = e(__('vehicles.edit_title'));
@@ -58,7 +58,7 @@ class EditVehicle extends EditRecord
             $photos[] = Storage::url($vehicle->photo);
         }
 
-        if (!empty($vehicle->photos)) {
+        if (! empty($vehicle->photos)) {
             foreach ($vehicle->photos as $photo) {
                 $photos[] = Storage::url($photo);
             }
@@ -88,9 +88,9 @@ class EditVehicle extends EditRecord
 
             $html .= '
                 <img
-                    src="' . $photoUrl . '"
-                    onclick="openGallery(' . $index . ')"
-                    style="width:' . $size . '; height:' . ($index === 0 ? 'auto' : '100px') . '; object-fit:cover; border-radius:12px; cursor:pointer;"
+                    src="'.$photoUrl.'"
+                    onclick="openGallery('.$index.')"
+                    style="width:'.$size.'; height:'.($index === 0 ? 'auto' : '100px').'; object-fit:cover; border-radius:12px; cursor:pointer;"
                 >
             ';
         }
@@ -99,7 +99,7 @@ class EditVehicle extends EditRecord
             </div>
             <div id="vehicleFiles" style="display:flex; flex-direction:column; gap:8px;">
             </div>
-            <div>' . $editTitle . '</div>
+            <div>'.$editTitle.'</div>
         </div>
 
         <div id="galleryOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center;">
@@ -110,8 +110,8 @@ class EditVehicle extends EditRecord
         </div>
 
         <script>
-            const photos = ' . $photosJson . ';
-            const files = ' . $filesJson . ';
+            const photos = '.$photosJson.';
+            const files = '.$filesJson.';
             let currentPhoto = 0;
 
             const fileContainer = document.getElementById("vehicleFiles");
@@ -119,7 +119,7 @@ class EditVehicle extends EditRecord
             if (files.length) {
                 const heading = document.createElement("div");
                 heading.style.fontWeight = "700";
-                heading.textContent = ' . json_encode($otherFilesLabel) . ';
+                heading.textContent = '.json_encode($otherFilesLabel).';
                 fileContainer.appendChild(heading);
 
                 files.forEach((file) => {

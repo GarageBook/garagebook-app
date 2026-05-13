@@ -86,6 +86,58 @@ class VehicleCostService
         ];
     }
 
+    public function getMonthlyCostTrendForUser(int $userId, int $months = 6): array
+    {
+        $months = max(1, $months);
+        $vehicleIds = Vehicle::query()
+            ->where('user_id', $userId)
+            ->pluck('id');
+
+        $start = CarbonImmutable::now()->startOfMonth()->subMonths($months - 1);
+        $monthBuckets = collect(range(0, $months - 1))
+            ->map(fn (int $offset) => $start->addMonths($offset));
+
+        $maintenanceTotals = MaintenanceLog::query()
+            ->whereIn('vehicle_id', $vehicleIds)
+            ->whereDate('maintenance_date', '>=', $start->toDateString())
+            ->get(['maintenance_date', 'cost'])
+            ->groupBy(fn (MaintenanceLog $log) => CarbonImmutable::parse($log->maintenance_date)->format('Y-m'))
+            ->map(fn (Collection $logs) => round($logs->sum(
+                fn (MaintenanceLog $log) => (float) ($log->cost ?? 0)
+            ), 2));
+
+        $fuelTotals = FuelLog::query()
+            ->whereIn('vehicle_id', $vehicleIds)
+            ->whereNotNull('price_per_liter')
+            ->whereDate('fuel_date', '>=', $start->toDateString())
+            ->get(['fuel_date', 'fuel_liters', 'price_per_liter'])
+            ->groupBy(fn (FuelLog $log) => CarbonImmutable::parse($log->fuel_date)->format('Y-m'))
+            ->map(fn (Collection $logs) => round($logs->sum(
+                fn (FuelLog $log) => (float) $log->fuel_liters * (float) $log->price_per_liter
+            ), 2));
+
+        $maintenance = $monthBuckets
+            ->map(fn (CarbonImmutable $month) => (float) $maintenanceTotals->get($month->format('Y-m'), 0.0))
+            ->all();
+
+        $fuel = $monthBuckets
+            ->map(fn (CarbonImmutable $month) => (float) $fuelTotals->get($month->format('Y-m'), 0.0))
+            ->all();
+
+        return [
+            'labels' => $monthBuckets
+                ->map(fn (CarbonImmutable $month) => $month->translatedFormat('M Y'))
+                ->all(),
+            'maintenance' => $maintenance,
+            'fuel' => $fuel,
+            'totals' => array_map(
+                fn (float $maintenanceTotal, float $fuelTotal): float => round($maintenanceTotal + $fuelTotal, 2),
+                $maintenance,
+                $fuel
+            ),
+        ];
+    }
+
     public function getCumulativeCostTrendForUser(int $userId, int $months = 12): array
     {
         $months = max(1, $months);
