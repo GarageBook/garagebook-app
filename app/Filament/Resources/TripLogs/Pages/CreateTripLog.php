@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TripLogs\Pages;
 use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Jobs\ProcessTripLogUpload;
 use App\Models\Vehicle;
+use App\Support\AnalyticsEventTracker;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 
@@ -31,6 +32,7 @@ class CreateTripLog extends CreateRecord
 
     protected function afterCreate(): void
     {
+        app(AnalyticsEventTracker::class)->queueTripLogCreated($this->record);
         ProcessTripLogUpload::dispatch($this->record->getKey());
     }
 }

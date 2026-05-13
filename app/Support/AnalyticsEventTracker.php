@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\TripLog;
 use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
@@ -15,50 +16,91 @@ class AnalyticsEventTracker
 
     public function queueSignUp(string $method = 'email'): void
     {
-        $this->queue('sign_up', [
+        $this->queue('sign_up', $this->context(
+            userId: auth()->id(),
+            appSection: 'auth',
+            extra: [
             'method' => $method,
-        ]);
+            ],
+        ));
     }
 
-    public function queueLogin(string $method = 'email'): void
+    public function queueLogin(?int $userId = null, string $method = 'email'): void
     {
-        $this->queue('login', [
+        $this->queue('login', $this->context(
+            userId: $userId ?? auth()->id(),
+            appSection: 'auth',
+            extra: [
             'method' => $method,
-        ]);
+            ],
+        ));
     }
 
     public function queueVehicleCreated(Vehicle $vehicle): void
     {
-        $this->queue('vehicle_created', [
-            ...$this->vehicleTypeParams($vehicle),
-            'source' => 'app',
-        ]);
+        $this->queue('vehicle_created', $this->context(
+            userId: $vehicle->user_id,
+            vehicleId: $vehicle->getKey(),
+            appSection: 'vehicles',
+            extra: [
+                ...$this->vehicleTypeParams($vehicle),
+                'source' => 'app',
+            ],
+        ));
     }
 
     public function queueMaintenanceLogCreated(MaintenanceLog $maintenanceLog): void
     {
-        $this->queue('maintenance_log_created', [
-            ...$this->vehicleTypeParams($maintenanceLog->vehicle),
-            'has_cost' => filled($maintenanceLog->cost),
-            'has_attachment' => $maintenanceLog->attachments !== [],
-            'source' => 'app',
-        ]);
+        $this->queue('maintenance_log_created', $this->context(
+            userId: $maintenanceLog->vehicle?->user_id,
+            vehicleId: $maintenanceLog->vehicle_id,
+            appSection: 'maintenance',
+            extra: [
+                ...$this->vehicleTypeParams($maintenanceLog->vehicle),
+                'has_cost' => filled($maintenanceLog->cost),
+                'has_attachment' => $maintenanceLog->attachments !== [],
+                'source' => 'app',
+            ],
+        ));
     }
 
     public function queueFuelEntryCreated(FuelLog $fuelLog): void
     {
-        $this->queue('fuel_entry_created', [
-            ...$this->vehicleTypeParams($fuelLog->vehicle),
-            'source' => 'app',
-        ]);
+        $this->queue('fuel_entry_created', $this->context(
+            userId: $fuelLog->vehicle?->user_id,
+            vehicleId: $fuelLog->vehicle_id,
+            appSection: 'fuel',
+            extra: [
+                ...$this->vehicleTypeParams($fuelLog->vehicle),
+                'source' => 'app',
+            ],
+        ));
     }
 
     public function queueDocumentUploaded(VehicleDocument $vehicleDocument): void
     {
-        $this->queue('document_uploaded', [
-            ...$this->documentTypeParams($vehicleDocument),
-            'source' => 'app',
-        ]);
+        $this->queue('document_uploaded', $this->context(
+            userId: $vehicleDocument->vehicle?->user_id,
+            vehicleId: $vehicleDocument->vehicle_id,
+            appSection: 'documents',
+            extra: [
+                ...$this->documentTypeParams($vehicleDocument),
+                'source' => 'app',
+            ],
+        ));
+    }
+
+    public function queueTripLogCreated(TripLog $tripLog): void
+    {
+        $this->queue('trip_log_created', $this->context(
+            userId: $tripLog->user_id,
+            vehicleId: $tripLog->vehicle_id,
+            appSection: 'trips',
+            extra: [
+                ...$this->vehicleTypeParams($tripLog->vehicle),
+                'source' => 'app',
+            ],
+        ));
     }
 
     public function queue(string $eventName, array $params = []): void
@@ -90,6 +132,18 @@ class AnalyticsEventTracker
             $params,
             fn (mixed $value): bool => is_string($value) || is_int($value) || is_float($value) || is_bool($value)
         );
+    }
+
+    protected function context(?int $userId = null, ?int $vehicleId = null, string $appSection = '', array $extra = []): array
+    {
+        return [
+            ...array_filter([
+                'user_id' => $userId,
+                'vehicle_id' => $vehicleId,
+                'app_section' => $appSection !== '' ? $appSection : null,
+            ], fn (mixed $value): bool => $value !== null),
+            ...$extra,
+        ];
     }
 
     protected function vehicleTypeParams(?Model $vehicle): array

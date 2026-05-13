@@ -22,6 +22,6 @@ class TrackSuccessfulLogin
             'last_login_at' => $now,
         ])->save();
 
-        app(AnalyticsEventTracker::class)->queueLogin(method: 'email');
+        app(AnalyticsEventTracker::class)->queueLogin(userId: $user->getAuthIdentifier(), method: 'email');
     }
 }

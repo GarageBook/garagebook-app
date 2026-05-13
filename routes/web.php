@@ -21,7 +21,14 @@ Route::get('/', function () {
 });
 
 Route::get('/start', function () {
-    return redirect('/admin/register', 301);
+    $queryString = request()->getQueryString();
+    $targetUrl = '/admin/register';
+
+    if ($queryString) {
+        $targetUrl .= '?'.$queryString;
+    }
+
+    return redirect($targetUrl, 301);
 });
 
 Route::get('/website', function () {

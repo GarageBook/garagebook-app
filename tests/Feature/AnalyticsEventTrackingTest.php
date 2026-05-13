@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\FuelLogs\Pages\CreateFuelLog;
 use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
+use App\Filament\Resources\TripLogs\Pages\CreateTripLog;
 use App\Filament\Resources\VehicleDocuments\Pages\CreateVehicleDocument;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
+use App\Jobs\ProcessTripLogUpload;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\AnalyticsEventTracker;
@@ -37,6 +39,8 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'login',
                 'params' => [
+                    'user_id' => $user->id,
+                    'app_section' => 'auth',
                     'method' => 'email',
                 ],
             ],
@@ -64,6 +68,9 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
+                    'user_id' => $user->id,
+                    'vehicle_id' => Vehicle::query()->firstOrFail()->id,
+                    'app_section' => 'vehicles',
                     'source' => 'app',
                 ],
             ],
@@ -101,6 +108,9 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'maintenance_log_created',
                 'params' => [
+                    'user_id' => $user->id,
+                    'vehicle_id' => $vehicle->id,
+                    'app_section' => 'maintenance',
                     'has_cost' => true,
                     'has_attachment' => false,
                     'source' => 'app',
@@ -138,6 +148,9 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'fuel_entry_created',
                 'params' => [
+                    'user_id' => $user->id,
+                    'vehicle_id' => $vehicle->id,
+                    'app_section' => 'fuel',
                     'source' => 'app',
                 ],
             ],
@@ -173,10 +186,94 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'document_uploaded',
                 'params' => [
+                    'user_id' => $user->id,
+                    'vehicle_id' => $vehicle->id,
+                    'app_section' => 'documents',
                     'document_type' => 'warranty',
                     'source' => 'app',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+    }
+
+    public function test_trip_log_create_queues_ga4_payload_in_session(): void
+    {
+        Storage::fake('local');
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'Tuareg 660',
+            'current_km' => 4000,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateTripLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'title' => 'Veluwe rit',
+                'description' => 'Testrit',
+                'source_file_path' => UploadedFile::fake()->create('trip.gpx', 10, 'application/gpx+xml'),
+                'source_format' => 'gpx',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        Bus::assertDispatched(ProcessTripLogUpload::class);
+
+        $this->assertSame([
+            [
+                'name' => 'trip_log_created',
+                'params' => [
+                    'user_id' => $user->id,
+                    'vehicle_id' => $vehicle->id,
+                    'app_section' => 'trips',
+                    'source' => 'app',
+                ],
+            ],
+        ], session(AnalyticsEventTracker::SESSION_KEY));
+    }
+
+    public function test_ga4_partials_do_not_render_outside_production(): void
+    {
+        $this->assertSame('', trim(view('partials.google-tag')->render()));
+        $this->assertSame('', trim(view('partials.analytics-tracking')->render()));
+    }
+
+    public function test_ga4_partials_render_configured_tracking_in_production(): void
+    {
+        $this->app['env'] = 'production';
+
+        config([
+            'analytics.ga4.measurement_id' => 'G-TEST123456',
+            'analytics.ga4.linker_domains' => ['garagebook.nl', 'app.garagebook.nl'],
+        ]);
+
+        session()->start();
+        session()->flash(AnalyticsEventTracker::SESSION_KEY, [
+            [
+                'name' => 'vehicle_created',
+                'params' => [
+                    'user_id' => 42,
+                    'vehicle_id' => 99,
+                    'app_section' => 'vehicles',
+                ],
+            ],
+        ]);
+
+        $googleTag = view('partials.google-tag')->render();
+        $trackingTag = view('partials.analytics-tracking')->render();
+
+        $this->assertStringContainsString('G-TEST123456', $googleTag);
+        $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
+        $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
+        $this->assertStringContainsString('hostname: window.location.hostname', $trackingTag);
+        $this->assertStringContainsString('"user_id":42', $trackingTag);
+        $this->assertStringContainsString('"vehicle_id":99', $trackingTag);
+        $this->assertStringContainsString('"app_section":"vehicles"', $trackingTag);
     }
 }

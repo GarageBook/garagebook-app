@@ -1,5 +1,10 @@
 @php
+    use App\Support\Analytics;
     use App\Support\AnalyticsEventTracker;
+
+    if (! Analytics::ga4Enabled()) {
+        return;
+    }
 
     $analyticsEvents = session(AnalyticsEventTracker::SESSION_KEY, []);
 @endphp
@@ -10,7 +15,11 @@
         }
 
         try {
-            window.gtag('event', eventName, params);
+            window.gtag('event', eventName, {
+                page_path: window.location.pathname,
+                hostname: window.location.hostname,
+                ...(params && typeof params === 'object' ? params : {}),
+            });
         } catch (error) {
         }
     };
