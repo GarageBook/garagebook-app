@@ -6,6 +6,7 @@ use App\Models\AnalyticsDailySummary;
 use App\Models\SearchConsoleDailySummary;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class GrowthSummaryStats extends Widget
 {
@@ -15,7 +16,9 @@ class GrowthSummaryStats extends Widget
 
     public static function canView(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return (auth()->user()?->isAdmin() ?? false)
+            && Schema::hasTable('analytics_daily_summaries')
+            && Schema::hasTable('search_console_daily_summaries');
     }
 
     protected function getViewData(): array

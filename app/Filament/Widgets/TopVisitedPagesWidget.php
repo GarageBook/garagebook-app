@@ -8,6 +8,7 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class TopVisitedPagesWidget extends TableWidget
 {
@@ -15,7 +16,8 @@ class TopVisitedPagesWidget extends TableWidget
 
     public static function canView(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return (auth()->user()?->isAdmin() ?? false)
+            && Schema::hasTable('analytics_top_pages');
     }
 
     protected function getTableHeading(): string

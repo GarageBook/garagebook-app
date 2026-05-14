@@ -82,20 +82,33 @@ class Dashboard extends BaseDashboard
         ];
 
         if ($isAdmin) {
-            $components[] = Grid::make(1)->schema([
-                Livewire::make(GrowthSummaryStats::class),
-            ]);
+            if (GrowthSummaryStats::canView()) {
+                $components[] = Grid::make(1)->schema([
+                    Livewire::make(GrowthSummaryStats::class),
+                ]);
+            }
 
-            $components[] = Grid::make([
-                'md' => 2,
-            ])->schema([
-                Livewire::make(TopSearchQueriesWidget::class),
-                Livewire::make(TopSeoPagesWidget::class),
-            ]);
+            $analyticsTables = [];
 
-            $components[] = Grid::make(1)->schema([
-                Livewire::make(TopVisitedPagesWidget::class),
-            ]);
+            if (TopSearchQueriesWidget::canView()) {
+                $analyticsTables[] = Livewire::make(TopSearchQueriesWidget::class);
+            }
+
+            if (TopSeoPagesWidget::canView()) {
+                $analyticsTables[] = Livewire::make(TopSeoPagesWidget::class);
+            }
+
+            if ($analyticsTables !== []) {
+                $components[] = Grid::make([
+                    'md' => 2,
+                ])->schema($analyticsTables);
+            }
+
+            if (TopVisitedPagesWidget::canView()) {
+                $components[] = Grid::make(1)->schema([
+                    Livewire::make(TopVisitedPagesWidget::class),
+                ]);
+            }
         }
 
         return $schema->components($components);

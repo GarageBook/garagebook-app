@@ -8,6 +8,7 @@ use App\Filament\Widgets\TopSeoPagesWidget;
 use App\Filament\Widgets\TopVisitedPagesWidget;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -54,5 +55,29 @@ class AnalyticsDashboardWidgetsTest extends TestCase
         $this->assertFalse(TopSearchQueriesWidget::canView());
         $this->assertFalse(TopSeoPagesWidget::canView());
         $this->assertFalse(TopVisitedPagesWidget::canView());
+    }
+
+    public function test_admin_dashboard_still_loads_when_analytics_tables_are_missing(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        Schema::dropIfExists('analytics_daily_summaries');
+        Schema::dropIfExists('analytics_top_pages');
+        Schema::dropIfExists('search_console_daily_summaries');
+        Schema::dropIfExists('search_console_queries');
+        Schema::dropIfExists('search_console_pages');
+
+        $this->actingAs($admin);
+
+        $this->assertFalse(GrowthSummaryStats::canView());
+        $this->assertFalse(TopSearchQueriesWidget::canView());
+        $this->assertFalse(TopSeoPagesWidget::canView());
+        $this->assertFalse(TopVisitedPagesWidget::canView());
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee('Mijn voertuigen');
     }
 }
