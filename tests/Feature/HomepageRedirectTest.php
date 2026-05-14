@@ -37,6 +37,7 @@ class HomepageRedirectTest extends TestCase
         $queryString = '_gl=abc123.def456&utm_source=test&utm_medium=test&utm_campaign=crossdomain_test&utm_content=cta-top&utm_term=garagebook+app&ref=partner42';
 
         $this->get('/start?'.$queryString)
+            ->assertStatus(302)
             ->assertRedirect('/admin/register?'.$queryString);
     }
 }

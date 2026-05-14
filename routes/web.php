@@ -28,7 +28,7 @@ Route::get('/start', function () {
         $targetUrl .= '?'.$queryString;
     }
 
-    return redirect($targetUrl, 301);
+    return redirect($targetUrl, 302);
 });
 
 Route::get('/website', function () {
