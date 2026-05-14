@@ -29,6 +29,7 @@ class TopSearchQueriesWidget extends TableWidget
     {
         return $table
             ->query($this->getTableQuery())
+            ->defaultKeySort(false)
             ->defaultPaginationPageOption(10)
             ->paginated(false)
             ->emptyStateHeading('Nog geen analyticsdata beschikbaar.')

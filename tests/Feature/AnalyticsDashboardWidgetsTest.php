@@ -80,4 +80,25 @@ class AnalyticsDashboardWidgetsTest extends TestCase
             ->assertOk()
             ->assertSee('Mijn voertuigen');
     }
+
+    public function test_grouped_search_queries_widget_query_does_not_append_qualified_primary_key_sort(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        $sql = strtolower(
+            Livewire::test(TopSearchQueriesWidget::class)
+                ->invade()
+                ->getFilteredSortedTableQuery()
+                ->toSql()
+        );
+
+        $this->assertStringContainsString('group by', $sql);
+        $this->assertStringContainsString('order by', $sql);
+        $this->assertMatchesRegularExpression('/order by\\s+[\"`]?clicks[\"`]?\\s+desc/', $sql);
+        $this->assertStringNotContainsString('search_console_queries.id', $sql);
+    }
 }
