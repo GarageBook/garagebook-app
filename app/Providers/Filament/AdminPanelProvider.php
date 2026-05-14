@@ -7,6 +7,7 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\LocalizationOverview;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
+use App\Http\Middleware\CaptureAnalyticsAttribution;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -62,6 +63,7 @@ class AdminPanelProvider extends PanelProvider
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 SubstituteBindings::class,
+                CaptureAnalyticsAttribution::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])

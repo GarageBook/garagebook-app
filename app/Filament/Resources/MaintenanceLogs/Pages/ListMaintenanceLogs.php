@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
+use App\Support\Analytics;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
@@ -64,6 +65,10 @@ class ListMaintenanceLogs extends ListRecords
                 ->label(__('maintenance.actions.open_external_page'))
                 ->url($shareUrl)
                 ->openUrlInNewTab()
+                ->extraAttributes(Analytics::clickTrackingAttributes('public_share_created', [
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'source' => 'share',
+                ]))
                 ->color('warning')
                 ->outlined(),
 
@@ -71,6 +76,10 @@ class ListMaintenanceLogs extends ListRecords
                 ->label(__('maintenance.actions.copy_url'))
                 ->extraAttributes([
                     'onclick' => "navigator.clipboard.writeText('{$shareUrl}')",
+                    ...Analytics::clickTrackingAttributes('public_share_created', [
+                        'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                        'source' => 'share',
+                    ]),
                 ])
                 ->color('warning')
                 ->outlined(),
@@ -79,6 +88,10 @@ class ListMaintenanceLogs extends ListRecords
                 ->label(__('maintenance.actions.export_pdf'))
                 ->url($pdfUrl)
                 ->openUrlInNewTab()
+                ->extraAttributes(Analytics::clickTrackingAttributes('public_share_created', [
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'source' => 'export',
+                ]))
                 ->color('warning')
                 ->outlined(),
         ];

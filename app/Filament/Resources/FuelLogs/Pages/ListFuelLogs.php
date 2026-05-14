@@ -6,6 +6,7 @@ use App\Filament\Resources\FuelLogs\FuelLogResource;
 use App\Filament\Resources\FuelLogs\Widgets\FuelLogConsumptionTrendChart;
 use App\Models\FuelLog;
 use App\Models\Vehicle;
+use App\Support\Analytics;
 use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
 use Filament\Actions\CreateAction;
@@ -89,6 +90,11 @@ class ListFuelLogs extends ListRecords
         return [
             CreateAction::make()
                 ->label(__('fuel.actions.add'))
+                ->extraAttributes(Analytics::clickTrackingAttributes('app_cta_clicked', [
+                    'cta_name' => 'add_fuel_log',
+                    'location' => 'fuel_logs_header',
+                    'user_state' => Analytics::userState(auth()->user()),
+                ]))
                 ->url(fn (): string => static::getResource()::getUrl('create', [
                     'vehicle_id' => $this->activeVehicleId,
                 ])),

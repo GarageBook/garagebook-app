@@ -5,6 +5,7 @@ namespace App\Filament\Resources\VehicleDocuments\Pages;
 use App\Filament\Resources\VehicleDocuments\VehicleDocumentResource;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
+use App\Support\Analytics;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
@@ -58,6 +59,11 @@ class ListVehicleDocuments extends ListRecords
         return [
             CreateAction::make()
                 ->label(__('documents.actions.add_document'))
+                ->extraAttributes(Analytics::clickTrackingAttributes('app_cta_clicked', [
+                    'cta_name' => 'upload_document',
+                    'location' => 'vehicle_documents_header',
+                    'user_state' => Analytics::userState(auth()->user()),
+                ]))
                 ->url(fn (): string => static::getResource()::getUrl('create', [
                     'vehicle_id' => $this->activeVehicleId,
                 ])),

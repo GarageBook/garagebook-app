@@ -5,6 +5,14 @@
         ->get();
 @endphp
 
+@php
+    $addMaintenanceAttributes = \App\Support\Analytics::clickTrackingAttributes('app_cta_clicked', [
+        'cta_name' => 'add_maintenance_log',
+        'location' => 'dashboard_actions_widget',
+        'user_state' => \App\Support\Analytics::userState(auth()->user()),
+    ]);
+@endphp
+
 <x-filament-widgets::widget>
     <x-filament::section>
         <div class="space-y-6">
@@ -48,6 +56,9 @@
                     <a
                         href="/admin/maintenance-logs/create"
                         class="fi-btn rounded-xl px-5 py-3"
+                        @foreach ($addMaintenanceAttributes as $attribute => $value)
+                            {{ $attribute }}="{{ $value }}"
+                        @endforeach
                         style="display:inline-flex;"
                     >
                         {{ __('dashboard.actions_widget.add_maintenance') }}

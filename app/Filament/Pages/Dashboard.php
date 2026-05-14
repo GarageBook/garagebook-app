@@ -10,6 +10,7 @@ use App\Filament\Widgets\FuelConsumptionTrendChart;
 use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
+use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Schemas\Components\Grid;
@@ -18,6 +19,15 @@ use Filament\Schemas\Schema;
 
 class Dashboard extends BaseDashboard
 {
+    public function mount(): void
+    {
+        $user = Filament::auth()->user();
+
+        if ($user) {
+            app(AnalyticsEventTracker::class)->queueDashboardViewed($user);
+        }
+    }
+
     public function getHeading(): string
     {
         return __('dashboard.welcome_back', [

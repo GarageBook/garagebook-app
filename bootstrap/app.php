@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CachePublicResponses;
 use App\Http\Middleware\CanonicalizePublicUrl;
+use App\Http\Middleware\CaptureAnalyticsAttribution;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             CanonicalizePublicUrl::class,
+            CaptureAnalyticsAttribution::class,
             CachePublicResponses::class,
         ]);
     })

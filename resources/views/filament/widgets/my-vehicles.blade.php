@@ -1,3 +1,11 @@
+@php
+    $emptyCtaAttributes = \App\Support\Analytics::clickTrackingAttributes('app_cta_clicked', [
+        'cta_name' => 'add_first_vehicle',
+        'location' => 'my_vehicles_empty_state',
+        'user_state' => \App\Support\Analytics::userState(auth()->user()),
+    ]);
+@endphp
+
 <x-filament::widget>
     <x-filament::card>
         <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
@@ -346,6 +354,9 @@
 
                 <a
                     href="{{ $createVehicleUrl }}"
+                    @foreach ($emptyCtaAttributes as $attribute => $value)
+                        {{ $attribute }}="{{ $value }}"
+                    @endforeach
                     style="
                         padding:10px 14px;
                         border-radius:10px;

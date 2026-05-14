@@ -1,8 +1,8 @@
 # Analytics events
 
-Deze documentatie is verplaatst naar [docs/analytics-app.md](/home/willem/garagebook/docs/analytics-app.md).
+Deze documentatie is verplaatst naar [docs/analytics.md](/home/willem/garagebook/docs/analytics.md).
 
-Gebruik voortaan alleen `analytics-app.md` als bron voor:
+Gebruik voortaan alleen `analytics.md` als bron voor:
 
 - GA4 laadstrategie en Measurement ID
 - production-only tracking

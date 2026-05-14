@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Auth\Register;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\FuelLogs\Pages\CreateFuelLog;
 use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
 use App\Filament\Resources\TripLogs\Pages\CreateTripLog;
@@ -10,6 +12,8 @@ use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Jobs\ProcessTripLogUpload;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Analytics;
+use App\Support\AnalyticsAttribution;
 use App\Support\AnalyticsEventTracker;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,12 +43,17 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'login',
                 'params' => [
-                    'user_id' => $user->id,
                     'app_section' => 'auth',
                     'method' => 'email',
+                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['email', 'name', 'user_id']
+        );
     }
 
     public function test_vehicle_create_queues_ga4_payload_in_session(): void
@@ -68,13 +77,17 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'user_id' => $user->id,
-                    'vehicle_id' => Vehicle::query()->firstOrFail()->id,
                     'app_section' => 'vehicles',
-                    'source' => 'app',
+                    'is_first_vehicle' => true,
+                    'vehicle_count_after_create' => 1,
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['license_plate', 'notes', 'vehicle_id', 'brand', 'model']
+        );
     }
 
     public function test_maintenance_log_create_queues_ga4_payload_in_session(): void
@@ -108,15 +121,19 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'maintenance_log_created',
                 'params' => [
-                    'user_id' => $user->id,
-                    'vehicle_id' => $vehicle->id,
                     'app_section' => 'maintenance',
-                    'has_cost' => true,
-                    'has_attachment' => false,
-                    'source' => 'app',
+                    'is_first_maintenance_log' => true,
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'has_attachments' => false,
+                    'cost_entered' => true,
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['description', 'notes', 'vehicle_id']
+        );
     }
 
     public function test_fuel_log_create_queues_ga4_payload_in_session(): void
@@ -146,15 +163,20 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->assertSame([
             [
-                'name' => 'fuel_entry_created',
+                'name' => 'fuel_log_created',
                 'params' => [
-                    'user_id' => $user->id,
-                    'vehicle_id' => $vehicle->id,
                     'app_section' => 'fuel',
-                    'source' => 'app',
+                    'unit' => 'km',
+                    'calculated_consumption_available' => true,
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['vehicle_id', 'station_location']
+        );
     }
 
     public function test_document_upload_queues_ga4_payload_in_session(): void
@@ -186,14 +208,18 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'document_uploaded',
                 'params' => [
-                    'user_id' => $user->id,
-                    'vehicle_id' => $vehicle->id,
                     'app_section' => 'documents',
                     'document_type' => 'warranty',
-                    'source' => 'app',
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'file_count' => 1,
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['original_filename', 'file_path', 'title', 'vehicle_id']
+        );
     }
 
     public function test_trip_log_create_queues_ga4_payload_in_session(): void
@@ -229,13 +255,134 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'trip_log_created',
                 'params' => [
-                    'user_id' => $user->id,
-                    'vehicle_id' => $vehicle->id,
                     'app_section' => 'trips',
-                    'source' => 'app',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+    }
+
+    public function test_dashboard_view_event_queues_privacy_safe_counts(): void
+    {
+        $user = User::factory()->create([
+            'first_login_at' => now()->subDay(),
+            'last_login_at' => now(),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Suzuki',
+            'model' => 'V-Strom 800',
+            'current_km' => 5000,
+        ]);
+
+        $vehicle->maintenanceLogs()->create([
+            'description' => 'Ketting smeren',
+            'km_reading' => 5050,
+            'maintenance_date' => '2026-05-11',
+        ]);
+
+        $vehicle->documents()->create([
+            'title' => 'Factuur',
+            'document_type' => 'invoice',
+            'file_path' => 'documents/factuur.pdf',
+        ]);
+
+        $vehicle->fuelLogs()->create([
+            'fuel_date' => '2026-05-11',
+            'odometer_km' => 5100,
+            'distance_km' => 200,
+            'fuel_liters' => 9.5,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(Dashboard::class);
+
+        $this->assertSame([
+            [
+                'name' => 'dashboard_viewed',
+                'params' => [
+                    'app_section' => 'dashboard',
+                    'vehicle_count' => 1,
+                    'maintenance_log_count' => 1,
+                    'document_count' => 1,
+                    'fuel_log_count' => 1,
+                ],
+            ],
+        ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['user_id', 'vehicle_id', 'email', 'name']
+        );
+    }
+
+    public function test_registration_event_includes_first_touch_attribution_without_pii(): void
+    {
+        session()->start();
+
+        session()->put(AnalyticsAttribution::SESSION_KEY, [
+            'utm_source' => 'newsletter',
+            'utm_medium' => 'email',
+            'utm_campaign' => 'spring_launch',
+            'utm_content' => 'hero_button',
+            'utm_term' => 'garagebook',
+            'landing_page' => '/start',
+            'referrer' => 'https://garagebook.nl/blogs/test',
+        ]);
+
+        Livewire::test(Register::class)
+            ->fillForm([
+                'name' => 'GarageBook Tester',
+                'email' => 'new-user@example.com',
+                'password' => 'password',
+                'passwordConfirmation' => 'password',
+            ])
+            ->call('register');
+
+        $user = User::query()->where('email', 'new-user@example.com')->firstOrFail();
+
+        $this->assertDatabaseHas('user_attributions', [
+            'user_id' => $user->id,
+            'utm_source' => 'newsletter',
+            'utm_medium' => 'email',
+            'utm_campaign' => 'spring_launch',
+            'utm_content' => 'hero_button',
+            'utm_term' => 'garagebook',
+            'landing_page' => '/start',
+            'referrer' => 'https://garagebook.nl/blogs/test',
+        ]);
+
+        $this->assertSame([
+            [
+                'name' => 'login',
+                'params' => [
+                    'app_section' => 'auth',
+                    'method' => 'email',
+                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
+                ],
+            ],
+            [
+                'name' => 'account_registered',
+                'params' => [
+                    'app_section' => 'auth',
+                    'method' => 'email',
+                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
+                    'source_url' => '/start',
+                    'utm_source' => 'newsletter',
+                    'utm_medium' => 'email',
+                    'utm_campaign' => 'spring_launch',
+                    'utm_content' => 'hero_button',
+                    'utm_term' => 'garagebook',
+                ],
+            ],
+        ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[1]['params'],
+            ['email', 'name', 'user_id']
+        );
     }
 
     public function test_ga4_partials_do_not_render_outside_production(): void
@@ -258,9 +405,8 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'user_id' => 42,
-                    'vehicle_id' => 99,
                     'app_section' => 'vehicles',
+                    'vehicle_count_after_create' => 2,
                 ],
             ],
         ]);
@@ -272,8 +418,14 @@ class AnalyticsEventTrackingTest extends TestCase
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
         $this->assertStringContainsString('hostname: window.location.hostname', $trackingTag);
-        $this->assertStringContainsString('"user_id":42', $trackingTag);
-        $this->assertStringContainsString('"vehicle_id":99', $trackingTag);
         $this->assertStringContainsString('"app_section":"vehicles"', $trackingTag);
+        $this->assertStringContainsString('"vehicle_count_after_create":2', $trackingTag);
+    }
+
+    private function assertPayloadDoesNotContainKeys(array $payload, array $keys): void
+    {
+        foreach ($keys as $key) {
+            $this->assertArrayNotHasKey($key, $payload);
+        }
     }
 }

@@ -75,3 +75,43 @@ window.tripRouteMap = (config) => ({
         });
     },
 });
+
+document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element
+        ? event.target.closest('[data-analytics-click="true"]')
+        : null;
+
+    if (! target) {
+        return;
+    }
+
+    const eventName = target.getAttribute('data-analytics-event');
+
+    if (! eventName || typeof window.garagebookTrack !== 'function') {
+        return;
+    }
+
+    const params = {};
+
+    for (const attribute of target.getAttributeNames()) {
+        if (! attribute.startsWith('data-analytics-param-')) {
+            continue;
+        }
+
+        const key = attribute
+            .replace('data-analytics-param-', '')
+            .replaceAll('-', '_');
+
+        const rawValue = target.getAttribute(attribute);
+
+        if (rawValue === 'true') {
+            params[key] = true;
+        } else if (rawValue === 'false') {
+            params[key] = false;
+        } else if (rawValue !== null && rawValue !== '') {
+            params[key] = rawValue;
+        }
+    }
+
+    window.garagebookTrack(eventName, params);
+});

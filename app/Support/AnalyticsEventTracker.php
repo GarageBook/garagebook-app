@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\TripLog;
 use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
+use App\Models\User;
+use App\Models\UserAttribution;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use Illuminate\Database\Eloquent\Model;
@@ -14,13 +16,19 @@ class AnalyticsEventTracker
 {
     public const SESSION_KEY = 'garagebook.analytics_events';
 
-    public function queueSignUp(string $method = 'email'): void
+    public function queueSignUp(User $user, string $method = 'email', ?UserAttribution $attribution = null): void
     {
-        $this->queue('sign_up', $this->context(
-            userId: auth()->id(),
+        $this->queue('account_registered', $this->context(
             appSection: 'auth',
             extra: [
-            'method' => $method,
+                'method' => $method,
+                'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->getKey()),
+                'source_url' => $attribution?->landing_page,
+                'utm_source' => $attribution?->utm_source,
+                'utm_medium' => $attribution?->utm_medium,
+                'utm_campaign' => $attribution?->utm_campaign,
+                'utm_content' => $attribution?->utm_content,
+                'utm_term' => $attribution?->utm_term,
             ],
         ));
     }
@@ -28,51 +36,55 @@ class AnalyticsEventTracker
     public function queueLogin(?int $userId = null, string $method = 'email'): void
     {
         $this->queue('login', $this->context(
-            userId: $userId ?? auth()->id(),
             appSection: 'auth',
             extra: [
-            'method' => $method,
+                'method' => $method,
+                'user_id_hash' => Analytics::anonymizeIdentifier('user', $userId ?? auth()->id()),
             ],
         ));
     }
 
     public function queueVehicleCreated(Vehicle $vehicle): void
     {
+        $vehicleCount = Vehicle::query()
+            ->where('user_id', $vehicle->user_id)
+            ->count();
+
         $this->queue('vehicle_created', $this->context(
-            userId: $vehicle->user_id,
-            vehicleId: $vehicle->getKey(),
             appSection: 'vehicles',
             extra: [
                 ...$this->vehicleTypeParams($vehicle),
-                'source' => 'app',
+                'is_first_vehicle' => $vehicleCount === 1,
+                'vehicle_count_after_create' => $vehicleCount,
             ],
         ));
     }
 
     public function queueMaintenanceLogCreated(MaintenanceLog $maintenanceLog): void
     {
+        $maintenanceLogCount = MaintenanceLog::query()
+            ->where('vehicle_id', $maintenanceLog->vehicle_id)
+            ->count();
+
         $this->queue('maintenance_log_created', $this->context(
-            userId: $maintenanceLog->vehicle?->user_id,
-            vehicleId: $maintenanceLog->vehicle_id,
             appSection: 'maintenance',
             extra: [
-                ...$this->vehicleTypeParams($maintenanceLog->vehicle),
-                'has_cost' => filled($maintenanceLog->cost),
-                'has_attachment' => $maintenanceLog->attachments !== [],
-                'source' => 'app',
+                'is_first_maintenance_log' => $maintenanceLogCount === 1,
+                'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $maintenanceLog->vehicle_id),
+                'has_attachments' => $this->hasMaintenanceAttachments($maintenanceLog),
+                'cost_entered' => filled($maintenanceLog->cost),
             ],
         ));
     }
 
     public function queueFuelEntryCreated(FuelLog $fuelLog): void
     {
-        $this->queue('fuel_entry_created', $this->context(
-            userId: $fuelLog->vehicle?->user_id,
-            vehicleId: $fuelLog->vehicle_id,
+        $this->queue('fuel_log_created', $this->context(
             appSection: 'fuel',
             extra: [
-                ...$this->vehicleTypeParams($fuelLog->vehicle),
-                'source' => 'app',
+                'unit' => $this->distanceUnit($fuelLog->vehicle),
+                'calculated_consumption_available' => (float) $fuelLog->distance_km > 0 && (float) $fuelLog->fuel_liters > 0,
+                'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $fuelLog->vehicle_id),
             ],
         ));
     }
@@ -80,12 +92,11 @@ class AnalyticsEventTracker
     public function queueDocumentUploaded(VehicleDocument $vehicleDocument): void
     {
         $this->queue('document_uploaded', $this->context(
-            userId: $vehicleDocument->vehicle?->user_id,
-            vehicleId: $vehicleDocument->vehicle_id,
             appSection: 'documents',
             extra: [
                 ...$this->documentTypeParams($vehicleDocument),
-                'source' => 'app',
+                'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicleDocument->vehicle_id),
+                'file_count' => filled($vehicleDocument->file_path) ? 1 : 0,
             ],
         ));
     }
@@ -93,12 +104,27 @@ class AnalyticsEventTracker
     public function queueTripLogCreated(TripLog $tripLog): void
     {
         $this->queue('trip_log_created', $this->context(
-            userId: $tripLog->user_id,
-            vehicleId: $tripLog->vehicle_id,
             appSection: 'trips',
             extra: [
                 ...$this->vehicleTypeParams($tripLog->vehicle),
-                'source' => 'app',
+            ],
+        ));
+    }
+
+    public function queueDashboardViewed(User $user): void
+    {
+        $vehicles = Vehicle::query()
+            ->where('user_id', $user->getKey())
+            ->withCount(['maintenanceLogs', 'documents', 'fuelLogs'])
+            ->get();
+
+        $this->queue('dashboard_viewed', $this->context(
+            appSection: 'dashboard',
+            extra: [
+                'vehicle_count' => $vehicles->count(),
+                'maintenance_log_count' => (int) $vehicles->sum('maintenance_logs_count'),
+                'document_count' => (int) $vehicles->sum('documents_count'),
+                'fuel_log_count' => (int) $vehicles->sum('fuel_logs_count'),
             ],
         ));
     }
@@ -128,18 +154,13 @@ class AnalyticsEventTracker
 
     protected function sanitizeParams(array $params): array
     {
-        return array_filter(
-            $params,
-            fn (mixed $value): bool => is_string($value) || is_int($value) || is_float($value) || is_bool($value)
-        );
+        return Analytics::sanitizeParams($params);
     }
 
-    protected function context(?int $userId = null, ?int $vehicleId = null, string $appSection = '', array $extra = []): array
+    protected function context(string $appSection = '', array $extra = []): array
     {
         return [
             ...array_filter([
-                'user_id' => $userId,
-                'vehicle_id' => $vehicleId,
                 'app_section' => $appSection !== '' ? $appSection : null,
             ], fn (mixed $value): bool => $value !== null),
             ...$extra,
@@ -176,5 +197,27 @@ class AnalyticsEventTracker
         return [
             'document_type' => (string) $vehicleDocument->document_type,
         ];
+    }
+
+    protected function distanceUnit(?Model $vehicle): ?string
+    {
+        if (! $vehicle instanceof Model) {
+            return null;
+        }
+
+        $unit = $vehicle->getAttribute('distance_unit');
+
+        if (! is_string($unit) || $unit === '') {
+            return null;
+        }
+
+        return $unit === 'mi' ? 'mi' : 'km';
+    }
+
+    protected function hasMaintenanceAttachments(MaintenanceLog $maintenanceLog): bool
+    {
+        return $maintenanceLog->attachments !== []
+            || $maintenanceLog->media_attachments !== []
+            || $maintenanceLog->file_attachments !== [];
     }
 }
