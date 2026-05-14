@@ -41,4 +41,14 @@ return [
         'group_id' => env('MAILERLITE_GROUP_ID'),
     ],
 
+    'google_analytics' => [
+        'property_id' => env('GOOGLE_ANALYTICS_PROPERTY_ID'),
+        'credentials_json' => env('GOOGLE_ANALYTICS_CREDENTIALS_JSON'),
+    ],
+
+    'search_console' => [
+        'site_url' => env('GOOGLE_SEARCH_CONSOLE_SITE_URL'),
+        'credentials_json' => env('GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON'),
+    ],
+
 ];

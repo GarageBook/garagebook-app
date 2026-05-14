@@ -13,3 +13,11 @@ if (config('backups.enabled')) {
         ->dailyAt(config('backups.schedule_at', '02:30'))
         ->withoutOverlapping();
 }
+
+Schedule::command('garagebook:sync-ga4-analytics')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();
+
+Schedule::command('garagebook:sync-search-console')
+    ->dailyAt('04:15')
+    ->withoutOverlapping();

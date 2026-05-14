@@ -4,12 +4,16 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\CostBreakdownByVehicleChart;
 use App\Filament\Widgets\CumulativeCostTrendChart;
+use App\Filament\Widgets\GrowthSummaryStats;
 use App\Filament\Widgets\MyVehicles;
 use App\Filament\Widgets\FuelConsumptionOverview;
 use App\Filament\Widgets\FuelConsumptionTrendChart;
 use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
+use App\Filament\Widgets\TopSearchQueriesWidget;
+use App\Filament\Widgets\TopSeoPagesWidget;
+use App\Filament\Widgets\TopVisitedPagesWidget;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -42,7 +46,9 @@ class Dashboard extends BaseDashboard
 
     public function headerWidgets(Schema $schema): Schema
     {
-        $hasFuelLogs = Filament::auth()->user()?->vehicles()->whereHas('fuelLogs')->exists();
+        $user = Filament::auth()->user();
+        $hasFuelLogs = $user?->vehicles()->whereHas('fuelLogs')->exists();
+        $isAdmin = $user?->isAdmin() ?? false;
 
         $secondaryWidgets = [
             Livewire::make(MaintenanceReminders::class),
@@ -63,7 +69,7 @@ class Dashboard extends BaseDashboard
             $chartWidgets[] = Livewire::make(FuelConsumptionTrendChart::class);
         }
 
-        return $schema->components([
+        $components = [
             Grid::make([
                 'md' => 2,
             ])->schema([
@@ -73,6 +79,25 @@ class Dashboard extends BaseDashboard
             Grid::make([
                 'md' => 2,
             ])->schema($chartWidgets),
-        ]);
+        ];
+
+        if ($isAdmin) {
+            $components[] = Grid::make(1)->schema([
+                Livewire::make(GrowthSummaryStats::class),
+            ]);
+
+            $components[] = Grid::make([
+                'md' => 2,
+            ])->schema([
+                Livewire::make(TopSearchQueriesWidget::class),
+                Livewire::make(TopSeoPagesWidget::class),
+            ]);
+
+            $components[] = Grid::make(1)->schema([
+                Livewire::make(TopVisitedPagesWidget::class),
+            ]);
+        }
+
+        return $schema->components($components);
     }
 }
