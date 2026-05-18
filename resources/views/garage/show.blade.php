@@ -1,10 +1,6 @@
 @extends('layouts.public')
 
-@php
-    use App\Support\ImageThumbnail;
-    use App\Support\MediaPath;
-    use Illuminate\Support\Facades\Storage;
-@endphp
+@php($primaryPhoto = $vehiclePhotos[0] ?? null)
 
 @section('title', $metaTitle)
 @section('meta_description', $metaDescription)
@@ -38,12 +34,6 @@
                         [
                             '@type' => 'ListItem',
                             'position' => 2,
-                            'name' => 'Garage',
-                            'item' => url('/garage'),
-                        ],
-                        [
-                            '@type' => 'ListItem',
-                            'position' => 3,
                             'name' => $vehicleName,
                             'item' => $canonicalUrl,
                         ],
@@ -53,6 +43,7 @@
                     '@type' => 'Vehicle',
                     'name' => $vehicleName,
                     'brand' => $vehicle->brand,
+                    'image' => $primaryPhoto['url'] ?? null,
                     'model' => $vehicle->model,
                     'vehicleModelDate' => $vehicle->year ? (string) $vehicle->year : null,
                     'url' => $canonicalUrl,
@@ -67,12 +58,10 @@
         <nav aria-label="Breadcrumb" style="font-size: 14px; color: #4b5563; margin-bottom: 24px;">
             <a href="{{ url('/') }}" style="color: inherit;">Home</a>
             <span aria-hidden="true"> &gt; </span>
-            <span>Garage</span>
-            <span aria-hidden="true"> &gt; </span>
             <span>{{ $vehicleName }}</span>
         </nav>
 
-        <header style="display: grid; gap: 24px; margin-bottom: 40px;">
+        <header style="display: grid; gap: 24px; margin-bottom: 32px;">
             <div style="display: grid; gap: 12px;">
                 <span style="display: inline-flex; width: fit-content; padding: 8px 12px; border-radius: 999px; background: #fff4bf; color: #111827; font-weight: 700;">
                     Publieke onderhoudshistorie
@@ -86,13 +75,18 @@
                 <p style="margin: 0; font-size: 16px; color: #374151; max-width: 760px; line-height: 1.6;">
                     {{ $introText }}
                 </p>
+                @if(! $isIndexable)
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; max-width: 760px; line-height: 1.6;">
+                        Deze pagina is publiek zichtbaar, maar nog niet bedoeld voor indexatie zolang de inhoud beperkt is.
+                    </p>
+                @endif
             </div>
 
             @if($vehiclePhotos !== [])
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
                     @foreach($vehiclePhotos as $photo)
                         <img
-                            src="{{ Storage::url($photo) }}"
+                            src="{{ $photo['thumbnail_url'] }}"
                             alt="{{ $vehicleName }}"
                             style="width: 100%; height: 220px; object-fit: cover; border-radius: 24px; background: #f3f4f6;"
                         >
@@ -120,14 +114,14 @@
                 <div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Model</div>
                 <div style="font-size: 20px; font-weight: 700; color: #111827;">{{ $vehicle->model }}</div>
             </div>
-            @if($vehicle->current_km > 0)
-                <div style="padding: 18px; border-radius: 20px; background: #f9fafb;">
-                    <div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Kilometerstand</div>
-                    <div style="font-size: 20px; font-weight: 700; color: #111827;">
-                        {{ app(\App\Services\DistanceUnitService::class)->formatFromKilometers($vehicle->current_km, $vehicle->distance_unit, 0) }}
-                    </div>
-                </div>
-            @endif
+            <div style="padding: 18px; border-radius: 20px; background: #f9fafb;">
+                <div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Onderhoudsmomenten</div>
+                <div style="font-size: 20px; font-weight: 700; color: #111827;">{{ $publicStats['maintenance_count'] }}</div>
+            </div>
+            <div style="padding: 18px; border-radius: 20px; background: #f9fafb;">
+                <div style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280;">Laatst bijgewerkt</div>
+                <div style="font-size: 20px; font-weight: 700; color: #111827;">{{ $publicStats['last_updated_label'] ?? 'Onbekend' }}</div>
+            </div>
         </section>
 
         <section style="margin-bottom: 40px;">
@@ -142,38 +136,39 @@
             </div>
 
             <div style="display: grid; gap: 20px;">
-                @foreach($vehicle->maintenanceLogs as $log)
-                    @php
-                        $publicMediaAttachments = $displayAttachments
-                            ? array_values(array_filter(
-                                $log->media_attachments,
-                                fn (string $attachment) => MediaPath::isImage($attachment)
-                            ))
-                            : [];
-                    @endphp
-                    <article style="padding: 24px; border-radius: 24px; border: 1px solid #e5e7eb; background: #fff;">
-                        <div style="display: grid; gap: 8px;">
-                            <div style="display: flex; flex-wrap: wrap; gap: 16px; color: #4b5563; font-size: 14px;">
-                                <span>Onderhoudsdatum: {{ $log->maintenance_date->format('d-m-Y') }}</span>
-                                <span>Kilometerstand: {{ app(\App\Services\DistanceUnitService::class)->formatFromKilometers($log->km_reading, $vehicle->distance_unit, 0) }}</span>
-                                @if($displayCosts && $log->cost !== null)
-                                    <span>Kosten: € {{ number_format((float) $log->cost, 2, ',', '.') }}</span>
+                @foreach($timelineItems as $item)
+                    <article style="padding: 20px; border-radius: 24px; border: 1px solid #e5e7eb; background: #fff;">
+                        <div style="display: grid; gap: 10px;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                @if($item['date_label'])
+                                    <span style="display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: 14px;">
+                                        Onderhoudsdatum: {{ $item['date_label'] }}
+                                    </span>
+                                @endif
+                                @if($item['km_label'])
+                                    <span style="display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: 14px;">
+                                        Kilometerstand: {{ $item['km_label'] }}
+                                    </span>
+                                @endif
+                                @if($item['cost_label'])
+                                    <span style="display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 14px;">
+                                        Kosten: {{ $item['cost_label'] }}
+                                    </span>
                                 @endif
                             </div>
-                            <h3 style="margin: 0; font-size: 22px;">{{ $log->description }}</h3>
-                            @if(filled($log->notes))
-                                <p style="margin: 0; color: #374151; white-space: pre-line;">{{ $log->notes }}</p>
+                            <h3 style="margin: 0; font-size: 20px; line-height: 1.25;">{{ $item['description'] !== '' ? $item['description'] : 'Onderhoudsmoment' }}</h3>
+                            @if($item['notes'])
+                                <p style="margin: 0; color: #374151; white-space: pre-line; line-height: 1.6;">{{ $item['notes'] }}</p>
                             @endif
 
-                            @if($publicMediaAttachments !== [])
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 8px;">
-                                    @foreach($publicMediaAttachments as $attachment)
-                                        @php($thumbnailPath = ImageThumbnail::path($attachment, 720) ?: $attachment)
-                                        <a href="{{ asset('storage/' . ltrim($attachment, '/')) }}" target="_blank" rel="noopener noreferrer">
+                            @if($item['public_attachments'] !== [])
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+                                    @foreach($item['public_attachments'] as $attachment)
+                                        <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener noreferrer">
                                             <img
-                                                src="{{ asset('storage/' . ltrim($thumbnailPath, '/')) }}"
-                                                alt="Publieke foto bij onderhoud van {{ $vehicleName }}"
-                                                style="width: 100%; height: 180px; object-fit: cover; border-radius: 18px; background: #f3f4f6;"
+                                                src="{{ $attachment['thumbnail_url'] }}"
+                                                alt="{{ $attachment['alt'] }}"
+                                                style="width: 100%; height: 160px; object-fit: cover; border-radius: 18px; background: #f3f4f6;"
                                             >
                                         </a>
                                     @endforeach

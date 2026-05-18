@@ -24,19 +24,21 @@ class PublicGarageController extends Controller
         $vehicleHeading = $this->publicGarageService->publicVehicleHeading($vehicle);
         $canonicalUrl = $this->publicGarageService->publicUrl($vehicle);
         $isIndexable = $this->publicGarageService->shouldIndex($vehicle);
+        $publicStats = $this->publicGarageService->publicStats($vehicle);
+        $timelineItems = $this->publicGarageService->publicTimelineItems($vehicle);
 
         return view('garage.show', [
             'canonicalUrl' => $canonicalUrl,
-            'displayAttachments' => (bool) $vehicle->share_attachments_publicly,
-            'displayCosts' => (bool) $vehicle->share_costs_publicly,
             'isIndexable' => $isIndexable,
             'introText' => $this->publicGarageService->publicIntroText($vehicle),
             'metaDescription' => sprintf(
-                'Bekijk de onderhoudshistorie, kilometerstanden, werkzaamheden en documentatie van deze %s in GarageBook.',
+                'Bekijk de onderhoudshistorie, kilometerstanden en werkzaamheden van deze %s in GarageBook.',
                 trim($vehicleHeading),
             ),
             'metaRobots' => $isIndexable ? 'index,follow' : 'noindex,follow',
             'metaTitle' => trim($vehicleName) . ' onderhoudshistorie | GarageBook',
+            'publicStats' => $publicStats,
+            'timelineItems' => $timelineItems,
             'typeSpecificLandingUrl' => $this->publicGarageService->typeSpecificLandingUrl($vehicle),
             'vehicle' => $vehicle,
             'vehicleHeading' => $vehicleHeading,

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\ImageThumbnail;
+use App\Support\MediaPath;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -82,11 +84,9 @@ class PublicGarageService
             return false;
         }
 
-        $logs = $vehicle->relationLoaded('maintenanceLogs')
-            ? $vehicle->maintenanceLogs
-            : $vehicle->maintenanceLogs()->latest('maintenance_date')->latest('id')->get();
+        $timelineItems = $this->publicTimelineItems($vehicle);
 
-        if ($logs->isEmpty()) {
+        if ($timelineItems === []) {
             return false;
         }
 
@@ -94,11 +94,9 @@ class PublicGarageService
             return true;
         }
 
-        if (filled($vehicle->notes)) {
-            return true;
-        }
-
-        return $logs->contains(fn ($log) => filled($log->description));
+        return collect($timelineItems)->contains(
+            fn (array $item) => filled($item['description']) || filled($item['notes'])
+        );
     }
 
     public function indexableVehicles(): Collection
@@ -140,17 +138,82 @@ class PublicGarageService
     public function publicIntroText(Vehicle $vehicle): string
     {
         return sprintf(
-            'Deze publieke GarageBook-pagina toont de onderhoudshistorie van deze %s. Je ziet onderhoudsmomenten, kilometerstanden en werkzaamheden die door de eigenaar zijn bijgehouden.',
+            'Deze publieke GarageBook-pagina toont de onderhoudshistorie van deze %s. Je ziet onderhoudsmomenten, kilometerstanden en uitgevoerde werkzaamheden, zonder persoonsgegevens van de eigenaar.',
             $this->publicVehicleName($vehicle),
         );
     }
 
     public function publicVehiclePhotos(Vehicle $vehicle): array
     {
-        return array_values(array_unique(array_filter([
+        return collect([
             $vehicle->photo,
             ...Arr::wrap($vehicle->photos),
-        ])));
+        ])
+            ->filter(fn ($path) => is_string($path) && filled($path) && MediaPath::isImage($path))
+            ->map(fn (string $path) => ltrim($path, '/'))
+            ->unique()
+            ->values()
+            ->map(function (string $path): ?array {
+                $thumbnailPath = ImageThumbnail::path($path, 960);
+
+                if ($thumbnailPath === null && ! $this->publicStoragePathExists($path)) {
+                    return null;
+                }
+
+                return [
+                    'path' => $path,
+                    'thumbnail_url' => asset('storage/' . ltrim($thumbnailPath ?: $path, '/')),
+                    'url' => asset('storage/' . ltrim($path, '/')),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public function publicTimelineItems(Vehicle $vehicle): array
+    {
+        $logs = $vehicle->relationLoaded('maintenanceLogs')
+            ? $vehicle->maintenanceLogs
+            : $vehicle->maintenanceLogs()->latest('maintenance_date')->latest('id')->get();
+
+        return $logs->map(function ($log) use ($vehicle): array {
+            $publicAttachments = $vehicle->share_attachments_publicly
+                ? collect($log->media_attachments)
+                    ->filter(fn ($path) => is_string($path) && filled($path) && MediaPath::isImage($path))
+                    ->map(fn (string $path): ?array => $this->publicAttachmentImage($path, $vehicle))
+                    ->filter()
+                    ->values()
+                    ->all()
+                : [];
+
+            return [
+                'date_label' => $log->maintenance_date?->format('d-m-Y'),
+                'description' => trim((string) $log->description),
+                'km_label' => $log->km_reading > 0
+                    ? app(DistanceUnitService::class)->formatFromKilometers($log->km_reading, $vehicle->distance_unit, 0)
+                    : null,
+                'cost_label' => $vehicle->share_costs_publicly && $log->cost !== null
+                    ? '€ ' . number_format((float) $log->cost, 2, ',', '.')
+                    : null,
+                'notes' => trim((string) $log->notes) !== '' ? trim((string) $log->notes) : null,
+                'public_attachments' => $publicAttachments,
+            ];
+        })->all();
+    }
+
+    public function publicStats(Vehicle $vehicle): array
+    {
+        $logs = $vehicle->relationLoaded('maintenanceLogs')
+            ? $vehicle->maintenanceLogs
+            : $vehicle->maintenanceLogs()->latest('maintenance_date')->latest('id')->get();
+
+        $lastUpdatedAt = $logs->first()?->maintenance_date ?? $vehicle->updated_at;
+
+        return [
+            'maintenance_count' => $logs->count(),
+            'last_updated_label' => $lastUpdatedAt?->format('d-m-Y'),
+        ];
     }
 
     public function typeSpecificLandingUrl(Vehicle $vehicle): ?string
@@ -247,5 +310,26 @@ class PublicGarageService
             ->when($ignoreVehicleId, fn ($query) => $query->whereKeyNot($ignoreVehicleId))
             ->where('public_slug', $slug)
             ->exists();
+    }
+
+    private function publicAttachmentImage(string $path, Vehicle $vehicle): ?array
+    {
+        $path = ltrim($path, '/');
+        $thumbnailPath = ImageThumbnail::path($path, 720) ?: $path;
+
+        if (! $this->publicStoragePathExists($path)) {
+            return null;
+        }
+
+        return [
+            'alt' => 'Publieke foto bij onderhoud van ' . $this->publicVehicleName($vehicle),
+            'thumbnail_url' => asset('storage/' . ltrim($thumbnailPath, '/')),
+            'url' => asset('storage/' . $path),
+        ];
+    }
+
+    private function publicStoragePathExists(string $path): bool
+    {
+        return \Illuminate\Support\Facades\Storage::disk('public')->exists(ltrim($path, '/'));
     }
 }

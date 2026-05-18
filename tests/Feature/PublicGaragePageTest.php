@@ -41,7 +41,11 @@ class PublicGaragePageTest extends TestCase
         $response->assertSee('"@type": "Vehicle"', false);
         $response->assertSee('"@type": "BreadcrumbList"', false);
         $response->assertSee('"@type": "WebPage"', false);
-        $response->assertSee('Deze publieke GarageBook-pagina toont de onderhoudshistorie van deze 2008 Toyota Highlander Hybrid Limited.');
+        $response->assertSee('Onderhoudsmomenten');
+        $response->assertSee('Laatst bijgewerkt');
+        $response->assertSee('01-05-2026');
+        $response->assertSee('Deze publieke GarageBook-pagina toont de onderhoudshistorie van deze 2008 Toyota Highlander Hybrid Limited. Je ziet onderhoudsmomenten, kilometerstanden en uitgevoerde werkzaamheden, zonder persoonsgegevens van de eigenaar.');
+        $response->assertDontSee('"item": "' . url('/garage') . '"', false);
     }
 
     public function test_old_share_route_redirects_permanently_to_new_public_garage_url(): void
@@ -122,6 +126,7 @@ class PublicGaragePageTest extends TestCase
         $response->assertDontSee('Willem van Veelen');
         $response->assertDontSee('willem@example.com');
         $response->assertDontSee('willem-van-veelen');
+        $response->assertDontSee('user_id');
         $response->assertDontSee('12-AB-34');
     }
 
@@ -234,6 +239,35 @@ class PublicGaragePageTest extends TestCase
             ->assertSee(url('/garage/' . $indexableVehicle->public_slug), false)
             ->assertDontSee(url('/garage/' . $privateVehicle->public_slug), false)
             ->assertDontSee('/garage/1999-aprilia-rsv-mille', false);
+    }
+
+    public function test_non_indexable_public_vehicle_uses_noindex_follow_and_stays_out_of_sitemap(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'XT 600',
+            'year' => 1994,
+            'is_public' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => '',
+            'km_reading' => 0,
+            'maintenance_date' => '2026-05-10',
+            'notes' => '',
+        ]);
+
+        $this->get('/garage/' . $vehicle->public_slug)
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex,follow">', false);
+
+        $this->get('/sitemap-garages.xml')
+            ->assertOk()
+            ->assertDontSee(url('/garage/' . $vehicle->public_slug), false);
     }
 
     public function test_existing_public_slug_stays_unchanged_after_vehicle_identity_fields_change(): void
