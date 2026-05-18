@@ -8,6 +8,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -17,6 +18,8 @@ class MaintenanceCostsWidgetTest extends TestCase
 
     public function test_dashboard_widget_only_shows_the_authenticated_users_vehicle_costs_and_totals(): void
     {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
 
@@ -96,6 +99,8 @@ class MaintenanceCostsWidgetTest extends TestCase
             ->assertSeeText('Maandelijkse kosten')
             ->assertDontSeeText('Sporttourer')
             ->assertDontSeeText('EUR 999,99');
+
+        Carbon::setTestNow();
     }
 
     public function test_dashboard_widget_shows_empty_state_when_user_has_no_vehicles(): void

@@ -2,9 +2,9 @@
 
 use App\Models\MaintenanceLog;
 use App\Models\Page;
-use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Blog;
+use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
 use App\Http\Controllers\VehicleDocumentController;
 use App\Support\InternalContentLinks;
@@ -35,37 +35,11 @@ Route::get('/website', function () {
     return redirect('/', 301);
 })->name('website');
 
-Route::get('/share/{username}/{vehicleSlug}', function ($username, $vehicleSlug) {
-    $users = User::all();
+Route::get('/garage/{publicSlug}', [PublicGarageController::class, 'show'])
+    ->name('public-garage.show');
 
-    $user = $users->first(function ($user) use ($username) {
-        return Str::slug(trim($user->name)) === trim($username);
-    });
-
-    if (! $user) {
-        abort(404, 'User not found');
-    }
-
-    $vehicles = Vehicle::where('user_id', $user->id)->get();
-
-    $vehicle = $vehicles->first(function ($vehicle) use ($vehicleSlug) {
-        $slug = Str::slug(
-            trim($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model)
-        );
-
-        return $slug === trim($vehicleSlug);
-    });
-
-    if (! $vehicle) {
-        abort(404, 'Vehicle not found');
-    }
-
-    $logs = MaintenanceLog::where('vehicle_id', $vehicle->id)
-        ->latest('maintenance_date')
-        ->get();
-
-    return view('maintenance-share', compact('logs', 'vehicle', 'user'));
-});
+Route::get('/share/{username}/{vehicleSlug}', [PublicGarageController::class, 'legacyRedirect'])
+    ->name('public-garage.legacy');
 
 Route::get('/maintenance/pdf', function () {
     $vehicles = Vehicle::query()
@@ -143,6 +117,9 @@ Route::get('/sitemap.xml', function () {
         ->view('sitemap', compact('pages'))
         ->header('Content-Type', 'application/xml');
 });
+
+Route::get('/sitemap-garages.xml', [PublicGarageController::class, 'sitemap'])
+    ->name('sitemap.garages');
 
 Route::get('/robots.txt', function () {
     return response()

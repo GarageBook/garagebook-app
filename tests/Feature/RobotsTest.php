@@ -13,6 +13,7 @@ class RobotsTest extends TestCase
             ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
             ->assertSee('User-agent: *', false)
             ->assertSee('Allow: /', false)
-            ->assertSee('Sitemap: ' . url('/sitemap.xml'), false);
+            ->assertSee('Sitemap: ' . url('/sitemap.xml'), false)
+            ->assertSee('Sitemap: ' . url('/sitemap-garages.xml'), false);
     }
 }

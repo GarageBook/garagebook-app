@@ -56,6 +56,10 @@ class VehicleForm
                     ->label(__('vehicles.fields.model'))
                     ->required(),
 
+                Forms\Components\TextInput::make('display_variant')
+                    ->label('Uitvoering / variant')
+                    ->placeholder('Limited, GT, Mille, Hybrid, Carrera 4'),
+
                 Forms\Components\TextInput::make('nickname')
                     ->label(__('vehicles.fields.nickname')),
 

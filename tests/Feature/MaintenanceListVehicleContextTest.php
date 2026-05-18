@@ -128,7 +128,7 @@ class MaintenanceListVehicleContextTest extends TestCase
         $actions = collect($method->invoke($component->instance()))->keyBy(fn ($action) => $action->getName());
 
         $this->assertSame(
-            url('/share/willem-garage/allroad'),
+            url('/garage/bmw-r-1200-gs'),
             $actions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(
@@ -167,7 +167,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             ->keyBy(fn ($action) => $action->getName());
 
         $this->assertSame(
-            url('/share/willem-garage/allroad'),
+            url('/garage/bmw-r-1200-gs'),
             $cachedActions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(

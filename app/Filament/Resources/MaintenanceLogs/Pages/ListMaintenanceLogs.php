@@ -5,13 +5,13 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
+use App\Services\PublicGarageService;
 use App\Support\Analytics;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
-use Illuminate\Support\Str;
 
 class ListMaintenanceLogs extends ListRecords
 {
@@ -54,9 +54,7 @@ class ListMaintenanceLogs extends ListRecords
             return [];
         }
 
-        $shareUrl = url('/share/' .
-            Str::slug(auth()->user()->name) . '/' .
-            Str::slug($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model));
+        $shareUrl = app(PublicGarageService::class)->publicUrl($vehicle);
 
         $pdfUrl = url('/maintenance/pdf?vehicle_id=' . $vehicle->id);
 

@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Services\PublicGarageService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Vehicle extends Model
 {
@@ -13,11 +15,16 @@ class Vehicle extends Model
         'airtable_synced_at',
         'brand',
         'model',
+        'display_variant',
         'nickname',
         'license_plate',
         'current_km',
         'distance_unit',
         'year',
+        'public_slug',
+        'is_public',
+        'share_costs_publicly',
+        'share_attachments_publicly',
         'purchase_price',
         'insurance_cost_per_month',
         'road_tax_cost_per_month',
@@ -31,10 +38,27 @@ class Vehicle extends Model
         'photos' => 'array',
         'media_attachments' => 'array',
         'airtable_synced_at' => 'datetime',
+        'is_public' => 'boolean',
         'purchase_price' => 'decimal:2',
+        'share_attachments_publicly' => 'boolean',
+        'share_costs_publicly' => 'boolean',
         'insurance_cost_per_month' => 'decimal:2',
         'road_tax_cost_per_month' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Vehicle $vehicle): void {
+            if (! Schema::hasColumn($vehicle->getTable(), 'public_slug') || filled($vehicle->public_slug)) {
+                return;
+            }
+
+            $vehicle->public_slug = app(PublicGarageService::class)->generatePublicSlug(
+                $vehicle,
+                $vehicle->exists ? $vehicle->id : null,
+            );
+        });
+    }
 
     public function maintenanceLogs(): HasMany
     {
