@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Models\MaintenanceLog;
+use App\Models\TripLog;
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
 use App\Support\ImageThumbnail;
@@ -73,12 +75,20 @@ class Timeline extends Page
         $activeVehicle = $vehicles->firstWhere('id', $this->activeVehicleId);
 
         $logs = collect();
+        $trips = collect();
 
         if ($activeVehicle) {
             $logs = MaintenanceLog::query()
                 ->where('vehicle_id', $activeVehicle->id)
                 ->orderBy('maintenance_date')
                 ->orderBy('id')
+                ->get();
+
+            $trips = TripLog::query()
+                ->where('vehicle_id', $activeVehicle->id)
+                ->where('user_id', auth()->id())
+                ->orderByDesc('ridden_at')
+                ->orderByDesc('id')
                 ->get();
         }
 
@@ -144,6 +154,42 @@ class Timeline extends Page
             $previousYear = $year;
         }
 
+        $tripEntries = $trips->map(function (TripLog $trip): array {
+            $previewPhotos = collect($trip->photos ?? [])
+                ->filter(fn (mixed $photo) => is_string($photo) && filled($photo) && MediaPath::isImage($photo))
+                ->values()
+                ->take(3)
+                ->map(fn (string $photo, int $index): array => [
+                    'url' => route('trip-photos.show', ['trip' => $trip, 'photoIndex' => $index]),
+                    'label' => MediaPath::label($photo),
+                ])
+                ->all();
+
+            $photoCount = count($trip->photos ?? []);
+
+            return [
+                'id' => $trip->id,
+                'title' => $trip->title ?: __('trips.table.no_title'),
+                'label' => __('dashboard.timeline.trips_item_label'),
+                'dateLabel' => $trip->ridden_at?->translatedFormat('d F Y'),
+                'riddenLabel' => $trip->ridden_at
+                    ? __('dashboard.timeline.trips_ridden_on', ['date' => $trip->ridden_at->translatedFormat('d F Y')])
+                    : null,
+                'distanceLabel' => $trip->distance_km !== null
+                    ? number_format((float) $trip->distance_km, 2, ',', '.') . ' km'
+                    : null,
+                'metaLabel' => filled($trip->source_file_name)
+                    ? __('dashboard.timeline.trips_meta_uploaded')
+                    : null,
+                'photoCount' => $photoCount,
+                'photoCountLabel' => $photoCount > 0
+                    ? trans_choice('dashboard.timeline.images_count', min($photoCount, 3), ['count' => min($photoCount, 3)])
+                    : null,
+                'previewPhotos' => $previewPhotos,
+                'tripUrl' => TripLogResource::getUrl('view', ['record' => $trip]),
+            ];
+        })->all();
+
         $periodLabel = null;
 
         if ($logs->isNotEmpty()) {
@@ -157,6 +203,7 @@ class Timeline extends Page
             'activeVehicle' => $activeVehicle,
             'entries' => $entries,
             'entriesJson' => json_encode($entries, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'tripEntries' => $tripEntries,
             'periodLabel' => $periodLabel,
             'totalCostLabel' => $activeVehicle
                 ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')

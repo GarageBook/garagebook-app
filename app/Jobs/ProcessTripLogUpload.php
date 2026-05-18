@@ -51,6 +51,7 @@ class ProcessTripLogUpload implements ShouldQueue
                 'duration_seconds' => $parsed->durationSeconds,
                 'started_at' => $parsed->startedAt,
                 'ended_at' => $parsed->endedAt,
+                'ridden_at' => $tripLog->ridden_at ?: $this->resolveRiddenAt($parsed->startedAt),
                 'points_count' => count($parsed->points),
                 'bounds' => $parsed->bounds,
                 'geojson' => json_encode($parsed->geojson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -64,5 +65,14 @@ class ProcessTripLogUpload implements ShouldQueue
                 'failure_reason' => $exception->getMessage(),
             ])->save();
         }
+    }
+
+    private function resolveRiddenAt(?string $startedAt): ?string
+    {
+        if (! is_string($startedAt) || trim($startedAt) === '') {
+            return null;
+        }
+
+        return date('Y-m-d', strtotime($startedAt));
     }
 }

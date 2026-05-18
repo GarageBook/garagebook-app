@@ -23,6 +23,10 @@ class TripLogInfolist
                             ->label(__('trips.table.status'))
                             ->badge()
                             ->color(fn (string $state): string => TripLog::statusColor($state)),
+                        TextEntry::make('ridden_at')
+                            ->label(__('trips.infolist.ridden_at'))
+                            ->date('d-m-Y')
+                            ->placeholder('-'),
                         TextEntry::make('started_at')
                             ->label(__('trips.infolist.started_at'))
                             ->dateTime('d-m-Y H:i')
@@ -50,6 +54,13 @@ class TripLogInfolist
                             ->columnSpanFull(),
                     ])
                     ->columns(4),
+                Section::make(__('trips.infolist.photos'))
+                    ->schema([
+                        ViewEntry::make('photos_gallery')
+                            ->hiddenLabel()
+                            ->view('filament.resources.trip-logs.photo-gallery'),
+                    ])
+                    ->visible(fn (TripLog $record): bool => count($record->photos ?? []) > 0),
                 Section::make(__('trips.infolist.route'))
                     ->schema([
                         ViewEntry::make('route_map')

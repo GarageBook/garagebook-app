@@ -243,6 +243,7 @@ class AnalyticsEventTrackingTest extends TestCase
                 'vehicle_id' => $vehicle->id,
                 'title' => 'Veluwe rit',
                 'description' => 'Testrit',
+                'ridden_at' => '2026-05-18',
                 'source_file_path' => UploadedFile::fake()->create('trip.gpx', 10, 'application/gpx+xml'),
                 'source_format' => 'gpx',
             ])

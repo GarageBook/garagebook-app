@@ -27,32 +27,31 @@ class TripLogsTable
                     ->label(__('trips.table.title'))
                     ->placeholder(__('trips.table.no_title'))
                     ->searchable(),
-                Tables\Columns\TextColumn::make('started_at')
-                    ->label(__('trips.table.started_at'))
-                    ->dateTime('d-m-Y H:i')
-                    ->placeholder(__('trips.table.not_processed'))
+                Tables\Columns\TextColumn::make('ridden_at')
+                    ->label(__('trips.table.ridden_at'))
+                    ->date('d-m-Y')
                     ->sortable(),
+                Tables\Columns\IconColumn::make('source_file_path')
+                    ->label(__('trips.table.gpx'))
+                    ->boolean()
+                    ->state(fn (TripLog $record): bool => filled($record->source_file_path)),
                 Tables\Columns\TextColumn::make('distance_km')
                     ->label(__('trips.table.distance'))
                     ->formatStateUsing(fn ($state) => $state !== null ? number_format((float) $state, 2, ',', '.').' km' : __('trips.table.not_processed'))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('duration_seconds')
-                    ->label(__('trips.table.duration'))
-                    ->formatStateUsing(fn ($state) => self::formatDuration($state))
-                    ->placeholder(__('trips.table.not_processed')),
+                Tables\Columns\TextColumn::make('photos_count')
+                    ->label(__('trips.table.photos'))
+                    ->state(fn (TripLog $record): int => count($record->photos ?? [])),
                 Tables\Columns\TextColumn::make('status')
                     ->label(__('trips.table.status'))
                     ->badge()
                     ->color(fn (string $state): string => TripLog::statusColor($state)),
-                Tables\Columns\TextColumn::make('points_count')
-                    ->label(__('trips.table.points_count'))
-                    ->placeholder(__('trips.table.not_processed')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('trips.table.created_at'))
                     ->dateTime('d-m-Y H:i')
                     ->sortable(),
             ])
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort('ridden_at', 'desc')
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
@@ -70,18 +69,5 @@ class TripLogsTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    private static function formatDuration(mixed $durationSeconds): string
-    {
-        if ($durationSeconds === null) {
-            return __('trips.table.not_processed');
-        }
-
-        $durationSeconds = (int) $durationSeconds;
-        $hours = intdiv($durationSeconds, 3600);
-        $minutes = intdiv($durationSeconds % 3600, 60);
-
-        return sprintf('%02d:%02d', $hours, $minutes);
     }
 }

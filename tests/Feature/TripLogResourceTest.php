@@ -22,7 +22,7 @@ class TripLogResourceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_trip_upload_and_processing_creates_processed_trip(): void
+    public function test_trip_upload_and_processing_creates_processed_trip_with_ridden_at_and_photos(): void
     {
         Storage::fake('local');
         Queue::fake();
@@ -36,6 +36,8 @@ class TripLogResourceTest extends TestCase
 
         $fixturePath = base_path('tests/Fixtures/trips/sample.gpx');
         $uploadedFile = UploadedFile::fake()->create('sample.gpx', 10, 'application/gpx+xml');
+        $photoA = UploadedFile::fake()->image('trip-a.jpg');
+        $photoB = UploadedFile::fake()->image('trip-b.jpg');
 
         $this->actingAs($user);
 
@@ -44,8 +46,10 @@ class TripLogResourceTest extends TestCase
                 'vehicle_id' => $vehicle->id,
                 'title' => 'Ardennenrit',
                 'description' => 'Testtrip',
+                'ridden_at' => '2026-05-18',
                 'source_file_path' => $uploadedFile,
                 'source_format' => 'gpx',
+                'photos' => [$photoA, $photoB],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -55,6 +59,10 @@ class TripLogResourceTest extends TestCase
 
         Queue::assertPushed(ProcessTripLogUpload::class);
         $this->assertSame(TripLog::STATUS_PENDING, $trip->status);
+        $this->assertSame('2026-05-18', $trip->ridden_at?->toDateString());
+        $this->assertCount(2, $trip->photos ?? []);
+        Storage::disk('local')->assertExists($trip->photos[0]);
+        Storage::disk('local')->assertExists($trip->photos[1]);
 
         (new ProcessTripLogUpload($trip->id))->handle(app(TripParserManager::class));
 
@@ -67,11 +75,14 @@ class TripLogResourceTest extends TestCase
         $this->assertSame(4, $trip->points_count);
         $this->assertNotNull($trip->geojson);
         $this->assertNotNull($trip->simplified_geojson);
+        $this->assertSame('2026-05-18', $trip->ridden_at?->toDateString());
 
         $this->get(TripLogResource::getUrl('view', ['record' => $trip]))
             ->assertOk()
             ->assertSeeText('Tripoverzicht')
-            ->assertSeeText('Routekaart')
+            ->assertSeeText('Gereden op')
+            ->assertSeeText('18-05-2026')
+            ->assertSeeText('Foto\'s')
             ->assertSee('trip-route-map-'.$trip->id)
             ->assertSee('build/assets/app-');
     }
@@ -96,6 +107,7 @@ class TripLogResourceTest extends TestCase
         $ownerTrip = TripLog::query()->create([
             'user_id' => $owner->id,
             'vehicle_id' => $ownerVehicle->id,
+            'ridden_at' => '2026-05-18',
             'source_file_path' => 'trip-uploads/test.gpx',
             'source_format' => 'gpx',
         ]);
@@ -103,6 +115,7 @@ class TripLogResourceTest extends TestCase
         TripLog::query()->create([
             'user_id' => $otherUser->id,
             'vehicle_id' => $otherVehicle->id,
+            'ridden_at' => '2026-05-17',
             'source_file_path' => 'trip-uploads/other.gpx',
             'source_format' => 'gpx',
         ]);
@@ -126,6 +139,7 @@ class TripLogResourceTest extends TestCase
         $trip = TripLog::query()->create([
             'user_id' => $owner->id,
             'vehicle_id' => $vehicle->id,
+            'ridden_at' => '2026-05-18',
             'source_file_path' => 'trip-uploads/test.gpx',
             'source_format' => 'gpx',
         ]);
@@ -160,6 +174,7 @@ class TripLogResourceTest extends TestCase
             'user_id' => $owner->id,
             'vehicle_id' => $ownerVehicle->id,
             'title' => 'Eigen trip',
+            'ridden_at' => '2026-05-18',
             'source_file_path' => 'trip-uploads/owner.gpx',
             'source_format' => 'gpx',
             'status' => TripLog::STATUS_PROCESSED,
@@ -169,6 +184,7 @@ class TripLogResourceTest extends TestCase
             'user_id' => $otherUser->id,
             'vehicle_id' => $otherVehicle->id,
             'title' => 'Verborgen trip',
+            'ridden_at' => '2026-05-17',
             'source_file_path' => 'trip-uploads/other.gpx',
             'source_format' => 'gpx',
             'status' => TripLog::STATUS_PROCESSED,
@@ -205,6 +221,7 @@ class TripLogResourceTest extends TestCase
         $trip = TripLog::query()->create([
             'user_id' => $user->id,
             'vehicle_id' => $vehicle->id,
+            'ridden_at' => '2026-05-18',
             'source_file_path' => 'trip-uploads/invalid.gpx',
             'source_file_name' => 'invalid.gpx',
             'source_format' => 'gpx',
@@ -233,6 +250,7 @@ class TripLogResourceTest extends TestCase
             'user_id' => $user->id,
             'vehicle_id' => $vehicle->id,
             'title' => 'Herverwerken',
+            'ridden_at' => '2026-05-18',
             'source_file_path' => 'trip-uploads/reprocess.gpx',
             'source_format' => 'gpx',
             'status' => TripLog::STATUS_FAILED,

@@ -6,6 +6,7 @@ use App\Models\Vehicle;
 use App\Models\Blog;
 use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
+use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleDocumentController;
 use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -73,6 +74,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/documents/{document}/download', [VehicleDocumentController::class, 'download'])
         ->name('vehicle-documents.download');
+
+    Route::get('/trips/{trip}/photos/{photoIndex}', [TripPhotoController::class, 'show'])
+        ->whereNumber('photoIndex')
+        ->name('trip-photos.show');
 });
 
 /*

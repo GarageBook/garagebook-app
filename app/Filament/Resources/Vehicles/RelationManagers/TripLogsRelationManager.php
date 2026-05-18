@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 class TripLogsRelationManager extends RelationManager
 {
@@ -36,6 +37,11 @@ class TripLogsRelationManager extends RelationManager
             ->components([
                 Section::make(__('trips.form.section_title'))
                     ->schema([
+                        Forms\Components\DatePicker::make('ridden_at')
+                            ->label(__('trips.form.ridden_at'))
+                            ->required()
+                            ->native(false),
+
                         Forms\Components\TextInput::make('title')
                             ->label(__('trips.form.title'))
                             ->maxLength(255),
@@ -63,6 +69,36 @@ class TripLogsRelationManager extends RelationManager
                             ->downloadable()
                             ->openable()
                             ->visible(fn (string $operation): bool => $operation === 'create')
+                            ->columnSpanFull(),
+
+                        Forms\Components\FileUpload::make('photos')
+                            ->label(__('trips.form.photos'))
+                            ->disk('local')
+                            ->directory(fn (RelationManager $livewire) => 'trip-photos/'.auth()->id().'/'.$livewire->getOwnerRecord()->getKey())
+                            ->visibility('private')
+                            ->image()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                                'image/gif',
+                                'image/bmp',
+                            ])
+                            ->maxSize(12288)
+                            ->multiple()
+                            ->appendFiles()
+                            ->reorderable()
+                            ->fetchFileInformation(false)
+                            ->downloadable(false)
+                            ->openable(false)
+                            ->previewable(false)
+                            ->helperText(__('trips.form.photos_help'))
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('photo_gallery')
+                            ->label(__('trips.form.photo_gallery'))
+                            ->content(fn (?TripLog $record) => new HtmlString(view('filament.resources.trip-logs.photo-gallery', ['record' => $record])->render()))
+                            ->visible(fn (?TripLog $record): bool => $record !== null && count($record->photos ?? []) > 0)
                             ->columnSpanFull(),
 
                         Forms\Components\Hidden::make('source_format')
@@ -99,25 +135,23 @@ class TripLogsRelationManager extends RelationManager
                     ->formatStateUsing(fn (?string $state): string => $state ?: __('trips.table.no_title'))
                     ->url(fn (TripLog $record): string => TripLogResource::getUrl('view', ['record' => $record]))
                     ->searchable(),
-                Tables\Columns\TextColumn::make('started_at')
-                    ->label(__('trips.table.started_at'))
-                    ->dateTime('d-m-Y H:i')
-                    ->placeholder(__('trips.table.not_processed'))
+                Tables\Columns\TextColumn::make('ridden_at')
+                    ->label(__('trips.table.ridden_at'))
+                    ->date('d-m-Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('distance_km')
                     ->label(__('trips.table.distance'))
                     ->formatStateUsing(fn ($state) => $state !== null ? number_format((float) $state, 2, ',', '.').' km' : __('trips.table.not_processed'))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('duration_seconds')
-                    ->label(__('trips.table.duration'))
-                    ->formatStateUsing(fn ($state) => self::formatDuration($state))
-                    ->placeholder(__('trips.table.not_processed')),
+                Tables\Columns\TextColumn::make('photos_count')
+                    ->label(__('trips.table.photos'))
+                    ->state(fn (TripLog $record): int => count($record->photos ?? [])),
                 Tables\Columns\TextColumn::make('status')
                     ->label(__('trips.table.status'))
                     ->badge()
                     ->color(fn (string $state): string => TripLog::statusColor($state)),
             ])
-            ->defaultSort('started_at', 'desc')
+            ->defaultSort('ridden_at', 'desc')
             ->headerActions([
                 CreateAction::make()
                     ->mutateDataUsing(function (array $data): array {
@@ -145,18 +179,5 @@ class TripLogsRelationManager extends RelationManager
                     }),
             ])
             ->paginated([5, 10, 25]);
-    }
-
-    private static function formatDuration(mixed $durationSeconds): string
-    {
-        if ($durationSeconds === null) {
-            return __('trips.table.not_processed');
-        }
-
-        $durationSeconds = (int) $durationSeconds;
-        $hours = intdiv($durationSeconds, 3600);
-        $minutes = intdiv($durationSeconds % 3600, 60);
-
-        return sprintf('%02d:%02d', $hours, $minutes);
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\MaintenanceLog;
+use App\Models\TripLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
@@ -65,14 +66,48 @@ class TimelinePageTest extends TestCase
             'cost' => 320.00,
         ]);
 
+        TripLog::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $selectedVehicle->id,
+            'title' => 'Veluwerit',
+            'ridden_at' => '2026-05-18',
+            'source_file_path' => 'trip-uploads/selected.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+        ]);
+
+        TripLog::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $otherVehicle->id,
+            'title' => 'Circuitdag',
+            'ridden_at' => '2026-05-17',
+            'source_file_path' => 'trip-uploads/other.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+        ]);
+
+        TripLog::query()->create([
+            'user_id' => $otherUser->id,
+            'vehicle_id' => $foreignVehicle->id,
+            'title' => 'Verborgen rit',
+            'ridden_at' => '2026-05-16',
+            'source_file_path' => 'trip-uploads/foreign.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+        ]);
+
         $this->actingAs($user)
             ->get('/admin/tijdlijn?vehicle_id=' . $selectedVehicle->id)
             ->assertOk()
             ->assertSeeText('Tijdlijn')
             ->assertSeeText('Tourfiets')
             ->assertSeeText('Kleine beurt')
+            ->assertSeeText('Trips')
+            ->assertSeeText('Veluwerit')
             ->assertDontSeeText('Nieuwe remblokken')
-            ->assertDontSeeText('Bandenwissel');
+            ->assertDontSeeText('Bandenwissel')
+            ->assertDontSeeText('Circuitdag')
+            ->assertDontSeeText('Verborgen rit');
     }
 
     public function test_timeline_defaults_to_vehicle_with_most_recent_maintenance(): void
@@ -145,5 +180,84 @@ class TimelinePageTest extends TestCase
             ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
             ->assertOk()
             ->assertSeeText('100.000 mi');
+    }
+
+    public function test_timeline_contains_a_separate_trips_track_when_vehicle_has_trips(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1300 GS',
+            'nickname' => 'Reismotor',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Jaarbeurt',
+            'km_reading' => 15000,
+            'maintenance_date' => '2026-03-10',
+            'cost' => 299.00,
+        ]);
+
+        TripLog::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $vehicle->id,
+            'title' => 'Ardennenrit',
+            'ridden_at' => '2026-05-18',
+            'source_file_path' => 'trip-uploads/ardennen.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+            'distance_km' => 243.5,
+            'photos' => [
+                'trip-photos/1/1/a.jpg',
+                'trip-photos/1/1/b.jpg',
+                'trip-photos/1/1/c.jpg',
+                'trip-photos/1/1/d.jpg',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
+            ->assertOk()
+            ->assertSeeText('Onderhoud')
+            ->assertSeeText('Trips')
+            ->assertSeeText('Ardennenrit')
+            ->assertSeeText('Gereden op 18 mei 2026')
+            ->assertSeeText('243,50 km')
+            ->assertSeeText('Bekijk trip')
+            ->assertSeeText('3 foto\'s');
+    }
+
+    public function test_timeline_hides_trips_section_when_vehicle_has_no_trips(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+            'nickname' => 'Forens',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Kettingset vervangen',
+            'km_reading' => 22000,
+            'maintenance_date' => '2026-04-02',
+            'cost' => 210.00,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
+            ->assertOk()
+            ->assertSeeText('Kettingset vervangen')
+            ->assertDontSeeText('Bekijk trip')
+            ->assertDontSeeText('Gereden op');
     }
 }

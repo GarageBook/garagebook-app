@@ -7,6 +7,7 @@ use App\Models\Vehicle;
 use Filament\Forms;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class TripLogForm
 {
@@ -30,6 +31,11 @@ class TripLogForm
                             ->searchable()
                             ->required()
                             ->default(fn () => request()->integer('vehicle_id') ?: null),
+
+                        Forms\Components\DatePicker::make('ridden_at')
+                            ->label(__('trips.form.ridden_at'))
+                            ->required()
+                            ->native(false),
 
                         Forms\Components\TextInput::make('title')
                             ->label(__('trips.form.title'))
@@ -58,6 +64,36 @@ class TripLogForm
                             ->downloadable()
                             ->openable()
                             ->visible(fn (string $operation): bool => $operation === 'create'),
+
+                        Forms\Components\FileUpload::make('photos')
+                            ->label(__('trips.form.photos'))
+                            ->disk('local')
+                            ->directory(fn (callable $get) => 'trip-photos/'.auth()->id().'/'.($get('vehicle_id') ?: 'draft'))
+                            ->visibility('private')
+                            ->image()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                                'image/gif',
+                                'image/bmp',
+                            ])
+                            ->maxSize(12288)
+                            ->multiple()
+                            ->appendFiles()
+                            ->reorderable()
+                            ->fetchFileInformation(false)
+                            ->downloadable(false)
+                            ->openable(false)
+                            ->previewable(false)
+                            ->helperText(__('trips.form.photos_help'))
+                            ->columnSpanFull(),
+
+                        Forms\Components\Placeholder::make('photo_gallery')
+                            ->label(__('trips.form.photo_gallery'))
+                            ->content(fn (?TripLog $record) => new HtmlString(view('filament.resources.trip-logs.photo-gallery', ['record' => $record])->render()))
+                            ->visible(fn (?TripLog $record): bool => $record !== null && count($record->photos ?? []) > 0)
+                            ->columnSpanFull(),
 
                         Forms\Components\Hidden::make('source_format')
                             ->default('gpx'),

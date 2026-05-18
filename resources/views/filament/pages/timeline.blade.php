@@ -127,6 +127,37 @@
             font-weight: 700;
         }
 
+        .gb-timeline-section {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .gb-timeline-section__header {
+            display: grid;
+            gap: 0.35rem;
+            padding: 0 0.3rem;
+        }
+
+        .gb-timeline-section__eyebrow {
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+
+        .gb-timeline-section__title {
+            font-size: 1.35rem;
+            line-height: 1.1;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .gb-timeline-section__subtitle {
+            color: #64748b;
+            line-height: 1.6;
+            max-width: 44rem;
+        }
+
         .gb-timeline-board {
             position: relative;
             padding: 1.4rem;
@@ -258,28 +289,24 @@
 
         .gb-timeline-entry--bottom .gb-timeline-entry__stem {
             top: 50%;
-            bottom: 2.8rem;
+            bottom: 3.2rem;
             margin-top: 1.2rem;
         }
 
         .gb-timeline-card {
-            position: relative;
-            margin-left: 2.8rem;
-            border: 1px solid rgba(226, 232, 240, 0.96);
-            border-radius: 24px;
             overflow: hidden;
+            margin-left: 2.8rem;
+            border-radius: 26px;
+            border: 1px solid rgba(226, 232, 240, 0.95);
             background: var(--gb-timeline-panel);
-            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.09);
-            backdrop-filter: blur(14px);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
         }
 
         .gb-timeline-card__media {
-            position: relative;
-            aspect-ratio: 3 / 2;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.12), rgba(255, 210, 0, 0.22));
             overflow: hidden;
-            background:
-                linear-gradient(135deg, rgba(255, 210, 0, 0.28), rgba(255, 255, 255, 0.28)),
-                linear-gradient(145deg, #0f172a, #334155);
         }
 
         .gb-timeline-card__media img {
@@ -290,81 +317,69 @@
         }
 
         .gb-timeline-card__media-empty {
-            display: flex;
-            align-items: end;
-            justify-content: space-between;
-            width: 100%;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            gap: 0.45rem;
             height: 100%;
-            padding: 1rem;
-            color: white;
+            padding: 1.5rem;
             background:
-                radial-gradient(circle at top right, rgba(255, 210, 0, 0.55), transparent 14rem),
-                linear-gradient(145deg, #0f172a, #334155);
+                radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 50%),
+                linear-gradient(145deg, rgba(15, 23, 42, 0.10), rgba(255, 210, 0, 0.18));
+            color: #0f172a;
         }
 
         .gb-timeline-card__media-empty strong {
-            font-size: 1.6rem;
-            line-height: 1;
+            display: block;
+            font-size: 1.05rem;
             font-weight: 700;
-            letter-spacing: -0.04em;
-            max-width: 10rem;
         }
 
         .gb-timeline-card__media-empty span {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: rgba(255, 255, 255, 0.7);
+            color: #475569;
+            font-size: 0.92rem;
         }
 
         .gb-timeline-card__body {
             display: grid;
             gap: 0.9rem;
-            padding: 1.05rem 1.05rem 1.15rem;
+            padding: 1.15rem;
         }
 
         .gb-timeline-card__meta {
             display: flex;
-            justify-content: space-between;
-            gap: 0.8rem;
             align-items: start;
+            justify-content: space-between;
+            gap: 0.75rem;
         }
 
         .gb-timeline-card__date {
-            display: inline-flex;
-            gap: 0.55rem;
-            align-items: baseline;
+            display: grid;
+            gap: 0.1rem;
             color: var(--gb-timeline-ink);
         }
 
         .gb-timeline-card__day {
-            font-size: 1.55rem;
+            font-size: 1.8rem;
             line-height: 1;
             font-weight: 700;
-            letter-spacing: -0.06em;
         }
 
         .gb-timeline-card__month {
-            font-size: 0.8rem;
+            font-size: 0.84rem;
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: var(--gb-timeline-muted);
         }
 
         .gb-timeline-card__cost {
-            padding: 0.45rem 0.7rem;
-            border-radius: 999px;
-            background: rgba(255, 210, 0, 0.22);
             color: var(--gb-timeline-ink);
-            font-size: 0.8rem;
             font-weight: 700;
-            white-space: nowrap;
         }
 
         .gb-timeline-card__title {
-            font-size: 1.05rem;
-            line-height: 1.25;
-            font-weight: 700;
+            font-size: 1.15rem;
+            line-height: 1.3;
             color: var(--gb-timeline-ink);
         }
 
@@ -377,61 +392,157 @@
         .gb-timeline-pill {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
-            padding: 0.42rem 0.7rem;
+            gap: 0.35rem;
+            padding: 0.42rem 0.72rem;
             border-radius: 999px;
             background: rgba(15, 23, 42, 0.06);
             color: var(--gb-timeline-muted);
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             font-weight: 600;
         }
 
         .gb-timeline-card__notes {
             color: var(--gb-timeline-muted);
-            font-size: 0.9rem;
-            line-height: 1.55;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 3;
-            overflow: hidden;
+            line-height: 1.7;
         }
 
         .gb-timeline-card__button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             width: fit-content;
-            margin-top: 0.2rem;
-            padding: 0.58rem 0.9rem;
-            border: 1px solid rgba(15, 23, 42, 0.12);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.7);
-            color: #0f172a;
-            font-size: 0.82rem;
-            font-weight: 600;
+            padding: 0.72rem 0.95rem;
+            border: none;
+            border-radius: 14px;
+            background: #111827;
+            color: white;
+            font-weight: 700;
             cursor: pointer;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
 
         .gb-timeline-empty {
-            position: relative;
-            padding: 3rem 2rem;
-            border-radius: 24px;
+            padding: 1.6rem;
+            border-radius: 30px;
+            border: 1px dashed rgba(148, 163, 184, 0.38);
             background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(226, 232, 240, 0.9);
             color: var(--gb-timeline-muted);
-            text-align: center;
             box-shadow: var(--gb-timeline-shadow);
+        }
+
+        .gb-trips-rail {
+            position: relative;
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(18rem, 20rem);
+            gap: 1rem;
+            min-width: max-content;
+            padding: 0.25rem 0 0.6rem;
+        }
+
+        .gb-trips-card {
+            position: relative;
+            display: grid;
+            gap: 1rem;
+            padding: 1.1rem;
+            border-radius: 24px;
+            border: 1px solid rgba(147, 197, 253, 0.34);
+            background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 0.92));
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .gb-trips-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.10), transparent 40%);
+            pointer-events: none;
+        }
+
+        .gb-trips-card__label {
+            width: fit-content;
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(37, 99, 235, 0.12);
+            color: #1d4ed8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .gb-trips-card__title {
+            font-size: 1.1rem;
+            line-height: 1.3;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .gb-trips-card__meta {
+            display: grid;
+            gap: 0.45rem;
+            color: #475569;
+            font-size: 0.92rem;
+        }
+
+        .gb-trips-card__thumbs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+
+        .gb-trips-card__thumb {
+            display: block;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 1px solid rgba(191, 219, 254, 0.85);
+            background: #dbeafe;
+        }
+
+        .gb-trips-card__thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gb-trips-card__thumb-empty {
+            display: grid;
+            place-items: center;
+            aspect-ratio: 1 / 1;
+            border-radius: 16px;
+            border: 1px dashed rgba(147, 197, 253, 0.9);
+            background: rgba(219, 234, 254, 0.56);
+            color: #64748b;
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .gb-trips-card__cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            padding: 0.78rem 0.95rem;
+            border-radius: 14px;
+            background: #0f172a;
+            color: white;
+            font-weight: 700;
+            text-decoration: none;
         }
 
         .gb-timeline-modal {
             position: fixed;
             inset: 0;
+            z-index: 60;
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
-            background: rgba(15, 23, 42, 0.62);
-            backdrop-filter: blur(10px);
-            z-index: 60;
+            padding: 1.25rem;
+            background: rgba(15, 23, 42, 0.74);
+            backdrop-filter: blur(8px);
         }
 
         .gb-timeline-modal[x-cloak] {
@@ -439,28 +550,27 @@
         }
 
         .gb-timeline-modal__dialog {
-            width: min(100%, 72rem);
-            max-height: calc(100vh - 3rem);
+            width: min(100%, 70rem);
+            max-height: calc(100vh - 2rem);
             overflow: auto;
             border-radius: 28px;
-            background: #fff;
-            box-shadow: 0 36px 90px rgba(15, 23, 42, 0.26);
+            background: white;
+            box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
         }
 
         .gb-timeline-modal__grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.85fr);
+            grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
         }
 
         .gb-timeline-modal__gallery {
             position: relative;
-            min-height: 100%;
-            background: linear-gradient(145deg, #0f172a, #1e293b);
+            min-height: 22rem;
+            background: #0f172a;
         }
 
         .gb-timeline-modal__gallery-frame {
-            aspect-ratio: 4 / 3;
-            min-height: 100%;
+            height: 100%;
         }
 
         .gb-timeline-modal__gallery-frame img {
@@ -474,13 +584,13 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 2.8rem;
-            height: 2.8rem;
+            width: 2.9rem;
+            height: 2.9rem;
             border: none;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.56);
-            color: white;
-            font-size: 1.8rem;
+            background: rgba(255,255,255,0.84);
+            color: #111827;
+            font-size: 1.4rem;
             cursor: pointer;
         }
 
@@ -496,23 +606,24 @@
             position: absolute;
             left: 1rem;
             bottom: 1rem;
-            padding: 0.45rem 0.8rem;
+            padding: 0.42rem 0.7rem;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.56);
+            background: rgba(15, 23, 42, 0.68);
             color: white;
-            font-size: 0.78rem;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
         .gb-timeline-modal__content {
             display: grid;
             gap: 1rem;
-            padding: 1.4rem;
+            padding: 1.5rem;
         }
 
         .gb-timeline-modal__eyebrow {
             font-size: 0.78rem;
-            text-transform: uppercase;
             letter-spacing: 0.12em;
+            text-transform: uppercase;
             color: #64748b;
         }
 
@@ -608,8 +719,12 @@
                 padding: 1rem;
             }
 
-            .gb-timeline-track {
+            .gb-timeline-track,
+            .gb-trips-rail {
                 grid-auto-columns: minmax(16rem, 18rem);
+            }
+
+            .gb-timeline-track {
                 padding-top: 2.4rem;
                 padding-bottom: 2.6rem;
             }
@@ -715,80 +830,145 @@
             </section>
 
             @if($activeVehicle && count($entries))
-                <section class="gb-timeline-board">
-                    <div class="gb-timeline-scroll">
-                        <div class="gb-timeline-track">
-                            @foreach($entries as $entry)
-                                <article class="gb-timeline-entry gb-timeline-entry--{{ $entry['side'] }}">
-                                    @if($entry['showYearMarker'])
-                                        <div class="gb-timeline-entry__year">{{ $entry['year'] }}</div>
-                                    @endif
+                <section class="gb-timeline-section">
+                    <div class="gb-timeline-section__header">
+                        <div class="gb-timeline-section__eyebrow">{{ __('dashboard.timeline.maintenance_section') }}</div>
+                        <div class="gb-timeline-section__title">{{ __('dashboard.timeline.maintenance_section') }}</div>
+                    </div>
 
-                                    <div class="gb-timeline-entry__anchor"></div>
-                                    <div class="gb-timeline-entry__stem"></div>
+                    <div class="gb-timeline-board">
+                        <div class="gb-timeline-scroll">
+                            <div class="gb-timeline-track">
+                                @foreach($entries as $entry)
+                                    <article class="gb-timeline-entry gb-timeline-entry--{{ $entry['side'] }}">
+                                        @if($entry['showYearMarker'])
+                                            <div class="gb-timeline-entry__year">{{ $entry['year'] }}</div>
+                                        @endif
 
-                                    <div class="gb-timeline-entry__card-wrap">
-                                        <div class="gb-timeline-card">
-                                            <div class="gb-timeline-card__media">
-                                                @if($entry['previewImage'])
-                                                    <img src="{{ $entry['previewImage'] }}" alt="{{ $entry['title'] }}" loading="lazy" decoding="async">
-                                                @else
-                                                    <div class="gb-timeline-card__media-empty">
-                                                        <strong>{{ $activeVehicle->brand }}</strong>
-                                                        <span>{{ $entry['dateLabel'] }}</span>
-                                                    </div>
-                                                @endif
-                                            </div>
+                                        <div class="gb-timeline-entry__anchor"></div>
+                                        <div class="gb-timeline-entry__stem"></div>
 
-                                            <div class="gb-timeline-card__body">
-                                                <div class="gb-timeline-card__meta">
-                                                    <div class="gb-timeline-card__date">
-                                                        <span class="gb-timeline-card__day">{{ $entry['dayLabel'] }}</span>
-                                                        <span class="gb-timeline-card__month">{{ $entry['monthLabel'] }}</span>
-                                                    </div>
-
-                                                    @if($entry['costLabel'])
-                                                        <div class="gb-timeline-card__cost">{{ $entry['costLabel'] }}</div>
+                                        <div class="gb-timeline-entry__card-wrap">
+                                            <div class="gb-timeline-card">
+                                                <div class="gb-timeline-card__media">
+                                                    @if($entry['previewImage'])
+                                                        <img src="{{ $entry['previewImage'] }}" alt="{{ $entry['title'] }}" loading="lazy" decoding="async">
+                                                    @else
+                                                        <div class="gb-timeline-card__media-empty">
+                                                            <strong>{{ $activeVehicle->brand }}</strong>
+                                                            <span>{{ $entry['dateLabel'] }}</span>
+                                                        </div>
                                                     @endif
                                                 </div>
 
-                                                <div class="gb-timeline-card__title">{{ $entry['title'] }}</div>
+                                                <div class="gb-timeline-card__body">
+                                                    <div class="gb-timeline-card__meta">
+                                                        <div class="gb-timeline-card__date">
+                                                            <span class="gb-timeline-card__day">{{ $entry['dayLabel'] }}</span>
+                                                            <span class="gb-timeline-card__month">{{ $entry['monthLabel'] }}</span>
+                                                        </div>
 
-                                                <div class="gb-timeline-card__summary">
-                                                    <span class="gb-timeline-pill">{{ $entry['distanceLabel'] }}</span>
-                                                    @if($entry['workedHoursLabel'])
-                                                        <span class="gb-timeline-pill">{{ $entry['workedHoursLabel'] }}</span>
-                                                    @endif
-                                                    @if($entry['imageCount'])
-                                                        <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.images_count', $entry['imageCount'], ['count' => $entry['imageCount']]) }}</span>
-                                                    @endif
-                                                    @if($entry['fileCount'])
-                                                        <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.files_count', $entry['fileCount'], ['count' => $entry['fileCount']]) }}</span>
-                                                    @endif
-                                                </div>
-
-                                                @if($entry['notes'])
-                                                    <div class="gb-timeline-card__notes">
-                                                        {{ $entry['notes'] }}
+                                                        @if($entry['costLabel'])
+                                                            <div class="gb-timeline-card__cost">{{ $entry['costLabel'] }}</div>
+                                                        @endif
                                                     </div>
-                                                @endif
 
-                                                <button type="button" class="gb-timeline-card__button" @click="openEntry({{ $entry['id'] }})">{{ __('dashboard.timeline.view_moment') }}</button>
+                                                    <div class="gb-timeline-card__title">{{ $entry['title'] }}</div>
+
+                                                    <div class="gb-timeline-card__summary">
+                                                        <span class="gb-timeline-pill">{{ $entry['distanceLabel'] }}</span>
+                                                        @if($entry['workedHoursLabel'])
+                                                            <span class="gb-timeline-pill">{{ $entry['workedHoursLabel'] }}</span>
+                                                        @endif
+                                                        @if($entry['imageCount'])
+                                                            <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.images_count', $entry['imageCount'], ['count' => $entry['imageCount']]) }}</span>
+                                                        @endif
+                                                        @if($entry['fileCount'])
+                                                            <span class="gb-timeline-pill">{{ trans_choice('dashboard.timeline.files_count', $entry['fileCount'], ['count' => $entry['fileCount']]) }}</span>
+                                                        @endif
+                                                    </div>
+
+                                                    @if($entry['notes'])
+                                                        <div class="gb-timeline-card__notes">
+                                                            {{ $entry['notes'] }}
+                                                        </div>
+                                                    @endif
+
+                                                    <button type="button" class="gb-timeline-card__button" @click="openEntry({{ $entry['id'] }})">{{ __('dashboard.timeline.view_moment') }}</button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </article>
-                            @endforeach
+                                    </article>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                 </section>
+            @elseif($activeVehicle)
+                <section class="gb-timeline-empty">
+                    {{ __('dashboard.timeline.empty_with_vehicle') }}
+                </section>
             @else
                 <section class="gb-timeline-empty">
-                    @if($activeVehicle)
-                        {{ __('dashboard.timeline.empty_with_vehicle') }}
-                    @else
-                        {{ __('dashboard.timeline.empty_without_vehicle') }}
-                    @endif
+                    {{ __('dashboard.timeline.empty_without_vehicle') }}
+                </section>
+            @endif
+
+            @if($activeVehicle && count($tripEntries))
+                <section class="gb-timeline-section">
+                    <div class="gb-timeline-section__header">
+                        <div class="gb-timeline-section__eyebrow">{{ __('dashboard.timeline.trips_section') }}</div>
+                        <div class="gb-timeline-section__title">{{ __('dashboard.timeline.trips_section') }}</div>
+                        <div class="gb-timeline-section__subtitle">{{ __('dashboard.timeline.trips_subtitle') }}</div>
+                    </div>
+
+                    <div class="gb-timeline-board">
+                        <div class="gb-timeline-scroll">
+                            <div class="gb-trips-rail">
+                                @foreach($tripEntries as $trip)
+                                    <article class="gb-trips-card">
+                                        <div class="gb-trips-card__label">{{ $trip['label'] }}</div>
+
+                                        <div>
+                                            <div class="gb-trips-card__title">{{ $trip['title'] }}</div>
+                                        </div>
+
+                                        <div class="gb-trips-card__meta">
+                                            @if($trip['riddenLabel'])
+                                                <div>{{ $trip['riddenLabel'] }}</div>
+                                            @endif
+                                            @if($trip['metaLabel'])
+                                                <div>{{ $trip['metaLabel'] }}</div>
+                                            @endif
+                                        </div>
+
+                                        <div class="gb-timeline-card__summary">
+                                            @if($trip['distanceLabel'])
+                                                <span class="gb-timeline-pill">{{ $trip['distanceLabel'] }}</span>
+                                            @endif
+                                            @if($trip['photoCountLabel'])
+                                                <span class="gb-timeline-pill">{{ $trip['photoCountLabel'] }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if(count($trip['previewPhotos']))
+                                            <div class="gb-trips-card__thumbs">
+                                                @foreach($trip['previewPhotos'] as $photo)
+                                                    <a class="gb-trips-card__thumb" href="{{ $photo['url'] }}" target="_blank" rel="noopener noreferrer">
+                                                        <img src="{{ $photo['url'] }}" alt="{{ $trip['title'] }}" loading="lazy" decoding="async">
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <div class="gb-trips-card__thumb-empty">{{ __('dashboard.timeline.trips_no_photos') }}</div>
+                                        @endif
+
+                                        <a class="gb-trips-card__cta" href="{{ $trip['tripUrl'] }}">{{ __('dashboard.timeline.view_trip') }}</a>
+                                    </article>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                 </section>
             @endif
         </div>
