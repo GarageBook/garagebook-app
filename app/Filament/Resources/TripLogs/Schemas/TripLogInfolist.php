@@ -66,7 +66,8 @@ class TripLogInfolist
                         ViewEntry::make('route_map')
                             ->hiddenLabel()
                             ->view('filament.resources.trip-logs.route-map'),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 }
