@@ -10,6 +10,7 @@ use App\Services\DistanceUnitService;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Pages\Page;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 
@@ -73,11 +74,15 @@ class Timeline extends Page
             ->get();
 
         $activeVehicle = $vehicles->firstWhere('id', $this->activeVehicleId);
-
-        $logs = collect();
-        $trips = collect();
+        $maintenanceEntries = collect();
+        $timelineGroups = collect();
+        $totalItems = 0;
+        $periodLabel = null;
 
         if ($activeVehicle) {
+            $distanceUnit = app(DistanceUnitService::class);
+            $activeDistanceUnit = $distanceUnit->normalizeUnit($activeVehicle->distance_unit);
+
             $logs = MaintenanceLog::query()
                 ->where('vehicle_id', $activeVehicle->id)
                 ->orderBy('maintenance_date')
@@ -87,123 +92,44 @@ class Timeline extends Page
             $trips = TripLog::query()
                 ->where('vehicle_id', $activeVehicle->id)
                 ->where('user_id', auth()->id())
-                ->orderByDesc('ridden_at')
-                ->orderByDesc('id')
+                ->orderBy('ridden_at')
+                ->orderBy('id')
                 ->get();
-        }
 
-        $entries = [];
-        $previousYear = null;
-        $distanceUnit = app(DistanceUnitService::class);
-        $activeDistanceUnit = $distanceUnit->normalizeUnit($activeVehicle?->distance_unit);
+            $maintenanceEntries = $logs->values()->map(
+                fn (MaintenanceLog $log, int $index): array => $this->maintenanceEntry($log, $index, $activeDistanceUnit, $distanceUnit, $activeVehicle)
+            );
 
-        foreach ($logs as $index => $log) {
-            $images = collect($log->attachments)
-                ->filter(fn (string $attachment) => MediaPath::isImage($attachment))
-                ->map(function (string $attachment): array {
-                    $thumbnail = ImageThumbnail::path($attachment, 640) ?: $attachment;
+            $tripEntries = $trips->values()->map(
+                fn (TripLog $trip): array => $this->tripEntry($trip)
+            );
 
-                    return [
-                        'thumbnail' => Storage::url($thumbnail),
-                        'full' => Storage::url($attachment),
-                        'label' => MediaPath::label($attachment),
-                    ];
-                })
-                ->values()
-                ->all();
+            $combinedEntries = $maintenanceEntries
+                ->concat($tripEntries)
+                ->filter(fn (array $entry): bool => filled($entry['sortDate'] ?? null));
 
-            $files = collect($log->attachments)
-                ->filter(fn (string $attachment) => ! MediaPath::isImage($attachment))
-                ->map(fn (string $attachment): array => [
-                    'label' => MediaPath::label($attachment),
-                    'type' => MediaPath::isVideo($attachment)
-                        ? __('dashboard.timeline.file_type_video')
-                        : (MediaPath::isPdf($attachment) ? __('dashboard.timeline.file_type_pdf') : __('dashboard.timeline.file_type_file')),
-                    'url' => Storage::url($attachment),
-                ])
-                ->values()
-                ->all();
+            $totalItems = $combinedEntries->count();
+            $timelineGroups = $this->buildTimelineGroups($combinedEntries);
 
-            $year = $log->maintenance_date?->format('Y');
+            if ($timelineGroups->isNotEmpty()) {
+                $firstDate = $timelineGroups->first()['sortDate'] ?? null;
+                $lastDate = $timelineGroups->last()['sortDate'] ?? null;
 
-            $entries[] = [
-                'id' => $log->id,
-                'index' => $index,
-                'side' => $index % 2 === 0 ? 'top' : 'bottom',
-                'showYearMarker' => $year !== $previousYear,
-                'year' => $year,
-                'dateLabel' => $log->maintenance_date?->translatedFormat('d M Y'),
-                'monthLabel' => $log->maintenance_date?->translatedFormat('M'),
-                'dayLabel' => $log->maintenance_date?->format('d'),
-                'title' => $log->description,
-                'distanceLabel' => $distanceUnit->formatFromKilometers($log->km_reading, $activeDistanceUnit, 0),
-                'costLabel' => $log->cost !== null
-                    ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) $log->cost, 2, ',', '.')
-                    : null,
-                'workedHoursLabel' => $log->worked_hours !== null
-                    ? rtrim(rtrim(number_format((float) $log->worked_hours, 2, ',', '.'), '0'), ',') . ' ' . __('dashboard.timeline.worked_hours_suffix')
-                    : null,
-                'notes' => $log->notes,
-                'images' => $images,
-                'files' => $files,
-                'previewImage' => $images[0]['thumbnail'] ?? null,
-                'imageCount' => count($images),
-                'fileCount' => count($files),
-            ];
-
-            $previousYear = $year;
-        }
-
-        $tripEntries = $trips->map(function (TripLog $trip): array {
-            $previewPhotos = collect($trip->photos ?? [])
-                ->filter(fn (mixed $photo) => is_string($photo) && filled($photo) && MediaPath::isImage($photo))
-                ->values()
-                ->take(3)
-                ->map(fn (string $photo, int $index): array => [
-                    'url' => route('trip-photos.show', ['trip' => $trip, 'photoIndex' => $index]),
-                    'label' => MediaPath::label($photo),
-                ])
-                ->all();
-
-            $photoCount = count($trip->photos ?? []);
-
-            return [
-                'id' => $trip->id,
-                'title' => $trip->title ?: __('trips.table.no_title'),
-                'label' => __('dashboard.timeline.trips_item_label'),
-                'dateLabel' => $trip->ridden_at?->translatedFormat('d F Y'),
-                'riddenLabel' => $trip->ridden_at
-                    ? __('dashboard.timeline.trips_ridden_on', ['date' => $trip->ridden_at->translatedFormat('d F Y')])
-                    : null,
-                'distanceLabel' => $trip->distance_km !== null
-                    ? number_format((float) $trip->distance_km, 2, ',', '.') . ' km'
-                    : null,
-                'metaLabel' => filled($trip->source_file_name)
-                    ? __('dashboard.timeline.trips_meta_uploaded')
-                    : null,
-                'photoCount' => $photoCount,
-                'photoCountLabel' => $photoCount > 0
-                    ? trans_choice('dashboard.timeline.images_count', min($photoCount, 3), ['count' => min($photoCount, 3)])
-                    : null,
-                'previewPhotos' => $previewPhotos,
-                'tripUrl' => TripLogResource::getUrl('view', ['record' => $trip]),
-            ];
-        })->all();
-
-        $periodLabel = null;
-
-        if ($logs->isNotEmpty()) {
-            $periodLabel = $logs->first()->maintenance_date?->translatedFormat('M Y')
-                . ' - '
-                . $logs->last()->maintenance_date?->translatedFormat('M Y');
+                if (is_string($firstDate) && is_string($lastDate)) {
+                    $periodLabel = Carbon::parse($firstDate)->translatedFormat('M Y')
+                        . ' - '
+                        . Carbon::parse($lastDate)->translatedFormat('M Y');
+                }
+            }
         }
 
         return [
             'vehicles' => $vehicles,
             'activeVehicle' => $activeVehicle,
-            'entries' => $entries,
-            'entriesJson' => json_encode($entries, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'tripEntries' => $tripEntries,
+            'entries' => $maintenanceEntries->values()->all(),
+            'entriesJson' => json_encode($maintenanceEntries->values()->all(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'timelineGroups' => $timelineGroups->all(),
+            'totalItems' => $totalItems,
             'periodLabel' => $periodLabel,
             'totalCostLabel' => $activeVehicle
                 ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')
@@ -237,5 +163,130 @@ class Timeline extends Page
         }
 
         return $vehicles->first()->id;
+    }
+
+    private function maintenanceEntry(
+        MaintenanceLog $log,
+        int $index,
+        string $activeDistanceUnit,
+        DistanceUnitService $distanceUnit,
+        Vehicle $activeVehicle,
+    ): array {
+        $images = collect($log->attachments)
+            ->filter(fn (string $attachment) => MediaPath::isImage($attachment))
+            ->map(function (string $attachment): array {
+                $thumbnail = ImageThumbnail::path($attachment, 640) ?: $attachment;
+
+                return [
+                    'thumbnail' => Storage::url($thumbnail),
+                    'full' => Storage::url($attachment),
+                    'label' => MediaPath::label($attachment),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $files = collect($log->attachments)
+            ->filter(fn (string $attachment) => ! MediaPath::isImage($attachment))
+            ->map(fn (string $attachment): array => [
+                'label' => MediaPath::label($attachment),
+                'type' => MediaPath::isVideo($attachment)
+                    ? __('dashboard.timeline.file_type_video')
+                    : (MediaPath::isPdf($attachment) ? __('dashboard.timeline.file_type_pdf') : __('dashboard.timeline.file_type_file')),
+                'url' => Storage::url($attachment),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'id' => $log->id,
+            'type' => 'maintenance',
+            'index' => $index,
+            'sortDate' => $log->maintenance_date?->toDateString(),
+            'dateLabel' => $log->maintenance_date?->translatedFormat('d M Y'),
+            'monthLabel' => $log->maintenance_date?->translatedFormat('M'),
+            'dayLabel' => $log->maintenance_date?->format('d'),
+            'title' => $log->description,
+            'distanceLabel' => $distanceUnit->formatFromKilometers($log->km_reading, $activeDistanceUnit, 0),
+            'costLabel' => $log->cost !== null
+                ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) $log->cost, 2, ',', '.')
+                : null,
+            'workedHoursLabel' => $log->worked_hours !== null
+                ? rtrim(rtrim(number_format((float) $log->worked_hours, 2, ',', '.'), '0'), ',') . ' ' . __('dashboard.timeline.worked_hours_suffix')
+                : null,
+            'notes' => $log->notes,
+            'images' => $images,
+            'files' => $files,
+            'previewImage' => $images[0]['thumbnail'] ?? null,
+            'imageCount' => count($images),
+            'fileCount' => count($files),
+            'fallbackBrand' => $activeVehicle->brand,
+        ];
+    }
+
+    private function tripEntry(TripLog $trip): array
+    {
+        $previewPhotos = collect($trip->photos ?? [])
+            ->filter(fn (mixed $photo) => is_string($photo) && filled($photo) && MediaPath::isImage($photo))
+            ->values()
+            ->take(3)
+            ->map(fn (string $photo, int $index): array => [
+                'url' => route('trip-photos.show', ['trip' => $trip, 'photoIndex' => $index]),
+                'label' => MediaPath::label($photo),
+            ])
+            ->all();
+
+        $photoCount = count($trip->photos ?? []);
+
+        return [
+            'id' => $trip->id,
+            'type' => 'trip',
+            'sortDate' => $trip->ridden_at?->toDateString(),
+            'title' => $trip->title ?: __('trips.table.no_title'),
+            'label' => __('dashboard.timeline.trips_item_label'),
+            'dateLabel' => $trip->ridden_at?->translatedFormat('d F Y'),
+            'riddenLabel' => $trip->ridden_at
+                ? __('dashboard.timeline.trips_ridden_on', ['date' => $trip->ridden_at->translatedFormat('d F Y')])
+                : null,
+            'distanceLabel' => $trip->distance_km !== null
+                ? number_format((float) $trip->distance_km, 2, ',', '.') . ' km'
+                : null,
+            'metaLabel' => filled($trip->source_file_name)
+                ? __('dashboard.timeline.trips_meta_uploaded')
+                : null,
+            'photoCountLabel' => $photoCount > 0
+                ? trans_choice('dashboard.timeline.images_count', min($photoCount, 3), ['count' => min($photoCount, 3)])
+                : null,
+            'previewPhotos' => $previewPhotos,
+            'tripUrl' => TripLogResource::getUrl('view', ['record' => $trip]),
+        ];
+    }
+
+    private function buildTimelineGroups($combinedEntries)
+    {
+        $previousYear = null;
+
+        return $combinedEntries
+            ->groupBy('sortDate')
+            ->sortKeys()
+            ->values()
+            ->map(function ($items) use (&$previousYear): array {
+                $firstItem = $items->first();
+                $sortDate = $firstItem['sortDate'];
+                $date = Carbon::parse($sortDate);
+                $year = $date->format('Y');
+
+                $group = [
+                    'sortDate' => $sortDate,
+                    'showYearMarker' => $year !== $previousYear,
+                    'year' => $year,
+                    'maintenanceItems' => $items->where('type', 'maintenance')->values()->all(),
+                    'tripItems' => $items->where('type', 'trip')->values()->all(),
+                ];
+
+                $previousYear = $year;
+
+                return $group;
+            });
     }
 }

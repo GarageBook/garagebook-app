@@ -102,7 +102,6 @@ class TimelinePageTest extends TestCase
             ->assertSeeText('Tijdlijn')
             ->assertSeeText('Tourfiets')
             ->assertSeeText('Kleine beurt')
-            ->assertSeeText('Trips')
             ->assertSeeText('Veluwerit')
             ->assertDontSeeText('Nieuwe remblokken')
             ->assertDontSeeText('Bandenwissel')
@@ -182,7 +181,7 @@ class TimelinePageTest extends TestCase
             ->assertSeeText('100.000 mi');
     }
 
-    public function test_timeline_contains_a_separate_trips_track_when_vehicle_has_trips(): void
+    public function test_timeline_integrates_trips_into_the_same_chronological_track(): void
     {
         $user = User::factory()->create([
             'is_admin' => true,
@@ -197,42 +196,89 @@ class TimelinePageTest extends TestCase
 
         MaintenanceLog::query()->create([
             'vehicle_id' => $vehicle->id,
-            'description' => 'Jaarbeurt',
-            'km_reading' => 15000,
-            'maintenance_date' => '2026-03-10',
-            'cost' => 299.00,
+            'description' => 'Olie vervangen',
+            'km_reading' => 10000,
+            'maintenance_date' => '2026-01-01',
+            'cost' => 99.00,
         ]);
 
         TripLog::query()->create([
             'user_id' => $user->id,
             'vehicle_id' => $vehicle->id,
-            'title' => 'Ardennenrit',
-            'ridden_at' => '2026-05-18',
-            'source_file_path' => 'trip-uploads/ardennen.gpx',
+            'title' => 'Veluwerit',
+            'ridden_at' => '2026-01-02',
+            'source_file_path' => 'trip-uploads/veluwe.gpx',
             'source_format' => 'gpx',
             'status' => TripLog::STATUS_PROCESSED,
-            'distance_km' => 243.5,
-            'photos' => [
-                'trip-photos/1/1/a.jpg',
-                'trip-photos/1/1/b.jpg',
-                'trip-photos/1/1/c.jpg',
-                'trip-photos/1/1/d.jpg',
-            ],
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Banden vervangen',
+            'km_reading' => 10300,
+            'maintenance_date' => '2026-01-05',
+            'cost' => 320.00,
         ]);
 
         $this->actingAs($user)
             ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
             ->assertOk()
-            ->assertSeeText('Onderhoud')
-            ->assertSeeText('Trips')
-            ->assertSeeText('Ardennenrit')
-            ->assertSeeText('Gereden op 18 mei 2026')
-            ->assertSeeText('243,50 km')
+            ->assertSeeTextInOrder([
+                'Olie vervangen',
+                'Veluwerit',
+                'Banden vervangen',
+            ])
             ->assertSeeText('Bekijk trip')
-            ->assertSeeText('3 foto\'s');
+            ->assertDontSeeText('Ritten die je hebt gereden, los van onderhoudsmomenten');
     }
 
-    public function test_timeline_hides_trips_section_when_vehicle_has_no_trips(): void
+    public function test_timeline_still_scopes_trips_to_the_active_vehicle_owner(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => true,
+        ]);
+        $otherUser = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'Transalp',
+        ]);
+
+        $otherVehicle = Vehicle::query()->create([
+            'user_id' => $otherUser->id,
+            'brand' => 'KTM',
+            'model' => '790 Adventure',
+        ]);
+
+        TripLog::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $vehicle->id,
+            'title' => 'Eigen rit',
+            'ridden_at' => '2026-04-02',
+            'source_file_path' => 'trip-uploads/own.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+        ]);
+
+        TripLog::query()->create([
+            'user_id' => $otherUser->id,
+            'vehicle_id' => $otherVehicle->id,
+            'title' => 'Verborgen rit',
+            'ridden_at' => '2026-04-03',
+            'source_file_path' => 'trip-uploads/hidden.gpx',
+            'source_format' => 'gpx',
+            'status' => TripLog::STATUS_PROCESSED,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/tijdlijn?vehicle_id=' . $vehicle->id)
+            ->assertOk()
+            ->assertSeeText('Eigen rit')
+            ->assertDontSeeText('Verborgen rit');
+    }
+
+    public function test_timeline_without_trips_still_renders_maintenance_correctly(): void
     {
         $user = User::factory()->create([
             'is_admin' => true,
@@ -258,6 +304,6 @@ class TimelinePageTest extends TestCase
             ->assertOk()
             ->assertSeeText('Kettingset vervangen')
             ->assertDontSeeText('Bekijk trip')
-            ->assertDontSeeText('Gereden op');
+            ->assertDontSeeText('Ritten die je hebt gereden, los van onderhoudsmomenten');
     }
 }

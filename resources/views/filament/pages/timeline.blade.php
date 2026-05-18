@@ -3,10 +3,8 @@
         .gb-timeline-page {
             --gb-timeline-ink: #0f172a;
             --gb-timeline-muted: #5b6475;
-            --gb-timeline-line: rgba(15, 23, 42, 0.16);
             --gb-timeline-panel: rgba(255, 255, 255, 0.84);
             --gb-timeline-accent: #ffd200;
-            --gb-timeline-accent-deep: #f5b700;
             --gb-timeline-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);
             position: relative;
             display: grid;
@@ -127,37 +125,6 @@
             font-weight: 700;
         }
 
-        .gb-timeline-section {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .gb-timeline-section__header {
-            display: grid;
-            gap: 0.35rem;
-            padding: 0 0.3rem;
-        }
-
-        .gb-timeline-section__eyebrow {
-            font-size: 0.72rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: #64748b;
-        }
-
-        .gb-timeline-section__title {
-            font-size: 1.35rem;
-            line-height: 1.1;
-            font-weight: 700;
-            color: #0f172a;
-        }
-
-        .gb-timeline-section__subtitle {
-            color: #64748b;
-            line-height: 1.6;
-            max-width: 44rem;
-        }
-
         .gb-timeline-board {
             position: relative;
             padding: 1.4rem;
@@ -178,6 +145,23 @@
             background-size: 2rem 2rem;
             mask-image: linear-gradient(180deg, rgba(0,0,0,0.32), transparent 88%);
             pointer-events: none;
+        }
+
+        .gb-timeline-board__legend {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.9rem;
+            padding: 0 0.3rem;
+        }
+
+        .gb-timeline-board__legend-label {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #64748b;
         }
 
         .gb-timeline-scroll {
@@ -218,14 +202,16 @@
             top: 50%;
             height: 2px;
             transform: translateY(-50%);
-            background:
-                linear-gradient(90deg, rgba(255, 210, 0, 0.26), rgba(255, 210, 0, 1) 10%, rgba(255, 210, 0, 1) 90%, rgba(255, 210, 0, 0.26));
+            background: linear-gradient(90deg, rgba(255, 210, 0, 0.26), rgba(255, 210, 0, 1) 10%, rgba(255, 210, 0, 1) 90%, rgba(255, 210, 0, 0.26));
             box-shadow: 0 0 0 1px rgba(255, 210, 0, 0.12);
         }
 
         .gb-timeline-entry {
             position: relative;
             scroll-snap-align: start;
+            display: grid;
+            grid-template-rows: minmax(15rem, auto) 2.6rem minmax(13rem, auto);
+            gap: 0;
         }
 
         .gb-timeline-entry__year {
@@ -239,13 +225,56 @@
             font-size: 0.72rem;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            z-index: 2;
+            z-index: 3;
+        }
+
+        .gb-timeline-entry__top,
+        .gb-timeline-entry__bottom {
+            position: relative;
+            display: grid;
+            gap: 1rem;
+            padding-left: 2.8rem;
+        }
+
+        .gb-timeline-entry__top {
+            align-content: end;
+            padding-bottom: 2.2rem;
+        }
+
+        .gb-timeline-entry__bottom {
+            align-content: start;
+            padding-top: 2.2rem;
+        }
+
+        .gb-timeline-entry__top::after,
+        .gb-timeline-entry__bottom::before {
+            content: "";
+            position: absolute;
+            left: 1.7rem;
+            width: 2px;
+            background: linear-gradient(180deg, rgba(255, 210, 0, 0.0), rgba(15, 23, 42, 0.14), rgba(15, 23, 42, 0.02));
+        }
+
+        .gb-timeline-entry__top::after {
+            top: 3.2rem;
+            bottom: 0.4rem;
+        }
+
+        .gb-timeline-entry__bottom::before {
+            top: 0.4rem;
+            bottom: 3.2rem;
+        }
+
+        .gb-timeline-entry__anchor-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         .gb-timeline-entry__anchor {
-            position: absolute;
-            left: 1.2rem;
-            top: 50%;
+            position: relative;
+            left: 1.15rem;
             z-index: 2;
             display: flex;
             align-items: center;
@@ -255,7 +284,6 @@
             border-radius: 999px;
             background: #111827;
             box-shadow: 0 0 0 6px rgba(255, 210, 0, 0.38), 0 10px 26px rgba(15, 23, 42, 0.20);
-            transform: translateY(-50%);
         }
 
         .gb-timeline-entry__anchor::after {
@@ -266,36 +294,8 @@
             background: var(--gb-timeline-accent);
         }
 
-        .gb-timeline-entry--top .gb-timeline-entry__card-wrap {
-            padding-bottom: 11rem;
-        }
-
-        .gb-timeline-entry--bottom .gb-timeline-entry__card-wrap {
-            padding-top: 11rem;
-        }
-
-        .gb-timeline-entry__stem {
-            position: absolute;
-            left: 1.7rem;
-            width: 2px;
-            background: linear-gradient(180deg, rgba(255, 210, 0, 0.0), rgba(15, 23, 42, 0.14), rgba(15, 23, 42, 0.02));
-        }
-
-        .gb-timeline-entry--top .gb-timeline-entry__stem {
-            top: 3.2rem;
-            bottom: 50%;
-            margin-bottom: 1.2rem;
-        }
-
-        .gb-timeline-entry--bottom .gb-timeline-entry__stem {
-            top: 50%;
-            bottom: 3.2rem;
-            margin-top: 1.2rem;
-        }
-
         .gb-timeline-card {
             overflow: hidden;
-            margin-left: 2.8rem;
             border-radius: 26px;
             border: 1px solid rgba(226, 232, 240, 0.95);
             background: var(--gb-timeline-panel);
@@ -323,9 +323,7 @@
             gap: 0.45rem;
             height: 100%;
             padding: 1.5rem;
-            background:
-                radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 50%),
-                linear-gradient(145deg, rgba(15, 23, 42, 0.10), rgba(255, 210, 0, 0.18));
+            background: radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 50%), linear-gradient(145deg, rgba(15, 23, 42, 0.10), rgba(255, 210, 0, 0.18));
             color: #0f172a;
         }
 
@@ -427,16 +425,6 @@
             background: rgba(255, 255, 255, 0.72);
             color: var(--gb-timeline-muted);
             box-shadow: var(--gb-timeline-shadow);
-        }
-
-        .gb-trips-rail {
-            position: relative;
-            display: grid;
-            grid-auto-flow: column;
-            grid-auto-columns: minmax(18rem, 20rem);
-            gap: 1rem;
-            min-width: max-content;
-            padding: 0.25rem 0 0.6rem;
         }
 
         .gb-trips-card {
@@ -719,31 +707,28 @@
                 padding: 1rem;
             }
 
-            .gb-timeline-track,
-            .gb-trips-rail {
-                grid-auto-columns: minmax(16rem, 18rem);
-            }
-
             .gb-timeline-track {
+                grid-auto-columns: minmax(16rem, 18rem);
                 padding-top: 2.4rem;
                 padding-bottom: 2.6rem;
             }
 
-            .gb-timeline-entry--top .gb-timeline-entry__card-wrap,
-            .gb-timeline-entry--bottom .gb-timeline-entry__card-wrap {
-                padding-top: 9rem;
-                padding-bottom: 0;
+            .gb-timeline-entry {
+                grid-template-rows: minmax(14rem, auto) 2.4rem minmax(12rem, auto);
             }
 
-            .gb-timeline-entry__stem {
-                top: 50% !important;
-                bottom: 2.6rem !important;
-                margin-top: 1rem !important;
-                margin-bottom: 0 !important;
+            .gb-timeline-entry__top,
+            .gb-timeline-entry__bottom {
+                padding-left: 2.2rem;
             }
 
-            .gb-timeline-card {
-                margin-left: 2.2rem;
+            .gb-timeline-entry__top::after,
+            .gb-timeline-entry__bottom::before {
+                left: 1.3rem;
+            }
+
+            .gb-timeline-entry__anchor {
+                left: 0.8rem;
             }
         }
     </style>
@@ -814,7 +799,7 @@
                 <div class="gb-timeline-summary">
                     <div class="gb-timeline-summary__card">
                         <div class="gb-timeline-summary__label">{{ __('dashboard.timeline.summary_items') }}</div>
-                        <div class="gb-timeline-summary__value">{{ count($entries) }}</div>
+                        <div class="gb-timeline-summary__value">{{ $totalItems }}</div>
                     </div>
 
                     <div class="gb-timeline-summary__card">
@@ -829,33 +814,30 @@
                 </div>
             </section>
 
-            @if($activeVehicle && count($entries))
-                <section class="gb-timeline-section">
-                    <div class="gb-timeline-section__header">
-                        <div class="gb-timeline-section__eyebrow">{{ __('dashboard.timeline.maintenance_section') }}</div>
-                        <div class="gb-timeline-section__title">{{ __('dashboard.timeline.maintenance_section') }}</div>
+            @if($activeVehicle && count($timelineGroups))
+                <section class="gb-timeline-board">
+                    <div class="gb-timeline-board__legend">
+                        <div class="gb-timeline-board__legend-label">{{ __('dashboard.timeline.maintenance_section') }}</div>
+                        <div class="gb-timeline-board__legend-label">{{ __('dashboard.timeline.trips_section') }}</div>
                     </div>
 
-                    <div class="gb-timeline-board">
-                        <div class="gb-timeline-scroll">
-                            <div class="gb-timeline-track">
-                                @foreach($entries as $entry)
-                                    <article class="gb-timeline-entry gb-timeline-entry--{{ $entry['side'] }}">
-                                        @if($entry['showYearMarker'])
-                                            <div class="gb-timeline-entry__year">{{ $entry['year'] }}</div>
-                                        @endif
+                    <div class="gb-timeline-scroll">
+                        <div class="gb-timeline-track">
+                            @foreach($timelineGroups as $group)
+                                <article class="gb-timeline-entry">
+                                    @if($group['showYearMarker'])
+                                        <div class="gb-timeline-entry__year">{{ $group['year'] }}</div>
+                                    @endif
 
-                                        <div class="gb-timeline-entry__anchor"></div>
-                                        <div class="gb-timeline-entry__stem"></div>
-
-                                        <div class="gb-timeline-entry__card-wrap">
+                                    <div class="gb-timeline-entry__top">
+                                        @foreach($group['maintenanceItems'] as $entry)
                                             <div class="gb-timeline-card">
                                                 <div class="gb-timeline-card__media">
                                                     @if($entry['previewImage'])
                                                         <img src="{{ $entry['previewImage'] }}" alt="{{ $entry['title'] }}" loading="lazy" decoding="async">
                                                     @else
                                                         <div class="gb-timeline-card__media-empty">
-                                                            <strong>{{ $activeVehicle->brand }}</strong>
+                                                            <strong>{{ $entry['fallbackBrand'] }}</strong>
                                                             <span>{{ $entry['dateLabel'] }}</span>
                                                         </div>
                                                     @endif
@@ -897,10 +879,56 @@
                                                     <button type="button" class="gb-timeline-card__button" @click="openEntry({{ $entry['id'] }})">{{ __('dashboard.timeline.view_moment') }}</button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </article>
-                                @endforeach
-                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="gb-timeline-entry__anchor-wrap">
+                                        <div class="gb-timeline-entry__anchor"></div>
+                                    </div>
+
+                                    <div class="gb-timeline-entry__bottom">
+                                        @foreach($group['tripItems'] as $trip)
+                                            <article class="gb-trips-card">
+                                                <div class="gb-trips-card__label">{{ $trip['label'] }}</div>
+
+                                                <div class="gb-trips-card__title">{{ $trip['title'] }}</div>
+
+                                                <div class="gb-trips-card__meta">
+                                                    @if($trip['riddenLabel'])
+                                                        <div>{{ $trip['riddenLabel'] }}</div>
+                                                    @endif
+                                                    @if($trip['metaLabel'])
+                                                        <div>{{ $trip['metaLabel'] }}</div>
+                                                    @endif
+                                                </div>
+
+                                                <div class="gb-timeline-card__summary">
+                                                    @if($trip['distanceLabel'])
+                                                        <span class="gb-timeline-pill">{{ $trip['distanceLabel'] }}</span>
+                                                    @endif
+                                                    @if($trip['photoCountLabel'])
+                                                        <span class="gb-timeline-pill">{{ $trip['photoCountLabel'] }}</span>
+                                                    @endif
+                                                </div>
+
+                                                @if(count($trip['previewPhotos']))
+                                                    <div class="gb-trips-card__thumbs">
+                                                        @foreach($trip['previewPhotos'] as $photo)
+                                                            <a class="gb-trips-card__thumb" href="{{ $photo['url'] }}" target="_blank" rel="noopener noreferrer">
+                                                                <img src="{{ $photo['url'] }}" alt="{{ $trip['title'] }}" loading="lazy" decoding="async">
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <div class="gb-trips-card__thumb-empty">{{ __('dashboard.timeline.trips_no_photos') }}</div>
+                                                @endif
+
+                                                <a class="gb-trips-card__cta" href="{{ $trip['tripUrl'] }}">{{ __('dashboard.timeline.view_trip') }}</a>
+                                            </article>
+                                        @endforeach
+                                    </div>
+                                </article>
+                            @endforeach
                         </div>
                     </div>
                 </section>
@@ -911,64 +939,6 @@
             @else
                 <section class="gb-timeline-empty">
                     {{ __('dashboard.timeline.empty_without_vehicle') }}
-                </section>
-            @endif
-
-            @if($activeVehicle && count($tripEntries))
-                <section class="gb-timeline-section">
-                    <div class="gb-timeline-section__header">
-                        <div class="gb-timeline-section__eyebrow">{{ __('dashboard.timeline.trips_section') }}</div>
-                        <div class="gb-timeline-section__title">{{ __('dashboard.timeline.trips_section') }}</div>
-                        <div class="gb-timeline-section__subtitle">{{ __('dashboard.timeline.trips_subtitle') }}</div>
-                    </div>
-
-                    <div class="gb-timeline-board">
-                        <div class="gb-timeline-scroll">
-                            <div class="gb-trips-rail">
-                                @foreach($tripEntries as $trip)
-                                    <article class="gb-trips-card">
-                                        <div class="gb-trips-card__label">{{ $trip['label'] }}</div>
-
-                                        <div>
-                                            <div class="gb-trips-card__title">{{ $trip['title'] }}</div>
-                                        </div>
-
-                                        <div class="gb-trips-card__meta">
-                                            @if($trip['riddenLabel'])
-                                                <div>{{ $trip['riddenLabel'] }}</div>
-                                            @endif
-                                            @if($trip['metaLabel'])
-                                                <div>{{ $trip['metaLabel'] }}</div>
-                                            @endif
-                                        </div>
-
-                                        <div class="gb-timeline-card__summary">
-                                            @if($trip['distanceLabel'])
-                                                <span class="gb-timeline-pill">{{ $trip['distanceLabel'] }}</span>
-                                            @endif
-                                            @if($trip['photoCountLabel'])
-                                                <span class="gb-timeline-pill">{{ $trip['photoCountLabel'] }}</span>
-                                            @endif
-                                        </div>
-
-                                        @if(count($trip['previewPhotos']))
-                                            <div class="gb-trips-card__thumbs">
-                                                @foreach($trip['previewPhotos'] as $photo)
-                                                    <a class="gb-trips-card__thumb" href="{{ $photo['url'] }}" target="_blank" rel="noopener noreferrer">
-                                                        <img src="{{ $photo['url'] }}" alt="{{ $trip['title'] }}" loading="lazy" decoding="async">
-                                                    </a>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <div class="gb-trips-card__thumb-empty">{{ __('dashboard.timeline.trips_no_photos') }}</div>
-                                        @endif
-
-                                        <a class="gb-trips-card__cta" href="{{ $trip['tripUrl'] }}">{{ __('dashboard.timeline.view_trip') }}</a>
-                                    </article>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
                 </section>
             @endif
         </div>
