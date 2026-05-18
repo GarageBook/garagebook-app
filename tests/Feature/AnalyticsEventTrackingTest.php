@@ -12,11 +12,11 @@ use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Jobs\ProcessTripLogUpload;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Support\Analytics;
 use App\Support\AnalyticsAttribution;
 use App\Support\AnalyticsEventTracker;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
@@ -43,16 +43,14 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'login',
                 'params' => [
-                    'app_section' => 'auth',
                     'method' => 'email',
-                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
             session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['email', 'name', 'user_id']
+            ['email', 'name', 'user_id', 'user_id_hash', 'source_url', 'utm_content', 'utm_term']
         );
     }
 
@@ -77,16 +75,14 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'app_section' => 'vehicles',
                     'is_first_vehicle' => true,
-                    'vehicle_count_after_create' => 1,
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
             session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['license_plate', 'notes', 'vehicle_id', 'brand', 'model']
+            ['license_plate', 'notes', 'vehicle_id', 'brand', 'model', 'user_id_hash', 'vehicle_count_after_create']
         );
     }
 
@@ -123,7 +119,6 @@ class AnalyticsEventTrackingTest extends TestCase
                 'params' => [
                     'app_section' => 'maintenance',
                     'is_first_maintenance_log' => true,
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
                     'has_attachments' => false,
                     'cost_entered' => true,
                 ],
@@ -168,7 +163,6 @@ class AnalyticsEventTrackingTest extends TestCase
                     'app_section' => 'fuel',
                     'unit' => 'km',
                     'calculated_consumption_available' => true,
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
@@ -210,7 +204,6 @@ class AnalyticsEventTrackingTest extends TestCase
                 'params' => [
                     'app_section' => 'documents',
                     'document_type' => 'warranty',
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
                     'file_count' => 1,
                 ],
             ],
@@ -319,7 +312,58 @@ class AnalyticsEventTrackingTest extends TestCase
         );
     }
 
-    public function test_registration_event_includes_first_touch_attribution_without_pii(): void
+    public function test_register_page_renders_register_start_with_safe_utm_params(): void
+    {
+        $this->app['env'] = 'production';
+
+        config([
+            'analytics.ga4.measurement_id' => 'G-TEST123456',
+        ]);
+
+        $this->get('/admin/register?utm_source=garagebook&utm_medium=referral&utm_campaign=spring_launch&utm_content=hero&utm_term=garagebook')
+            ->assertOk()
+            ->assertSee('register_start', false)
+            ->assertSee('"utm_source":"garagebook"', false)
+            ->assertSee('"utm_medium":"referral"', false)
+            ->assertSee('"utm_campaign":"spring_launch"', false)
+            ->assertSee('"page_path":"\/admin\/register"', false)
+            ->assertSee('"page_location"', false);
+    }
+
+    public function test_register_start_queue_only_keeps_safe_marketing_params(): void
+    {
+        session()->start();
+
+        $request = Request::create('/admin/register?utm_source=garagebook&utm_medium=referral&utm_campaign=spring_launch&utm_content=hero&utm_term=garagebook', 'GET');
+        $this->app->instance('request', $request);
+
+        app(AnalyticsEventTracker::class)->queueRegisterStart([
+            'utm_source' => 'garagebook',
+            'utm_medium' => 'referral',
+            'utm_campaign' => 'spring_launch',
+            'utm_content' => 'hero',
+            'utm_term' => 'garagebook',
+        ]);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, ['register_start']);
+        $this->assertSame('/admin/register', $this->eventParams($events, 'register_start')['page_path'] ?? null);
+        $this->assertSame('garagebook', $this->eventParams($events, 'register_start')['utm_source'] ?? null);
+        $this->assertSame('referral', $this->eventParams($events, 'register_start')['utm_medium'] ?? null);
+        $this->assertSame('spring_launch', $this->eventParams($events, 'register_start')['utm_campaign'] ?? null);
+        $this->assertStringContainsString('/admin/register?', $this->eventParams($events, 'register_start')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_source=garagebook', $this->eventParams($events, 'register_start')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_medium=referral', $this->eventParams($events, 'register_start')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_campaign=spring_launch', $this->eventParams($events, 'register_start')['page_location'] ?? '');
+
+        $this->assertPayloadDoesNotContainKeys(
+            $this->eventParams($events, 'register_start'),
+            ['utm_content', 'utm_term', 'source_url', 'user_id_hash', 'email', 'name']
+        );
+    }
+
+    public function test_registration_success_queues_sign_up_after_successful_user_creation(): void
     {
         session()->start();
 
@@ -355,35 +399,64 @@ class AnalyticsEventTrackingTest extends TestCase
             'referrer' => 'https://garagebook.nl/blogs/test',
         ]);
 
-        $this->assertSame([
-            [
-                'name' => 'login',
-                'params' => [
-                    'app_section' => 'auth',
-                    'method' => 'email',
-                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
-                ],
-            ],
-            [
-                'name' => 'account_registered',
-                'params' => [
-                    'app_section' => 'auth',
-                    'method' => 'email',
-                    'user_id_hash' => Analytics::anonymizeIdentifier('user', $user->id),
-                    'source_url' => '/start',
-                    'utm_source' => 'newsletter',
-                    'utm_medium' => 'email',
-                    'utm_campaign' => 'spring_launch',
-                    'utm_content' => 'hero_button',
-                    'utm_term' => 'garagebook',
-                ],
-            ],
-        ], session(AnalyticsEventTracker::SESSION_KEY));
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, ['login', 'sign_up']);
+        $this->assertSame(['method' => 'email'], $this->eventParams($events, 'login'));
+        $this->assertSame(['method' => 'email'], $this->eventParams($events, 'sign_up'));
 
         $this->assertPayloadDoesNotContainKeys(
-            session(AnalyticsEventTracker::SESSION_KEY)[1]['params'],
-            ['email', 'name', 'user_id']
+            $this->eventParams($events, 'sign_up'),
+            ['email', 'name', 'user_id', 'user_id_hash', 'source_url', 'utm_content', 'utm_term', 'utm_source', 'utm_medium', 'utm_campaign']
         );
+    }
+
+    public function test_registration_validation_errors_do_not_queue_sign_up(): void
+    {
+        session()->start();
+
+        Livewire::test(Register::class)
+            ->fillForm([
+                'name' => 'GarageBook Tester',
+                'email' => 'not-an-email',
+                'password' => 'password',
+                'passwordConfirmation' => 'mismatch',
+            ])
+            ->call('register')
+            ->assertHasFormErrors(['email', 'password']);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, []);
+        $this->assertNull($this->eventParams($events, 'sign_up'));
+    }
+
+    public function test_queued_events_are_consumed_after_render_and_do_not_fire_twice(): void
+    {
+        $this->app['env'] = 'production';
+
+        config([
+            'analytics.ga4.measurement_id' => 'G-TEST123456',
+            'analytics.ga4.linker_domains' => ['garagebook.nl', 'app.garagebook.nl'],
+        ]);
+
+        session()->start();
+        session()->flash(AnalyticsEventTracker::SESSION_KEY, [
+            [
+                'name' => 'vehicle_created',
+                'params' => [
+                    'is_first_vehicle' => true,
+                ],
+            ],
+        ]);
+
+        $firstRender = view('partials.analytics-tracking')->render();
+        $secondRender = view('partials.analytics-tracking')->render();
+
+        $this->assertStringContainsString('vehicle_created', $firstRender);
+        $this->assertStringContainsString('page_location: window.location.href', $firstRender);
+        $this->assertStringContainsString('page_path: window.location.pathname', $firstRender);
+        $this->assertStringNotContainsString('vehicle_created', $secondRender);
     }
 
     public function test_ga4_partials_do_not_render_outside_production(): void
@@ -406,8 +479,7 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'app_section' => 'vehicles',
-                    'vehicle_count_after_create' => 2,
+                    'is_first_vehicle' => true,
                 ],
             ],
         ]);
@@ -417,10 +489,10 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->assertStringContainsString('G-TEST123456', $googleTag);
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
+        $this->assertStringContainsString('page_location: window.location.href', $trackingTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
-        $this->assertStringContainsString('hostname: window.location.hostname', $trackingTag);
-        $this->assertStringContainsString('"app_section":"vehicles"', $trackingTag);
-        $this->assertStringContainsString('"vehicle_count_after_create":2', $trackingTag);
+        $this->assertStringContainsString('"is_first_vehicle":true', $trackingTag);
+        $this->assertStringNotContainsString('hostname:', $trackingTag);
     }
 
     private function assertPayloadDoesNotContainKeys(array $payload, array $keys): void
@@ -428,5 +500,24 @@ class AnalyticsEventTrackingTest extends TestCase
         foreach ($keys as $key) {
             $this->assertArrayNotHasKey($key, $payload);
         }
+    }
+
+    private function assertSessionEventNames(array $events, array $expectedNames): void
+    {
+        $this->assertSame($expectedNames, array_map(
+            fn (array $event): string => $event['name'],
+            $events,
+        ));
+    }
+
+    private function eventParams(array $events, string $eventName): ?array
+    {
+        foreach ($events as $event) {
+            if (($event['name'] ?? null) === $eventName) {
+                return $event['params'] ?? null;
+            }
+        }
+
+        return null;
     }
 }

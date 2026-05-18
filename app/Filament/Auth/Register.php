@@ -14,6 +14,19 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class Register extends BaseRegister
 {
+    public function mount(): void
+    {
+        parent::mount();
+
+        if (! request()->isMethod('GET') || request()->header('X-Livewire')) {
+            return;
+        }
+
+        app(AnalyticsEventTracker::class)->queueRegisterStart(
+            app(AnalyticsAttribution::class)->current(),
+        );
+    }
+
     public function register(): ?RegistrationResponse
     {
         try {
@@ -56,13 +69,9 @@ class Register extends BaseRegister
         session()->regenerate();
         RateLimiter::clear('filament-register:' . sha1((string) $user->email));
 
-        $attribution = app(AnalyticsAttribution::class)->pullForUser($user);
+        app(AnalyticsAttribution::class)->pullForUser($user);
 
-        app(AnalyticsEventTracker::class)->queueSignUp(
-            user: $user,
-            method: 'email',
-            attribution: $attribution,
-        );
+        app(AnalyticsEventTracker::class)->queueSignUp(method: 'email');
 
         return app(RegistrationResponse::class);
     }

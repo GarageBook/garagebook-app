@@ -6,7 +6,7 @@
         return;
     }
 
-    $analyticsEvents = session(AnalyticsEventTracker::SESSION_KEY, []);
+    $analyticsEvents = app(AnalyticsEventTracker::class)->consume();
     $debugEnabled = Analytics::frontendDebugEnabled();
 @endphp
 <script>
@@ -19,8 +19,8 @@
         }
 
         const payload = {
+            page_location: window.location.href,
             page_path: window.location.pathname,
-            hostname: window.location.hostname,
             ...(params && typeof params === 'object' ? params : {}),
         };
 
