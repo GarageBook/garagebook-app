@@ -2,7 +2,7 @@
 
 return [
     'welcome_back' => 'Welkom terug, :name',
-    'subheading' => 'Beheer je voertuigen en voeg onderhoud toe.',
+    'subheading' => 'Beheer je voertuigen en bouw aantoonbare historie op met onderhoud, kilometerstanden en bewijs.',
     'timeline_label' => 'Tijdlijn',
     'timeline_badge' => 'nieuw!',
     'timeline_heading' => 'Tijdlijn',

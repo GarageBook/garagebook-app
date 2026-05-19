@@ -29,21 +29,21 @@ class PublicGarageController extends Controller
 
         return view('garage.show', [
             'canonicalUrl' => $canonicalUrl,
-            'isIndexable' => $isIndexable,
+            'historyHighlights' => $this->publicGarageService->publicHistoryHighlights($vehicle),
             'introText' => $this->publicGarageService->publicIntroText($vehicle),
-            'metaDescription' => sprintf(
-                'Bekijk de onderhoudshistorie, kilometerstanden en werkzaamheden van deze %s in GarageBook.',
-                trim($vehicleHeading),
-            ),
+            'isIndexable' => $isIndexable,
+            'metaDescription' => $this->publicGarageService->publicMetaDescription($vehicle),
             'metaRobots' => $isIndexable ? 'index,follow' : 'noindex,follow',
-            'metaTitle' => trim($vehicleName) . ' onderhoudshistorie | GarageBook',
+            'metaTitle' => trim($vehicleName) . ' voertuiggeschiedenis | GarageBook',
             'publicStats' => $publicStats,
+            'shareCues' => $this->publicGarageService->publicShareCues($vehicle),
             'timelineItems' => $timelineItems,
             'typeSpecificLandingUrl' => $this->publicGarageService->typeSpecificLandingUrl($vehicle),
             'vehicle' => $vehicle,
             'vehicleHeading' => $vehicleHeading,
             'vehicleName' => $vehicleName,
             'vehiclePhotos' => $this->publicGarageService->publicVehiclePhotos($vehicle),
+            'verificationNote' => $this->publicGarageService->publicVerificationNote($vehicle),
         ]);
     }
 

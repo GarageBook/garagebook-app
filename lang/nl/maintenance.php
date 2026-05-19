@@ -4,6 +4,8 @@ return [
     'navigation_label' => 'Onderhoud',
     'model_label' => 'Onderhoudslog',
     'plural_model_label' => 'Onderhoud',
+    'heading' => 'Onderhoudshistorie',
+    'subheading' => 'Leg onderhoud, kilometerstanden en bewijs vast zodat je voertuiggeschiedenis aantoonbaar groeit en later sterker gedeeld kan worden bij verkoop, verificatie of overdracht.',
     'fields' => [
         'vehicle' => 'Voertuig',
         'distance_unit' => 'Afstandseenheid',
@@ -38,9 +40,9 @@ return [
         'hours_suffix' => ' uur',
     ],
     'actions' => [
-        'open_external_page' => 'Open als externe pagina',
-        'copy_url' => 'Kopieer URL',
-        'export_pdf' => 'Exporteer PDF',
+        'open_external_page' => 'Open publieke voertuigpagina',
+        'copy_url' => 'Kopieer publieke link',
+        'export_pdf' => 'Exporteer deelbare PDF',
         'delete' => 'Onderhoud verwijderen',
     ],
     'edit_page' => [

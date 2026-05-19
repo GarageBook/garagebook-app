@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PublicGaragePageTest extends TestCase
@@ -35,17 +37,69 @@ class PublicGaragePageTest extends TestCase
         $response = $this->get('/garage/' . $vehicle->public_slug);
 
         $response->assertOk();
-        $response->assertSee('Onderhoudshistorie van deze 2008 Toyota Highlander Hybrid Limited');
+        $response->assertSee('Aantoonbare voertuiggeschiedenis van deze 2008 Toyota Highlander Hybrid Limited');
         $response->assertSee('<link rel="canonical" href="' . url('/garage/' . $vehicle->public_slug) . '">', false);
         $response->assertSee('<meta name="robots" content="index,follow">', false);
+        $response->assertSee('<meta name="description" content="Bekijk de gedeelde onderhoudsgeschiedenis van deze Toyota Highlander Hybrid Limited in GarageBook. 1 onderhoudsmoment(en) en 1 moment(en) met kilometerstand laten zien wat de eigenaar aantoonbaar heeft vastgelegd.">', false);
         $response->assertSee('"@type": "Vehicle"', false);
         $response->assertSee('"@type": "BreadcrumbList"', false);
         $response->assertSee('"@type": "WebPage"', false);
         $response->assertSee('Onderhoudsmomenten');
-        $response->assertSee('Laatst bijgewerkt');
+        $response->assertSee('Historieperiode');
+        $response->assertSee('Met datum en kilometerstand');
+        $response->assertSee('Eigenaar bepaalt wat openbaar is');
         $response->assertSee('01-05-2026');
-        $response->assertSee('Deze publieke GarageBook-pagina toont de onderhoudshistorie van deze 2008 Toyota Highlander Hybrid Limited. Je ziet onderhoudsmomenten, kilometerstanden en uitgevoerde werkzaamheden, zonder persoonsgegevens van de eigenaar.');
+        $response->assertSee('Deze publieke GarageBook-pagina laat zien welke onderhoudsmomenten de eigenaar van deze 2008 Toyota Highlander Hybrid Limited heeft opgebouwd. Onderhoud, kilometerstanden, foto\'s en bewijsstukken worden hier deelbaar samengebracht, terwijl de eigenaar controle houdt over wat openbaar is.');
         $response->assertDontSee('"item": "' . url('/garage') . '"', false);
+    }
+
+    public function test_public_page_shows_proof_indicators_when_costs_and_public_images_are_shared(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+
+        $vehiclePhoto = UploadedFile::fake()->image('voertuig.jpg');
+        $vehiclePhoto->storeAs('vehicles', 'voertuig.jpg', 'public');
+
+        $maintenancePhoto = UploadedFile::fake()->image('bewijs.jpg');
+        $maintenancePhoto->storeAs('maintenance-attachments', 'bewijs.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+            'year' => 2018,
+            'photo' => 'vehicles/voertuig.jpg',
+            'is_public' => true,
+            'share_costs_publicly' => true,
+            'share_attachments_publicly' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Jaarbeurt uitgevoerd',
+            'km_reading' => 48210,
+            'maintenance_date' => '2026-05-11',
+            'cost' => 245.95,
+            'media_attachments' => [
+                'maintenance-attachments/bewijs.jpg',
+            ],
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSee('Historieperiode');
+        $response->assertSee('Sinds 11-05-2026');
+        $response->assertSee('1 moment');
+        $response->assertSee('2 zichtbaar');
+        $response->assertSee('1 gedeeld');
+        $response->assertSee('1 zichtbare bewijsbeelden laten zien wat er aan dit voertuig is gedaan');
+        $response->assertSee('Deel deze onderhoudsgeschiedenis met een koper, garage of liefhebber wanneer je wilt.');
+        $response->assertSee('Bij verkoop kan deze historie straks worden overgedragen aan de volgende eigenaar. Die overdracht is nog niet actief.');
+        $response->assertSee('Kosten: € 245,95');
+        $response->assertSee('storage/maintenance-attachments/bewijs.jpg', false);
     }
 
     public function test_old_share_route_redirects_permanently_to_new_public_garage_url(): void
@@ -154,6 +208,8 @@ class PublicGaragePageTest extends TestCase
         $response = $this->get('/garage/' . $vehicle->public_slug);
 
         $response->assertOk();
+        $response->assertSee('Kosten inzicht');
+        $response->assertSee('Privé gehouden');
         $response->assertDontSee('Kosten:');
         $response->assertDontSee('123,45');
     }
@@ -187,6 +243,7 @@ class PublicGaragePageTest extends TestCase
         $response = $this->get('/garage/' . $vehicle->public_slug);
 
         $response->assertOk();
+        $response->assertSee('Eigenaar bepaalt wat openbaar is');
         $response->assertDontSee('maintenance-attachments/foto.jpg');
         $response->assertDontSee('maintenance-attachments/factuur.pdf');
     }
@@ -268,6 +325,26 @@ class PublicGaragePageTest extends TestCase
         $this->get('/sitemap-garages.xml')
             ->assertOk()
             ->assertDontSee(url('/garage/' . $vehicle->public_slug), false);
+    }
+
+    public function test_public_page_shows_empty_states_when_no_public_history_or_photos_are_available(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Moto Guzzi',
+            'model' => 'V7 Stone',
+            'year' => 2022,
+            'is_public' => true,
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSeeText('Nog geen publieke voertuigfoto\'s zichtbaar');
+        $response->assertSee('Nog geen publiek onderhoud gedeeld');
+        $response->assertSee('Deze pagina is publiek zichtbaar, maar nog niet bedoeld voor indexatie zolang de gedeelde historie beperkt is.');
     }
 
     public function test_existing_public_slug_stays_unchanged_after_vehicle_identity_fields_change(): void
