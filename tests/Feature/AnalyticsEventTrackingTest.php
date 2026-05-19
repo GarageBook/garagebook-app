@@ -54,7 +54,7 @@ class AnalyticsEventTrackingTest extends TestCase
         );
     }
 
-    public function test_vehicle_create_queues_ga4_payload_in_session(): void
+    public function test_vehicle_create_queues_privacy_safe_ga4_payload_in_session(): void
     {
         $user = User::factory()->create();
 
@@ -75,18 +75,39 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'is_first_vehicle' => true,
+                    'source' => 'filament',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
             session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['license_plate', 'notes', 'vehicle_id', 'brand', 'model', 'user_id_hash', 'vehicle_count_after_create']
+            ['license_plate', 'notes', 'vehicle_id', 'brand', 'model', 'user_id', 'user_id_hash', 'is_first_vehicle']
         );
     }
 
-    public function test_maintenance_log_create_queues_ga4_payload_in_session(): void
+    public function test_vehicle_create_validation_errors_do_not_queue_event(): void
+    {
+        $user = User::factory()->create();
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateVehicle::class)
+            ->fillForm([
+                'distance_unit' => 'km',
+                'current_km' => 12000,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['brand', 'model']);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, []);
+        $this->assertNull($this->eventParams($events, 'vehicle_created'));
+    }
+
+    public function test_maintenance_log_create_queues_privacy_safe_ga4_payload_in_session(): void
     {
         Bus::fake();
 
@@ -117,18 +138,36 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'maintenance_log_created',
                 'params' => [
-                    'app_section' => 'maintenance',
-                    'is_first_maintenance_log' => true,
-                    'has_attachments' => false,
-                    'cost_entered' => true,
+                    'source' => 'filament',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
             session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['description', 'notes', 'vehicle_id']
+            ['description', 'notes', 'vehicle_id', 'cost_entered', 'has_attachments', 'is_first_maintenance_log', 'app_section']
         );
+    }
+
+    public function test_maintenance_log_create_validation_errors_do_not_queue_event(): void
+    {
+        $user = User::factory()->create();
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'distance_unit' => 'km',
+                'description' => 'Olie vervangen',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['vehicle_id', 'km_reading', 'maintenance_date']);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, []);
+        $this->assertNull($this->eventParams($events, 'maintenance_log_created'));
     }
 
     public function test_fuel_log_create_queues_ga4_payload_in_session(): void
@@ -173,7 +212,7 @@ class AnalyticsEventTrackingTest extends TestCase
         );
     }
 
-    public function test_document_upload_queues_ga4_payload_in_session(): void
+    public function test_document_upload_queues_privacy_safe_ga4_payload_in_session(): void
     {
         Storage::fake('local');
 
@@ -202,20 +241,45 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'document_uploaded',
                 'params' => [
-                    'app_section' => 'documents',
-                    'document_type' => 'warranty',
-                    'file_count' => 1,
+                    'source' => 'filament',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
             session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['original_filename', 'file_path', 'title', 'vehicle_id']
+            ['original_filename', 'file_path', 'title', 'vehicle_id', 'document_type', 'file_count', 'user_id']
         );
     }
 
-    public function test_trip_log_create_queues_ga4_payload_in_session(): void
+    public function test_document_upload_validation_errors_do_not_queue_event(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Ducati',
+            'model' => 'Multistrada V4',
+            'current_km' => 9000,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateVehicleDocument::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'title' => 'Garantiebewijs',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['file_path']);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, []);
+        $this->assertNull($this->eventParams($events, 'document_uploaded'));
+    }
+
+    public function test_trip_log_create_queues_privacy_safe_ga4_payload_in_session(): void
     {
         Storage::fake('local');
         Bus::fake();
@@ -247,12 +311,49 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->assertSame([
             [
-                'name' => 'trip_log_created',
+                'name' => 'trip_created',
                 'params' => [
-                    'app_section' => 'trips',
+                    'source' => 'filament',
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
+
+        $this->assertPayloadDoesNotContainKeys(
+            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
+            ['title', 'description', 'vehicle_id', 'distance_km', 'source_file_path', 'source_format', 'location', 'route']
+        );
+    }
+
+    public function test_trip_log_create_validation_errors_do_not_queue_event(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $otherUserVehicle = Vehicle::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'brand' => 'Aprilia',
+            'model' => 'Tuareg 660',
+            'current_km' => 4000,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateTripLog::class)
+            ->fillForm([
+                'vehicle_id' => $otherUserVehicle->id,
+                'title' => 'Veluwe rit',
+                'ridden_at' => '2026-05-18',
+                'source_file_path' => UploadedFile::fake()->create('trip.gpx', 10, 'application/gpx+xml'),
+                'source_format' => 'gpx',
+            ])
+            ->call('create')
+            ->assertHasErrors(['data.vehicle_id']);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, []);
+        $this->assertNull($this->eventParams($events, 'trip_created'));
     }
 
     public function test_dashboard_view_event_queues_privacy_safe_counts(): void
@@ -431,6 +532,32 @@ class AnalyticsEventTrackingTest extends TestCase
         $this->assertNull($this->eventParams($events, 'sign_up'));
     }
 
+    public function test_consume_pulls_queued_events_once(): void
+    {
+        session()->start();
+        session()->flash(AnalyticsEventTracker::SESSION_KEY, [
+            [
+                'name' => 'vehicle_created',
+                'params' => [
+                    'source' => 'filament',
+                ],
+            ],
+        ]);
+
+        $events = app(AnalyticsEventTracker::class)->consume();
+
+        $this->assertSame([
+            [
+                'name' => 'vehicle_created',
+                'params' => [
+                    'source' => 'filament',
+                ],
+            ],
+        ], $events);
+        $this->assertSame([], session(AnalyticsEventTracker::SESSION_KEY, []));
+        $this->assertSame([], app(AnalyticsEventTracker::class)->consume());
+    }
+
     public function test_queued_events_are_consumed_after_render_and_do_not_fire_twice(): void
     {
         $this->app['env'] = 'production';
@@ -445,7 +572,7 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'is_first_vehicle' => true,
+                    'source' => 'filament',
                 ],
             ],
         ]);
@@ -479,7 +606,7 @@ class AnalyticsEventTrackingTest extends TestCase
             [
                 'name' => 'vehicle_created',
                 'params' => [
-                    'is_first_vehicle' => true,
+                    'source' => 'filament',
                 ],
             ],
         ]);
@@ -491,7 +618,7 @@ class AnalyticsEventTrackingTest extends TestCase
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
         $this->assertStringContainsString('page_location: window.location.href', $trackingTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
-        $this->assertStringContainsString('"is_first_vehicle":true', $trackingTag);
+        $this->assertStringContainsString('"source":"filament"', $trackingTag);
         $this->assertStringNotContainsString('hostname:', $trackingTag);
     }
 

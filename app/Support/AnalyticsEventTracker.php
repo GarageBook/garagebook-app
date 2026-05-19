@@ -43,30 +43,17 @@ class AnalyticsEventTracker
 
     public function queueVehicleCreated(Vehicle $vehicle): void
     {
-        $vehicleCount = Vehicle::query()
-            ->where('user_id', $vehicle->user_id)
-            ->count();
-
         $this->queue('vehicle_created', [
+            'source' => 'filament',
             ...$this->vehicleTypeParams($vehicle),
-            'is_first_vehicle' => $vehicleCount === 1,
         ]);
     }
 
     public function queueMaintenanceLogCreated(MaintenanceLog $maintenanceLog): void
     {
-        $maintenanceLogCount = MaintenanceLog::query()
-            ->where('vehicle_id', $maintenanceLog->vehicle_id)
-            ->count();
-
-        $this->queue('maintenance_log_created', $this->context(
-            appSection: 'maintenance',
-            extra: [
-                'is_first_maintenance_log' => $maintenanceLogCount === 1,
-                'has_attachments' => $this->hasMaintenanceAttachments($maintenanceLog),
-                'cost_entered' => filled($maintenanceLog->cost),
-            ],
-        ));
+        $this->queue('maintenance_log_created', [
+            'source' => 'filament',
+        ]);
     }
 
     public function queueFuelEntryCreated(FuelLog $fuelLog): void
@@ -82,23 +69,16 @@ class AnalyticsEventTracker
 
     public function queueDocumentUploaded(VehicleDocument $vehicleDocument): void
     {
-        $this->queue('document_uploaded', $this->context(
-            appSection: 'documents',
-            extra: [
-                ...$this->documentTypeParams($vehicleDocument),
-                'file_count' => filled($vehicleDocument->file_path) ? 1 : 0,
-            ],
-        ));
+        $this->queue('document_uploaded', [
+            'source' => 'filament',
+        ]);
     }
 
     public function queueTripLogCreated(TripLog $tripLog): void
     {
-        $this->queue('trip_log_created', $this->context(
-            appSection: 'trips',
-            extra: [
-                ...$this->vehicleTypeParams($tripLog->vehicle),
-            ],
-        ));
+        $this->queue('trip_created', [
+            'source' => 'filament',
+        ]);
     }
 
     public function queueDashboardViewed(User $user): void
@@ -189,17 +169,6 @@ class AnalyticsEventTracker
         ];
     }
 
-    protected function documentTypeParams(VehicleDocument $vehicleDocument): array
-    {
-        if (! filled($vehicleDocument->document_type)) {
-            return [];
-        }
-
-        return [
-            'document_type' => (string) $vehicleDocument->document_type,
-        ];
-    }
-
     protected function distanceUnit(?Model $vehicle): ?string
     {
         if (! $vehicle instanceof Model) {
@@ -213,12 +182,5 @@ class AnalyticsEventTracker
         }
 
         return $unit === 'mi' ? 'mi' : 'km';
-    }
-
-    protected function hasMaintenanceAttachments(MaintenanceLog $maintenanceLog): bool
-    {
-        return $maintenanceLog->attachments !== []
-            || $maintenanceLog->media_attachments !== []
-            || $maintenanceLog->file_attachments !== [];
     }
 }
