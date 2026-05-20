@@ -399,6 +399,33 @@ class AdminPanelProvider extends PanelProvider
                         line-height: 1 !important;
                     }
 
+                    .fi-sidebar-item-badge-ctn .fi-badge.fi-color-success {
+                        background: #16a34a !important;
+                        color: #ffffff !important;
+                        box-shadow: none !important;
+                        border: 0 !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        border-radius: 9999px !important;
+                        min-width: auto !important;
+                        padding: 0.2rem 0.5rem !important;
+                        font-size: 0.6875rem !important;
+                        line-height: 1 !important;
+                    }
+
+                    .fi-sidebar-item-badge-ctn .fi-badge.fi-color-success .fi-badge-label,
+                    .fi-sidebar-item-badge-ctn .fi-badge.fi-color-success .fi-icon {
+                        color: #ffffff !important;
+                    }
+
+                    .fi-sidebar-item-badge-ctn .fi-badge.fi-color-success .fi-badge-label-ctn,
+                    .fi-sidebar-item-badge-ctn .fi-badge.fi-color-success .fi-badge-label {
+                        display: flex !important;
+                        align-items: center !important;
+                        line-height: 1 !important;
+                    }
+
                     .fi-sidebar-item-badge-ctn {
                         display: flex !important;
                         align-items: center !important;

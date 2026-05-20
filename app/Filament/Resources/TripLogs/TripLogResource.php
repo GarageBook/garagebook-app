@@ -21,7 +21,7 @@ class TripLogResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-map';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     public static function form(Schema $schema): Schema
     {
@@ -71,11 +71,11 @@ class TripLogResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return 'nieuw!';
+        return 'beta!';
     }
 
     public static function getNavigationBadgeColor(): string|array|null
     {
-        return 'info';
+        return "success";
     }
 }
