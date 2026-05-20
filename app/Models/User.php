@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -28,6 +28,11 @@ class User extends Authenticatable implements FilamentUser
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    public function isGeratelUser(): bool
+    {
+        return $this->registration_source === 'geratel';
     }
 
     public function vehicles(): HasMany

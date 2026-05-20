@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\GeratelRegister;
 use App\Filament\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\LocalizationOverview;
@@ -18,6 +19,7 @@ use Filament\PanelProvider;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -38,6 +40,9 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
             ->login()
             ->registration(Register::class)
+            ->routes(function (): void {
+                Route::get('register/geratel', GeratelRegister::class)->name('auth.register.geratel');
+            })
             ->passwordReset()
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([
@@ -165,6 +170,43 @@ class AdminPanelProvider extends PanelProvider
                         font-size: 15px;
                         color: #8d9199;
                         width: 100%;
+                    }
+
+                    .gb-geratel-topnav-logo {
+                        display: inline-flex;
+                        align-items: center;
+                        flex-shrink: 0;
+                        margin-inline-start: 0.75rem;
+                    }
+
+                    .gb-geratel-topnav-logo img {
+                        display: block;
+                        height: 3.25rem;
+                        width: auto;
+                        max-width: none;
+                    }
+
+                    .gb-geratel-register-page .gb-geratel-register-page__content {
+                        gap: 0;
+                        padding-top: 0;
+                    }
+
+                    .gb-geratel-register-page .gb-geratel-register-hero {
+                        display: flex;
+                        justify-content: center;
+                        margin: 0;
+                        padding: 0;
+                    }
+
+                    .gb-geratel-register-page .gb-geratel-register-hero__logo {
+                        display: block;
+                        width: min(100%, 24rem);
+                        height: auto;
+                        margin: 0;
+                    }
+
+                    .gb-geratel-register-page .fi-simple-header {
+                        margin-top: 0;
                     }
 
                     .gb-maintenance-attachments-upload .filepond--list-scroller,
@@ -418,6 +460,13 @@ class AdminPanelProvider extends PanelProvider
                     }
                 </style>
             ')
+        );
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::TOPBAR_LOGO_AFTER,
+            fn (): string => auth()->check() && auth()->user()?->isGeratelUser()
+                ? view('filament.partials.geratel-badge')->render()
+                : '',
         );
 
         FilamentView::registerRenderHook(
