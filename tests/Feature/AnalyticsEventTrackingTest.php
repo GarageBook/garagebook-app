@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Auth\GeratelRegister;
 use App\Filament\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\FuelLogs\Pages\CreateFuelLog;
@@ -505,6 +506,35 @@ class AnalyticsEventTrackingTest extends TestCase
         $this->assertSessionEventNames($events, ['login', 'sign_up']);
         $this->assertSame(['method' => 'email'], $this->eventParams($events, 'login'));
         $this->assertSame(['method' => 'email'], $this->eventParams($events, 'sign_up'));
+
+        $this->assertPayloadDoesNotContainKeys(
+            $this->eventParams($events, 'sign_up'),
+            ['email', 'name', 'user_id', 'user_id_hash', 'source_url', 'utm_content', 'utm_term', 'utm_source', 'utm_medium', 'utm_campaign', 'registration_source']
+        );
+    }
+
+    public function test_geratel_registration_success_queues_sign_up_with_registration_source(): void
+    {
+        session()->start();
+
+        Livewire::test(GeratelRegister::class)
+            ->fillForm([
+                'name' => 'Geratel Tester',
+                'email' => 'geratel-analytics@example.com',
+                'password' => 'password',
+                'passwordConfirmation' => 'password',
+            ])
+            ->call('register');
+
+        $user = User::query()->where('email', 'geratel-analytics@example.com')->firstOrFail();
+
+        $this->assertSame('geratel', $user->registration_source);
+        $this->assertTrue($user->isGeratelUser());
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, ['login', 'sign_up']);
+        $this->assertSame(['method' => 'email', 'registration_source' => 'geratel'], $this->eventParams($events, 'sign_up'));
 
         $this->assertPayloadDoesNotContainKeys(
             $this->eventParams($events, 'sign_up'),

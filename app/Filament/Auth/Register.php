@@ -71,7 +71,7 @@ class Register extends BaseRegister
 
         app(AnalyticsAttribution::class)->pullForUser($user);
 
-        app(AnalyticsEventTracker::class)->queueSignUp(method: 'email');
+        app(AnalyticsEventTracker::class)->queueSignUp(method: 'email', registrationSource: $user->registration_source);
 
         return app(RegistrationResponse::class);
     }

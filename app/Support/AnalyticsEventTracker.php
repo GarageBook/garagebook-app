@@ -27,11 +27,17 @@ class AnalyticsEventTracker
         ]);
     }
 
-    public function queueSignUp(string $method = 'email'): void
+    public function queueSignUp(string $method = 'email', ?string $registrationSource = null): void
     {
-        $this->queue('sign_up', [
+        $params = [
             'method' => $method,
-        ]);
+        ];
+
+        if (filled($registrationSource)) {
+            $params['registration_source'] = $registrationSource;
+        }
+
+        $this->queue('sign_up', $params);
     }
 
     public function queueLogin(string $method = 'email'): void
