@@ -40,10 +40,21 @@ class ListMaintenanceLogs extends ListRecords
     {
         return view('filament.resources.maintenance-logs.pages.vehicle-selector', [
             'actions' => $this->getCachedHeaderActions(),
+            'activeVehicle' => $this->getActiveVehicle(),
             'heading' => $this->getHeading(),
             'subheading' => $this->getSubheading(),
             'vehicles' => $this->getUserVehicles(),
         ]);
+    }
+
+    public function getHeading(): string
+    {
+        return __('maintenance.heading');
+    }
+
+    public function getSubheading(): ?string
+    {
+        return __('maintenance.subheading');
     }
 
     protected function getHeaderActions(): array

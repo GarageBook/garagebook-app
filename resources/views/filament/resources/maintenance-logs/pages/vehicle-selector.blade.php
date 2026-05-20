@@ -1,3 +1,5 @@
+@php($activeVehicle = $activeVehicle ?? null)
+
 <div style="display:flex; flex-direction:column; gap:20px;">
     <x-filament-panels::header
         :actions="$actions"
