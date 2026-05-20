@@ -61,6 +61,7 @@ class AnalyticsAttribution
             'utm_campaign' => $request->query('utm_campaign'),
             'utm_content' => $request->query('utm_content'),
             'utm_term' => $request->query('utm_term'),
+            'gclid' => $request->query('gclid'),
             'landing_page' => $request->getPathInfo(),
             'referrer' => $this->externalReferrer($request),
         ]);
@@ -71,6 +72,7 @@ class AnalyticsAttribution
             'utm_campaign',
             'utm_content',
             'utm_term',
+            'gclid',
         ])->contains(fn (string $key): bool => filled($payload[$key] ?? null));
 
         if (! $hasUtm && blank($payload['referrer'] ?? null)) {

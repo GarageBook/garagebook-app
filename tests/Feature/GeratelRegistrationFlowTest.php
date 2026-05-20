@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Auth\GeratelRegister;
 use App\Filament\Auth\Register;
 use App\Models\User;
+use App\Support\AnalyticsAttribution;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -24,6 +25,22 @@ class GeratelRegistrationFlowTest extends TestCase
             ->assertSee('E-mailadres')
             ->assertSee('Wachtwoord')
             ->assertDontSee('inloggen op je account');
+    }
+
+    public function test_geratel_register_page_keeps_query_parameters_without_redirect_and_preserves_registration_source_flow(): void
+    {
+        $response = $this->get('/admin/register/geratel?utm_source=geratel&utm_medium=partner&_gl=test123&gclid=test456');
+
+        $response
+            ->assertOk()
+            ->assertSee('garagebook-geratel-verified.png', false);
+
+        $this->assertSame([
+            'utm_source' => 'geratel',
+            'utm_medium' => 'partner',
+            'gclid' => 'test456',
+            'landing_page' => '/admin/register/geratel',
+        ], session(AnalyticsAttribution::SESSION_KEY));
     }
 
     public function test_registration_via_geratel_flow_sets_registration_source(): void

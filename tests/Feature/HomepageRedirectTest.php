@@ -34,7 +34,7 @@ class HomepageRedirectTest extends TestCase
 
     public function test_start_redirect_preserves_all_query_parameters(): void
     {
-        $queryString = '_gl=abc123.def456&utm_source=test&utm_medium=test&utm_campaign=crossdomain_test&utm_content=cta-top&utm_term=garagebook+app&ref=partner42';
+        $queryString = 'utm_source=test&utm_medium=referral&utm_campaign=debug&_gl=test123&gclid=test456';
 
         $this->get('/start?'.$queryString)
             ->assertStatus(302)

@@ -13,8 +13,8 @@ class AnalyticsAttributionTest extends TestCase
     public function test_first_touch_utm_parameters_are_captured_in_session(): void
     {
         $this->withHeader('referer', 'https://garagebook.nl/blogs/onderhoud')
-            ->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app')
-            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app');
+            ->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id')
+            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id');
 
         $this->assertSame([
             'utm_source' => 'google',
@@ -22,8 +22,20 @@ class AnalyticsAttributionTest extends TestCase
             'utm_campaign' => 'spring',
             'utm_content' => 'hero',
             'utm_term' => 'motor app',
+            'gclid' => 'google-click-id',
             'landing_page' => '/start',
             'referrer' => 'https://garagebook.nl/blogs/onderhoud',
+        ], session(AnalyticsAttribution::SESSION_KEY));
+    }
+
+    public function test_gclid_without_utm_parameters_is_captured_in_session(): void
+    {
+        $this->get('/start?gclid=test456')
+            ->assertRedirect('/admin/register?gclid=test456');
+
+        $this->assertSame([
+            'gclid' => 'test456',
+            'landing_page' => '/start',
         ], session(AnalyticsAttribution::SESSION_KEY));
     }
 
