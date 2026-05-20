@@ -73,9 +73,4 @@ class TripLogResource extends Resource
     {
         return 'beta!';
     }
-
-    public static function getNavigationBadgeColor(): string|array|null
-    {
-        return "success";
-    }
 }

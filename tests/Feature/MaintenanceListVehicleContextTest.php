@@ -98,6 +98,48 @@ class MaintenanceListVehicleContextTest extends TestCase
             ->assertDontSeeText('Olie vervangen');
     }
 
+    public function test_maintenance_logs_index_route_loads_only_authenticated_users_records(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $ownVehicle = Vehicle::query()->create([
+            "user_id" => $user->id,
+            "brand" => "Honda",
+            "model" => "CBR600F",
+            "nickname" => "Eigen motor",
+        ]);
+
+        $otherVehicle = Vehicle::query()->create([
+            "user_id" => $otherUser->id,
+            "brand" => "BMW",
+            "model" => "R 1250 GS",
+            "nickname" => "Andere motor",
+        ]);
+
+        MaintenanceLog::query()->create([
+            "vehicle_id" => $ownVehicle->id,
+            "description" => "Eigen onderhoud",
+            "km_reading" => 12000,
+            "maintenance_date" => now()->subDay()->toDateString(),
+        ]);
+
+        MaintenanceLog::query()->create([
+            "vehicle_id" => $otherVehicle->id,
+            "description" => "Andermans onderhoud",
+            "km_reading" => 22000,
+            "maintenance_date" => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get("/admin/maintenance-logs")
+            ->assertOk()
+            ->assertSeeText("Eigen motor")
+            ->assertSeeText("Eigen onderhoud")
+            ->assertDontSeeText("Andermans onderhoud")
+            ->assertDontSeeText("Andere motor");
+    }
+
     public function test_maintenance_list_header_actions_follow_the_selected_vehicle(): void
     {
         $user = User::factory()->create([
