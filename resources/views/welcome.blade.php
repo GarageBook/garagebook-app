@@ -135,10 +135,11 @@
         <!-- MIDDLE SECTION -->
         <section class="gb-home-section--compact">
             <div class="gb-section-shell">
+
                 <div class="gb-section-grid gb-home-grid--features">
                     <div>
                         <img
-                            src="{{ asset('images/garagebook-motor-display.webp') }}"
+                            src="{{ asset('images/ta-focando-ljJVG5ItaBI-unsplash.jpg') }}"
                             alt="Digitaal overzicht van onderhoud en kilometerstanden op een motor display"
                             class="gb-media-rounded"
                             width="1024"
@@ -149,6 +150,7 @@
                     </div>
 
                     <div class="gb-feature-grid">
+
 
                         <p class="gb-home-feature-intro">
                             Bouw een complete onderhoudshistorie op die je zelf terugvindt, makkelijker deelt en later ook helpt bij verkoop of taxatie.
@@ -175,6 +177,38 @@
                         </div>
                     </div>
                 </div>
+
+                <section class="pressMention" aria-label="Gezien op">
+                    <div class="pressMentionCard">
+                        <span class="pressMentionLabel">GarageBook is op de volgende sites verschenen:</span>
+                        <div class="pressMentionLogoGrid">
+                            <a class="pressMentionLogoLink pressMentionLogoLink--motornieuws" href="https://www.motornieuws.nl/het-onderhoudsboekje-wordt-misschien-wel-volledig-digitaal-dankzij-garagebook/" target="_blank" rel="noopener noreferrer" aria-label="Lees het artikel over GarageBook op Motornieuws">
+                                <span class="pressMentionLogoWrap">
+                                    <img src="/images/motornieuws_logo.png" alt="Motornieuws" width="482" height="220" loading="lazy">
+                                </span>
+                            </a>
+
+                            <a class="pressMentionLogoLink pressMentionLogoLink--motorfreaks" href="https://motorfreaks.nl/artikel/garagebook-digitaal-onderhoudsboekje-voor-zelfsleuteraars/" target="_blank" rel="noopener noreferrer" aria-label="Lees het artikel over GarageBook op Motorfreaks">
+                                <span class="pressMentionLogoWrap">
+                                    <img src="/images/motorfreaks-logo.webp" alt="Motorfreaks" width="507" height="231" loading="lazy">
+                                </span>
+                            </a>
+
+                            <a class="pressMentionLogoLink pressMentionLogoLink--motor" href="https://www.motor.nl/nieuws/het-onderhoudsboekje-wordt-misschien-wel-volledig-digitaal-dankzij-garagebook/" target="_blank" rel="noopener noreferrer" aria-label="Lees het artikel over GarageBook op Motor.nl">
+                                <span class="pressMentionLogoWrap">
+                                    <img src="/images/logo_motor_nl.webp" alt="Motor.nl" width="1200" height="244" loading="lazy">
+                                </span>
+                            </a>
+
+                            <a class="pressMentionLogoLink pressMentionLogoLink--nieuwsmotor" href="https://nieuwsmotor.nl/nieuws/persberichten/garagebook-onderhoudshistorie-motorfietsen-digitaal-vastleggen/" target="_blank" rel="noopener noreferrer" aria-label="Lees het artikel over GarageBook op Nieuwsmotor.nl">
+                                <span class="pressMentionLogoWrap">
+                                    <img src="/images/nieuwsmotor-logo.svg" alt="Nieuwsmotor.nl" width="245" height="61" loading="lazy">
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </section>
 
