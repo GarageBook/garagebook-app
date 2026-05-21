@@ -51,7 +51,11 @@ return [
     ],
 
     'search_console' => [
+        'auth_mode' => env('GOOGLE_SEARCH_CONSOLE_AUTH_MODE', 'service_account'),
         'site_url' => env('GOOGLE_SEARCH_CONSOLE_SITE_URL'),
+        'client_id' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET'),
+        'refresh_token' => env('GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN'),
         'credentials_json' => env('GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON'),
     ],
 

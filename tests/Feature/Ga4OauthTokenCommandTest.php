@@ -31,7 +31,10 @@ class Ga4OauthTokenCommandTest extends TestCase
         $client->shouldReceive('setClientId')->once()->with('client-id.apps.googleusercontent.com');
         $client->shouldReceive('setClientSecret')->once()->with('client-secret');
         $client->shouldReceive('setRedirectUri')->once()->with('http://localhost');
-        $client->shouldReceive('setScopes')->once()->with(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client->shouldReceive('setScopes')->once()->with([
+            'https://www.googleapis.com/auth/analytics.readonly',
+            'https://www.googleapis.com/auth/webmasters.readonly',
+        ]);
         $client->shouldReceive('setAccessType')->once()->with('offline');
         $client->shouldReceive('setPrompt')->once()->with('consent');
         $client->shouldReceive('createAuthUrl')->once()->andReturn('https://accounts.google.com/o/oauth2/auth?example=1');
@@ -48,7 +51,7 @@ class Ga4OauthTokenCommandTest extends TestCase
             ->expectsQuestion('Plak hier de authorization code', 'auth-code-123')
             ->expectsOutput('Refresh token:')
             ->expectsOutput('refresh-token-xyz')
-            ->expectsOutput('Zet dit token in GOOGLE_ANALYTICS_REFRESH_TOKEN.')
+            ->expectsOutput('Zet dit token in GOOGLE_ANALYTICS_REFRESH_TOKEN en/of GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN.')
             ->assertSuccessful();
     }
 
@@ -63,7 +66,10 @@ class Ga4OauthTokenCommandTest extends TestCase
         $client->shouldReceive('setClientId')->once()->with('client-id.apps.googleusercontent.com');
         $client->shouldReceive('setClientSecret')->once()->with('client-secret');
         $client->shouldReceive('setRedirectUri')->once()->with('http://localhost');
-        $client->shouldReceive('setScopes')->once()->with(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client->shouldReceive('setScopes')->once()->with([
+            'https://www.googleapis.com/auth/analytics.readonly',
+            'https://www.googleapis.com/auth/webmasters.readonly',
+        ]);
         $client->shouldReceive('setAccessType')->once()->with('offline');
         $client->shouldReceive('setPrompt')->once()->with('consent');
         $client->shouldReceive('createAuthUrl')->once()->andReturn('https://accounts.google.com/o/oauth2/auth?example=1');

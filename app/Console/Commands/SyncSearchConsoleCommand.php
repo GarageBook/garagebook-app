@@ -22,7 +22,7 @@ class SyncSearchConsoleCommand extends Command
         $service = app(SearchConsoleService::class);
 
         if (! $service->isConfigured()) {
-            $this->warn('Search Console credentials of site URL ontbreken. Geen data gesynchroniseerd.');
+            $this->warn(($service->configurationError() ?? 'Search Console configuratie ontbreekt.') . ' Geen data gesynchroniseerd.');
 
             return self::SUCCESS;
         }

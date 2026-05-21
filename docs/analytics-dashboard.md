@@ -50,9 +50,32 @@ GOOGLE_ANALYTICS_PROPERTY_ID=
 GOOGLE_ANALYTICS_CREDENTIALS_JSON=storage/app/google/ga4-service-account.json
 ```
 
-## Search Console service account
+## Search Console authenticatie
 
-Search Console gebruikt nog steeds alleen service-account authenticatie.
+Search Console ondersteunt nu ook twee authenticatiemodi:
+- `service_account`: bestaande setup met JSON-bestand
+- `oauth`: user credentials via een Google account zoals `garagebook.analytics@gmail.com`
+
+### Search Console via OAuth user credentials
+
+Gebruik dit wanneer de Search Console property alleen toegankelijk is via een normaal Google account.
+
+Benodigd:
+- een OAuth client in Google Cloud
+- een refresh token voor `garagebook.analytics@gmail.com`
+- toegang van dat Google account tot de juiste Search Console property met minimaal leesrechten
+
+Benodigde env variabelen:
+
+```dotenv
+GOOGLE_SEARCH_CONSOLE_AUTH_MODE=oauth
+GOOGLE_SEARCH_CONSOLE_SITE_URL=
+GOOGLE_SEARCH_CONSOLE_CLIENT_ID=
+GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET=
+GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN=
+```
+
+### Search Console via service account
 
 1. Maak een service account aan in Google Cloud.
 2. Download het JSON-credentialsbestand.
@@ -60,6 +83,14 @@ Search Console gebruikt nog steeds alleen service-account authenticatie.
 
 Aanbevolen pad:
 - `storage/app/google/search-console-service-account.json`
+
+Benodigde env variabelen:
+
+```dotenv
+GOOGLE_SEARCH_CONSOLE_AUTH_MODE=service_account
+GOOGLE_SEARCH_CONSOLE_SITE_URL=https://garagebook.nl/
+GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON=storage/app/google/search-console-service-account.json
+```
 
 Deze paden staan in `.gitignore` en mogen nooit gecommit worden.
 
@@ -73,22 +104,15 @@ Geef afhankelijk van de gekozen auth-methode toegang tot de juiste GA4 property 
 
 ### Search Console
 
-Geef het Search Console service account toegang tot de juiste Search Console property met minimaal leesrechten.
+Geef afhankelijk van de gekozen auth-methode toegang tot de juiste Search Console property met minimaal leesrechten:
+- bij `oauth`: het Google user account, bijvoorbeeld `garagebook.analytics@gmail.com`
+- bij `service_account`: het service account
 
 Let op:
 - `GOOGLE_SEARCH_CONSOLE_SITE_URL` moet exact overeenkomen met de property.
 - Voorbeelden:
   - `https://garagebook.nl/`
   - `sc-domain:garagebook.nl`
-
-## Overige env variabelen
-
-Zet lokaal en live ook:
-
-```dotenv
-GOOGLE_SEARCH_CONSOLE_SITE_URL=https://garagebook.nl/
-GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON=storage/app/google/search-console-service-account.json
-```
 
 ## Synchronisatiecommando's
 

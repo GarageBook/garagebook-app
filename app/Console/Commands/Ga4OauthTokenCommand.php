@@ -9,7 +9,7 @@ class Ga4OauthTokenCommand extends Command
 {
     protected $signature = 'garagebook:ga4-oauth-token';
 
-    protected $description = 'Haal tijdelijk een Google OAuth refresh token op voor GA4.';
+    protected $description = 'Haal tijdelijk een Google OAuth refresh token op voor GA4 en Search Console.';
 
     public function handle(): int
     {
@@ -35,7 +35,7 @@ class Ga4OauthTokenCommand extends Command
         $this->newLine();
         $this->line($consentUrl);
         $this->newLine();
-        $this->line('Log in met garagebook.analytics@gmail.com, geef toegang en kopieer daarna de authorization code uit de redirect URL.');
+        $this->line('Log in met garagebook.analytics@gmail.com, geef toegang voor GA4 en Search Console en kopieer daarna de authorization code uit de redirect URL.');
 
         $authorizationCode = trim((string) $this->ask('Plak hier de authorization code'));
 
@@ -72,7 +72,7 @@ class Ga4OauthTokenCommand extends Command
         $this->info('Refresh token:');
         $this->line($refreshToken);
         $this->newLine();
-        $this->comment('Zet dit token in GOOGLE_ANALYTICS_REFRESH_TOKEN.');
+        $this->comment('Zet dit token in GOOGLE_ANALYTICS_REFRESH_TOKEN en/of GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN.');
 
         return self::SUCCESS;
     }
@@ -84,7 +84,10 @@ class Ga4OauthTokenCommand extends Command
         $client->setClientId($clientId);
         $client->setClientSecret($clientSecret);
         $client->setRedirectUri('http://localhost');
-        $client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client->setScopes([
+            'https://www.googleapis.com/auth/analytics.readonly',
+            'https://www.googleapis.com/auth/webmasters.readonly',
+        ]);
         $client->setAccessType('offline');
         $client->setPrompt('consent');
 

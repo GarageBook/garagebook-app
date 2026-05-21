@@ -79,11 +79,12 @@ class Ga4AnalyticsServiceConfigurationTest extends TestCase
         $this->assertSame('GOOGLE_ANALYTICS_PROPERTY_ID ontbreekt.', $service->configurationError());
     }
 
-    public function test_search_console_remains_service_account_based(): void
+    public function test_search_console_defaults_to_service_account_mode_when_no_auth_mode_is_set(): void
     {
         config([
             'services.search_console.site_url' => 'https://garagebook.nl/',
             'services.search_console.credentials_json' => null,
+            'services.search_console.auth_mode' => null,
         ]);
 
         $service = app(SearchConsoleService::class);

@@ -17,6 +17,11 @@ class SearchConsoleService extends GoogleApiService
         return ['https://www.googleapis.com/auth/webmasters.readonly'];
     }
 
+    protected function supportsOauth(): bool
+    {
+        return true;
+    }
+
     protected function envPrefix(): string
     {
         return 'GOOGLE_SEARCH_CONSOLE';

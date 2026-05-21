@@ -125,4 +125,19 @@ class SyncSearchConsoleCommandTest extends TestCase
 
         CarbonImmutable::setTestNow();
     }
+
+    public function test_command_warns_with_specific_oauth_configuration_error(): void
+    {
+        $service = Mockery::mock(SearchConsoleService::class);
+        $service->shouldReceive('isConfigured')->once()->andReturn(false);
+        $service->shouldReceive('configurationError')->once()->andReturn(
+            'GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN ontbreekt voor Google OAuth authenticatie.'
+        );
+
+        $this->app->instance(SearchConsoleService::class, $service);
+
+        $this->artisan('garagebook:sync-search-console')
+            ->expectsOutputToContain('GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN ontbreekt voor Google OAuth authenticatie. Geen data gesynchroniseerd.')
+            ->assertSuccessful();
+    }
 }
