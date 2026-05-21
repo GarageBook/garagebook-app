@@ -1,130 +1,98 @@
 @php
-    $primarySections = [
+    $sections = [
         [
             'title' => 'Top queries op clicks',
+            'subtitle' => 'Zoekopdrachten met de meeste clicks uit lokaal opgeslagen Search Console data.',
+            'value_key' => 'label',
             'value_label' => 'Query',
-            'rows' => collect($top_queries_by_clicks)->take(5),
+            'rows' => $top_queries_by_clicks,
         ],
         [
-            'title' => 'Top queries op impressies',
+            'title' => 'Top queries op impressions',
+            'subtitle' => 'Zoekopdrachten met het grootste bereik in Search Console.',
+            'value_key' => 'label',
             'value_label' => 'Query',
-            'rows' => collect($top_queries_by_impressions)->take(5),
+            'rows' => $top_queries_by_impressions,
         ],
-        [
-            'title' => 'Top SEO landing pages',
-            'value_label' => 'Pagina',
-            'rows' => collect($top_pages)->take(5),
-        ],
-    ];
-
-    $secondarySections = [
         [
             'title' => 'Hoge impressies, lage CTR',
+            'subtitle' => 'Zoekopdrachten met zichtbaarheid maar relatief lage doorklikratio.',
+            'value_key' => 'label',
             'value_label' => 'Query',
-            'rows' => collect($high_impression_low_ctr_queries)->take(5),
+            'rows' => $high_impression_low_ctr_queries,
         ],
         [
             'title' => 'Positie 4 t/m 15',
+            'subtitle' => 'Zoekopdrachten die dicht bij topposities zitten en SEO-kansen bieden.',
+            'value_key' => 'label',
             'value_label' => 'Query',
-            'rows' => collect($position_opportunity_queries)->take(5),
+            'rows' => $position_opportunity_queries,
+        ],
+        [
+            'title' => 'Top SEO landing pages',
+            'subtitle' => 'Pagina\'s met de meeste organische clicks uit Search Console.',
+            'value_key' => 'label',
+            'value_label' => 'Pagina',
+            'rows' => $top_pages,
+            'span' => 'xl:col-span-2',
         ],
         [
             'title' => 'SEO pages met lage CTR',
+            'subtitle' => 'Pagina\'s met hoge impressies waar snippetverbetering kansrijk is.',
+            'value_key' => 'label',
             'value_label' => 'Pagina',
-            'rows' => collect($high_impression_low_ctr_pages)->take(5),
+            'rows' => $high_impression_low_ctr_pages,
         ],
     ];
 @endphp
 
 <x-filament-widgets::widget>
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
-        <div class="flex items-start justify-between gap-4 border-b border-gray-100 p-5 dark:border-white/10">
-            <div class="flex items-start gap-3">
-                <span class="inline-flex rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
-                    <x-filament::icon icon="heroicon-o-globe-alt" class="h-5 w-5" />
+    <x-filament::section
+        heading="SEO intelligence"
+        description="Zoekgedrag en contentkansen uit lokaal opgeslagen Search Console data, zonder live API-calls."
+        icon="heroicon-o-globe-alt"
+        compact
+    >
+        <div class="space-y-4">
+            <div class="flex justify-end">
+                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/20">
+                    Search Console snapshots
                 </span>
-                <div class="space-y-1">
-                    <h3 class="text-sm font-semibold text-gray-950 dark:text-white">SEO intelligence</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Zoekgedrag en contentkansen uit lokaal opgeslagen Search Console data.</p>
-                </div>
             </div>
-            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
-                Search Console snapshots
-            </span>
-        </div>
 
-        <div class="space-y-5 p-5">
-            <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                @foreach ($primarySections as $section)
-                    <article class="overflow-hidden rounded-xl border border-gray-100 bg-gray-50/60 dark:border-white/10 dark:bg-white/[0.03]">
-                        <div class="border-b border-gray-100 px-4 py-4 dark:border-white/10">
-                            <h4 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $section['title'] }}</h4>
+            <div class="grid gap-6 xl:grid-cols-2">
+                @foreach ($sections as $section)
+                    <article class="overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/40 shadow-sm dark:border-white/10 dark:bg-white/[0.03] {{ $section['span'] ?? '' }}">
+                        <div class="flex flex-col gap-1 border-b border-slate-200/80 px-5 py-4 dark:border-white/10">
+                            <h4 class="text-sm font-semibold text-slate-900 dark:text-white">{{ $section['title'] }}</h4>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">{{ $section['subtitle'] }}</p>
                         </div>
-                        @if ($section['rows']->isEmpty())
-                            <div class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Nog geen data beschikbaar</div>
-                        @else
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full table-fixed divide-y divide-gray-100 text-sm dark:divide-white/10">
-                                    <thead class="bg-gray-50 dark:bg-white/5">
-                                        <tr>
-                                            <th class="w-[44%] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $section['value_label'] }}</th>
-                                            <th class="w-[14%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Clicks</th>
-                                            <th class="w-[18%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Impr.</th>
-                                            <th class="w-[12%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">CTR</th>
-                                            <th class="w-[12%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Pos.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 bg-white dark:divide-white/10 dark:bg-transparent">
-                                        @foreach ($section['rows'] as $row)
-                                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.03]">
-                                                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                                    <div class="max-w-xs truncate" title="{{ $row['label'] ?: '—' }}">{{ $row['label'] ?: '—' }}</div>
-                                                </td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ number_format($row['clicks'], 0, ',', '.') }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ number_format($row['impressions'], 0, ',', '.') }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ $row['ctr'] === null ? '—' : number_format($row['ctr'], 2, ',', '.') . '%' }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ $row['position'] === null ? '—' : number_format($row['position'], 1, ',', '.') }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+
+                        @if (count($section['rows']) === 0)
+                            <div class="px-5 py-10 text-center">
+                                <p class="text-sm font-medium text-slate-700 dark:text-slate-200">Nog geen data beschikbaar</p>
+                                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Deze sectie wordt gevuld zodra er Search Console snapshots zijn opgeslagen.</p>
                             </div>
-                            <div class="border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">Toont top {{ $section['rows']->count() }}.</div>
-                        @endif
-                    </article>
-                @endforeach
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                @foreach ($secondarySections as $section)
-                    <article class="overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-white/10 dark:bg-white/[0.02]">
-                        <div class="border-b border-gray-100 px-4 py-4 dark:border-white/10">
-                            <h4 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $section['title'] }}</h4>
-                        </div>
-                        @if ($section['rows']->isEmpty())
-                            <div class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Nog geen data beschikbaar</div>
                         @else
                             <div class="overflow-x-auto">
-                                <table class="min-w-full table-fixed divide-y divide-gray-100 text-sm dark:divide-white/10">
-                                    <thead class="bg-gray-50 dark:bg-white/5">
+                                <table class="min-w-full table-auto divide-y divide-slate-200 text-sm dark:divide-white/10">
+                                    <thead class="bg-white/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-400">
                                         <tr>
-                                            <th class="w-[46%] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{{ $section['value_label'] }}</th>
-                                            <th class="w-[14%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Clicks</th>
-                                            <th class="w-[18%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Impr.</th>
-                                            <th class="w-[12%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">CTR</th>
-                                            <th class="w-[10%] px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Pos.</th>
+                                            <th class="px-4 py-3">{{ $section['value_label'] }}</th>
+                                            <th class="px-4 py-3 text-right">Clicks</th>
+                                            <th class="px-4 py-3 text-right">Impressions</th>
+                                            <th class="px-4 py-3 text-right">CTR</th>
+                                            <th class="px-4 py-3 text-right">Gem. positie</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-100 bg-white dark:divide-white/10 dark:bg-transparent">
+                                    <tbody class="divide-y divide-slate-100 bg-white dark:divide-white/5 dark:bg-transparent">
                                         @foreach ($section['rows'] as $row)
-                                            <tr class="hover:bg-gray-50/70 dark:hover:bg-white/[0.03]">
-                                                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                                    <div class="max-w-xs truncate" title="{{ $row['label'] ?: '—' }}">{{ $row['label'] ?: '—' }}</div>
-                                                </td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ number_format($row['clicks'], 0, ',', '.') }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ number_format($row['impressions'], 0, ',', '.') }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ $row['ctr'] === null ? '—' : number_format($row['ctr'], 2, ',', '.') . '%' }}</td>
-                                                <td class="px-4 py-3 text-right text-sm tabular-nums whitespace-nowrap text-gray-900 dark:text-white">{{ $row['position'] === null ? '—' : number_format($row['position'], 1, ',', '.') }}</td>
+                                            <tr class="align-top text-slate-700 transition hover:bg-white/80 dark:text-slate-200 dark:hover:bg-white/[0.03]">
+                                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ $row[$section['value_key']] ?: '—' }}</td>
+                                                <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['clicks'], 0, ',', '.') }}</td>
+                                                <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['impressions'], 0, ',', '.') }}</td>
+                                                <td class="px-4 py-3 text-right tabular-nums">{{ $row['ctr'] === null ? '—' : number_format($row['ctr'], 2, ',', '.') . '%' }}</td>
+                                                <td class="px-4 py-3 text-right tabular-nums">{{ $row['position'] === null ? '—' : number_format($row['position'], 1, ',', '.') }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -135,5 +103,5 @@
                 @endforeach
             </div>
         </div>
-    </div>
+    </x-filament::section>
 </x-filament-widgets::widget>

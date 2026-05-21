@@ -10,9 +10,16 @@ class GrowthKpiOverviewWidget extends StatsOverviewWidget
 {
     protected static bool $isLazy = false;
 
-    protected string $view = 'filament.widgets.growth-kpi-overview-widget';
+    protected ?string $heading = 'KPI-overzicht';
+
+    protected ?string $description = 'Bezoekers- en registratiecijfers uit lokaal opgeslagen analytics- en gebruikersdata.';
 
     protected int | string | array $columnSpan = 'full';
+
+    protected int | array | null $columns = [
+        'md' => 2,
+        'xl' => 4,
+    ];
 
     public static function canView(): bool
     {
@@ -43,11 +50,6 @@ class GrowthKpiOverviewWidget extends StatsOverviewWidget
                 });
             })
             ->all();
-    }
-
-    protected function getViewData(): array
-    {
-        return app(GrowthDashboardData::class)->kpiOverview();
     }
 
     private function formatValue(mixed $value, ?string $suffix = null): string
