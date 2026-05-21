@@ -184,6 +184,54 @@ class GrowthDashboardTest extends TestCase
             ->assertSeeText('Teruggekomen na 7 dagen');
     }
 
+    public function test_growth_funnel_counts_maintenance_logs_across_multiple_vehicles_for_one_user(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+        ]);
+
+        $multiVehicleUser = User::factory()->create();
+
+        $firstVehicle = Vehicle::query()->create([
+            'user_id' => $multiVehicleUser->id,
+            'brand' => 'BMW',
+            'model' => 'F 900 R',
+        ]);
+
+        $secondVehicle = Vehicle::query()->create([
+            'user_id' => $multiVehicleUser->id,
+            'brand' => 'Suzuki',
+            'model' => 'V-Strom',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $firstVehicle->id,
+            'description' => 'Service A',
+            'maintenance_date' => today(),
+            'km_reading' => 1000,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $secondVehicle->id,
+            'description' => 'Service B',
+            'maintenance_date' => today(),
+            'km_reading' => 2000,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $secondVehicle->id,
+            'description' => 'Service C',
+            'maintenance_date' => today(),
+            'km_reading' => 3000,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(GrowthProductActivationFunnelWidget::class)
+            ->assertSeeText('Users met minimaal 3 maintenance logs')
+            ->assertSeeText('1');
+    }
+
     public function test_existing_analytics_dashboard_remains_reachable(): void
     {
         $admin = User::factory()->create([
