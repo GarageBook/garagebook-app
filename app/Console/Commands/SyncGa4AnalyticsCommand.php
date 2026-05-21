@@ -12,7 +12,8 @@ class SyncGa4AnalyticsCommand extends Command
 {
     protected $signature = 'garagebook:sync-ga4-analytics
         {--from= : Startdatum in YYYY-MM-DD}
-        {--to= : Einddatum in YYYY-MM-DD}';
+        {--to= : Einddatum in YYYY-MM-DD}
+        {--debug-response : Toon property ID, datumrange en response-aantallen zonder secrets}';
 
     protected $description = 'Synchroniseer GA4 samenvattingen en top pages naar de lokale database.';
 
@@ -21,17 +22,27 @@ class SyncGa4AnalyticsCommand extends Command
         $service = app(Ga4AnalyticsService::class);
 
         if (! $service->isConfigured()) {
-            $this->warn('GA4 credentials of property ID ontbreken. Geen data gesynchroniseerd.');
+            $this->warn(($service->configurationError() ?? 'GA4 configuratie ontbreekt.') . ' Geen data gesynchroniseerd.');
 
             return self::SUCCESS;
         }
 
         [$from, $to] = $this->resolveDateRange(defaultOffsetDays: 1);
 
+        if ($this->option('debug-response')) {
+            $this->line('GA4 debug response');
+            $this->line('Property ID: ' . (string) config('services.google_analytics.property_id'));
+            $this->line('Datumrange: ' . $from->toDateString() . ' t/m ' . $to->toDateString());
+        }
+
         $syncedDays = 0;
 
         foreach ($this->datesBetween($from, $to) as $date) {
             $dailySummary = $service->fetchDailySummary($date);
+
+            if ($this->option('debug-response')) {
+                $this->line('Daily summary rows voor ' . $date->toDateString() . ': ' . ($dailySummary !== null ? '1' : '0'));
+            }
 
             if ($dailySummary !== null) {
                 AnalyticsDailySummary::query()->upsert(
@@ -42,6 +53,10 @@ class SyncGa4AnalyticsCommand extends Command
             }
 
             $topPages = $service->fetchTopPages($date, limit: 25);
+
+            if ($this->option('debug-response')) {
+                $this->line('Top pages rows voor ' . $date->toDateString() . ': ' . count($topPages));
+            }
 
             if ($topPages !== []) {
                 AnalyticsTopPage::query()->upsert(

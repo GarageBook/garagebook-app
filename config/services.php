@@ -42,7 +42,11 @@ return [
     ],
 
     'google_analytics' => [
+        'auth_mode' => env('GOOGLE_ANALYTICS_AUTH_MODE', 'service_account'),
         'property_id' => env('GOOGLE_ANALYTICS_PROPERTY_ID'),
+        'client_id' => env('GOOGLE_ANALYTICS_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_ANALYTICS_CLIENT_SECRET'),
+        'refresh_token' => env('GOOGLE_ANALYTICS_REFRESH_TOKEN'),
         'credentials_json' => env('GOOGLE_ANALYTICS_CREDENTIALS_JSON'),
     ],
 

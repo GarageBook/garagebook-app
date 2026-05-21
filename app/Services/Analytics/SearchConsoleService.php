@@ -17,9 +17,15 @@ class SearchConsoleService extends GoogleApiService
         return ['https://www.googleapis.com/auth/webmasters.readonly'];
     }
 
-    public function isConfigured(): bool
+    protected function envPrefix(): string
     {
-        return parent::isConfigured() && filled($this->siteUrl());
+        return 'GOOGLE_SEARCH_CONSOLE';
+    }
+
+    public function configurationError(): ?string
+    {
+        return parent::configurationError()
+            ?? ($this->siteUrl() === null ? 'GOOGLE_SEARCH_CONSOLE_SITE_URL ontbreekt.' : null);
     }
 
     public function fetchDailySummary(CarbonInterface $date): ?array

@@ -101,4 +101,45 @@ class SyncGa4AnalyticsCommandTest extends TestCase
 
         CarbonImmutable::setTestNow();
     }
+
+    public function test_command_warns_with_specific_oauth_configuration_error(): void
+    {
+        $service = Mockery::mock(Ga4AnalyticsService::class);
+        $service->shouldReceive('isConfigured')->once()->andReturn(false);
+        $service->shouldReceive('configurationError')->once()->andReturn(
+            'GOOGLE_ANALYTICS_REFRESH_TOKEN ontbreekt voor Google OAuth authenticatie.'
+        );
+
+        $this->app->instance(Ga4AnalyticsService::class, $service);
+
+        $this->artisan('garagebook:sync-ga4-analytics')
+            ->expectsOutputToContain('GOOGLE_ANALYTICS_REFRESH_TOKEN ontbreekt voor Google OAuth authenticatie. Geen data gesynchroniseerd.')
+            ->assertSuccessful();
+    }
+
+    public function test_command_can_print_debug_response_counts_without_secrets(): void
+    {
+        config([
+            'services.google_analytics.property_id' => '538513059',
+        ]);
+
+        $service = Mockery::mock(Ga4AnalyticsService::class);
+        $service->shouldReceive('isConfigured')->once()->andReturn(true);
+        $service->shouldReceive('fetchDailySummary')->once()->withArgs(fn ($date) => $date->toDateString() === '2026-05-10')->andReturn(null);
+        $service->shouldReceive('fetchTopPages')->once()->withArgs(fn ($date, $limit) => $date->toDateString() === '2026-05-10' && $limit === 25)->andReturn([]);
+
+        $this->app->instance(Ga4AnalyticsService::class, $service);
+
+        $this->artisan('garagebook:sync-ga4-analytics', [
+            '--from' => '2026-05-10',
+            '--to' => '2026-05-10',
+            '--debug-response' => true,
+        ])
+            ->expectsOutput('GA4 debug response')
+            ->expectsOutput('Property ID: 538513059')
+            ->expectsOutput('Datumrange: 2026-05-10 t/m 2026-05-10')
+            ->expectsOutput('Daily summary rows voor 2026-05-10: 0')
+            ->expectsOutput('Top pages rows voor 2026-05-10: 0')
+            ->assertSuccessful();
+    }
 }

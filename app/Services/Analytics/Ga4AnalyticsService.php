@@ -17,9 +17,15 @@ class Ga4AnalyticsService extends GoogleApiService
         return ['https://www.googleapis.com/auth/analytics.readonly'];
     }
 
-    public function isConfigured(): bool
+    protected function supportsOauth(): bool
     {
-        return parent::isConfigured() && filled($this->propertyId());
+        return true;
+    }
+
+    public function configurationError(): ?string
+    {
+        return parent::configurationError()
+            ?? ($this->propertyId() === null ? 'GOOGLE_ANALYTICS_PROPERTY_ID ontbreekt.' : null);
     }
 
     public function fetchDailySummary(CarbonInterface $date): ?array
@@ -124,11 +130,7 @@ class Ga4AnalyticsService extends GoogleApiService
 
     private function runReport(CarbonInterface $date, array $payload): array
     {
-        $propertyId = $this->propertyId();
-
-        if ($propertyId === null) {
-            throw new RuntimeException('GOOGLE_ANALYTICS_PROPERTY_ID ontbreekt.');
-        }
+        $propertyId = $this->propertyId() ?? throw new RuntimeException('GOOGLE_ANALYTICS_PROPERTY_ID ontbreekt.');
 
         return $this->postJson(
             "https://analyticsdata.googleapis.com/v1beta/properties/{$propertyId}:runReport",

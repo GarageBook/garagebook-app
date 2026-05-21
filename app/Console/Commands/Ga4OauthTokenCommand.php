@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Google\Client as GoogleClient;
+use Illuminate\Console\Command;
+
+class Ga4OauthTokenCommand extends Command
+{
+    protected $signature = 'garagebook:ga4-oauth-token';
+
+    protected $description = 'Haal tijdelijk een Google OAuth refresh token op voor GA4.';
+
+    public function handle(): int
+    {
+        $clientId = $this->clientId();
+        $clientSecret = $this->clientSecret();
+
+        if ($clientId === null) {
+            $this->error('GOOGLE_ANALYTICS_CLIENT_ID ontbreekt.');
+
+            return self::FAILURE;
+        }
+
+        if ($clientSecret === null) {
+            $this->error('GOOGLE_ANALYTICS_CLIENT_SECRET ontbreekt.');
+
+            return self::FAILURE;
+        }
+
+        $client = $this->makeGoogleClient($clientId, $clientSecret);
+        $consentUrl = $client->createAuthUrl();
+
+        $this->line('Open deze Google OAuth URL in je browser:');
+        $this->newLine();
+        $this->line($consentUrl);
+        $this->newLine();
+        $this->line('Log in met garagebook.analytics@gmail.com, geef toegang en kopieer daarna de authorization code uit de redirect URL.');
+
+        $authorizationCode = trim((string) $this->ask('Plak hier de authorization code'));
+
+        if ($authorizationCode === '') {
+            $this->error('Geen authorization code opgegeven.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            $token = $client->fetchAccessTokenWithAuthCode($authorizationCode);
+        } catch (\Throwable $exception) {
+            $this->error('Kon authorization code niet omwisselen voor tokens: ' . $exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if (isset($token['error'])) {
+            $description = $token['error_description'] ?? $token['error'];
+            $this->error('Google OAuth gaf een fout terug: ' . $description);
+
+            return self::FAILURE;
+        }
+
+        $refreshToken = $token['refresh_token'] ?? null;
+
+        if (! is_string($refreshToken) || trim($refreshToken) === '') {
+            $this->error('Google gaf geen refresh_token terug. Gebruik een OAuth client die offline access ondersteunt en doorloop opnieuw consent met prompt=consent.');
+
+            return self::FAILURE;
+        }
+
+        $this->newLine();
+        $this->info('Refresh token:');
+        $this->line($refreshToken);
+        $this->newLine();
+        $this->comment('Zet dit token in GOOGLE_ANALYTICS_REFRESH_TOKEN.');
+
+        return self::SUCCESS;
+    }
+
+    protected function makeGoogleClient(string $clientId, string $clientSecret): GoogleClient
+    {
+        /** @var GoogleClient $client */
+        $client = app(GoogleClient::class);
+        $client->setClientId($clientId);
+        $client->setClientSecret($clientSecret);
+        $client->setRedirectUri('http://localhost');
+        $client->setScopes(['https://www.googleapis.com/auth/analytics.readonly']);
+        $client->setAccessType('offline');
+        $client->setPrompt('consent');
+
+        return $client;
+    }
+
+    private function clientId(): ?string
+    {
+        $clientId = config('services.google_analytics.client_id');
+
+        return is_string($clientId) && trim($clientId) !== ''
+            ? trim($clientId)
+            : null;
+    }
+
+    private function clientSecret(): ?string
+    {
+        $clientSecret = config('services.google_analytics.client_secret');
+
+        return is_string($clientSecret) && trim($clientSecret) !== ''
+            ? trim($clientSecret)
+            : null;
+    }
+}
