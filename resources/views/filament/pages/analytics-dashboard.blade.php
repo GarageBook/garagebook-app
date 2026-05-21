@@ -1,23 +1,27 @@
 <x-filament-panels::page>
-    <div class="space-y-10 py-2">
+    <div class="py-2">
         @if (\App\Filament\Widgets\GrowthSummaryStats::canView())
-            <div class="pb-2">
+            <div style="margin-bottom: 40px;">
                 @livewire(\App\Filament\Widgets\GrowthSummaryStats::class)
             </div>
         @endif
 
-        <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
+        <div class="grid grid-cols-1 gap-8 xl:grid-cols-2" style="margin-bottom: 40px;">
             @if (\App\Filament\Widgets\TopSearchQueriesWidget::canView())
-                @livewire(\App\Filament\Widgets\TopSearchQueriesWidget::class)
+                <div style="margin-bottom: 40px;">
+                    @livewire(\App\Filament\Widgets\TopSearchQueriesWidget::class)
+                </div>
             @endif
 
             @if (\App\Filament\Widgets\TopSeoPagesWidget::canView())
-                @livewire(\App\Filament\Widgets\TopSeoPagesWidget::class)
+                <div style="margin-bottom: 40px;">
+                    @livewire(\App\Filament\Widgets\TopSeoPagesWidget::class)
+                </div>
             @endif
         </div>
 
         @if (\App\Filament\Widgets\TopVisitedPagesWidget::canView())
-            <div class="pt-2">
+            <div style="margin-bottom: 40px;">
                 @livewire(\App\Filament\Widgets\TopVisitedPagesWidget::class)
             </div>
         @endif
