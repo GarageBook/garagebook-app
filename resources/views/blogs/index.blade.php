@@ -1,7 +1,12 @@
 @extends('layouts.public')
 
+@php($isAppBlogHost = request()->getHost() === 'app.garagebook.nl')
+@php($blogIndexCanonicalUrl = $isAppBlogHost ? 'https://garagebook.nl/blogs' : url('/blogs'))
+
 @section('title', 'Blogs over motoronderhoud en onderhoudshistorie | GarageBook')
 @section('meta_description', 'Lees praktische blogs over motoronderhoud, onderhoudshistorie, digitaal onderhoud bijhouden en de invloed daarvan op vertrouwen en verkoopwaarde.')
+@section('canonical_url', $blogIndexCanonicalUrl)
+@section('meta_robots', $isAppBlogHost ? 'noindex, follow' : 'index,follow')
 
 @section('content')
 

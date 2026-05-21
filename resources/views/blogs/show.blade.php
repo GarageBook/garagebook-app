@@ -1,11 +1,13 @@
 @extends('layouts.public')
 
 @php($blogCanonicalUrl = 'https://garagebook.nl/blog/' . $blog->slug . '/')
+@php($isAppBlogHost = request()->getHost() === 'app.garagebook.nl')
 
 @section('title', $blog->title . ' - GarageBook')
 @section('meta_description', $blog->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($blog->rendered_content), 155))
 @section('og_type', 'article')
 @section('canonical_url', $blogCanonicalUrl)
+@section('meta_robots', $isAppBlogHost ? 'noindex, follow' : 'index,follow')
 @section('structured_data')
     <script type="application/ld+json">
         {!! json_encode([
