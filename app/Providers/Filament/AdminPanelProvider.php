@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\GeratelRegister;
 use App\Filament\Auth\Register;
+use App\Filament\Pages\AnalyticsDashboard;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\LocalizationOverview;
 use App\Filament\Pages\Timeline;
@@ -51,6 +52,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 Timeline::class,
+                AnalyticsDashboard::class,
                 LocalizationOverview::class,
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)

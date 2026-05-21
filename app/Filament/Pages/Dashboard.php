@@ -3,17 +3,13 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\CostBreakdownByVehicleChart;
-use App\Filament\Widgets\CumulativeCostTrendChart;
-use App\Filament\Widgets\GrowthSummaryStats;
 use App\Filament\Widgets\MyVehicles;
 use App\Filament\Widgets\FuelConsumptionOverview;
 use App\Filament\Widgets\FuelConsumptionTrendChart;
 use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
-use App\Filament\Widgets\TopSearchQueriesWidget;
-use App\Filament\Widgets\TopSeoPagesWidget;
-use App\Filament\Widgets\TopVisitedPagesWidget;
+use App\Filament\Widgets\CumulativeCostTrendChart;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -48,7 +44,6 @@ class Dashboard extends BaseDashboard
     {
         $user = Filament::auth()->user();
         $hasFuelLogs = $user?->vehicles()->whereHas('fuelLogs')->exists();
-        $isAdmin = $user?->isAdmin() ?? false;
 
         $secondaryWidgets = [
             Livewire::make(MaintenanceReminders::class),
@@ -69,7 +64,7 @@ class Dashboard extends BaseDashboard
             $chartWidgets[] = Livewire::make(FuelConsumptionTrendChart::class);
         }
 
-        $components = [
+        return $schema->components([
             Grid::make([
                 'md' => 2,
             ])->schema([
@@ -79,38 +74,6 @@ class Dashboard extends BaseDashboard
             Grid::make([
                 'md' => 2,
             ])->schema($chartWidgets),
-        ];
-
-        if ($isAdmin) {
-            if (GrowthSummaryStats::canView()) {
-                $components[] = Grid::make(1)->schema([
-                    Livewire::make(GrowthSummaryStats::class),
-                ]);
-            }
-
-            $analyticsTables = [];
-
-            if (TopSearchQueriesWidget::canView()) {
-                $analyticsTables[] = Livewire::make(TopSearchQueriesWidget::class);
-            }
-
-            if (TopSeoPagesWidget::canView()) {
-                $analyticsTables[] = Livewire::make(TopSeoPagesWidget::class);
-            }
-
-            if ($analyticsTables !== []) {
-                $components[] = Grid::make([
-                    'md' => 2,
-                ])->schema($analyticsTables);
-            }
-
-            if (TopVisitedPagesWidget::canView()) {
-                $components[] = Grid::make(1)->schema([
-                    Livewire::make(TopVisitedPagesWidget::class),
-                ]);
-            }
-        }
-
-        return $schema->components($components);
+        ]);
     }
 }
