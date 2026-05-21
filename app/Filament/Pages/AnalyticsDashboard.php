@@ -9,7 +9,7 @@ class AnalyticsDashboard extends Page
 {
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedChartBarSquare;
 
-    protected static ?int $navigationSort = 215;
+    protected static ?int $navigationSort = 190;
 
     protected string $view = 'filament.pages.analytics-dashboard';
 

@@ -1,10 +1,12 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div class="space-y-10 py-2">
         @if (\App\Filament\Widgets\GrowthSummaryStats::canView())
-            @livewire(\App\Filament\Widgets\GrowthSummaryStats::class)
+            <div class="pb-2">
+                @livewire(\App\Filament\Widgets\GrowthSummaryStats::class)
+            </div>
         @endif
 
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
             @if (\App\Filament\Widgets\TopSearchQueriesWidget::canView())
                 @livewire(\App\Filament\Widgets\TopSearchQueriesWidget::class)
             @endif
@@ -15,7 +17,9 @@
         </div>
 
         @if (\App\Filament\Widgets\TopVisitedPagesWidget::canView())
-            @livewire(\App\Filament\Widgets\TopVisitedPagesWidget::class)
+            <div class="pt-2">
+                @livewire(\App\Filament\Widgets\TopVisitedPagesWidget::class)
+            </div>
         @endif
     </div>
 </x-filament-panels::page>
