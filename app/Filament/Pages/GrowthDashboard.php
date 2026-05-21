@@ -11,6 +11,7 @@ use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\View\View;
 
 class GrowthDashboard extends Page
 {
@@ -40,7 +41,7 @@ class GrowthDashboard extends Page
 
     public function getHeading(): string
     {
-        return 'Growth dashboard';
+        return '';
     }
 
     public function getTitle(): string
@@ -50,7 +51,12 @@ class GrowthDashboard extends Page
 
     public function getSubheading(): ?string
     {
-        return 'Experimenteel beheer-dashboard met acquisitie-, SEO-, funnel- en activatiestatistieken op basis van lokaal opgeslagen data.';
+        return null;
+    }
+
+    public function getHeader(): ?View
+    {
+        return view('filament.pages.growth-dashboard-header');
     }
 
     protected function getHeaderWidgets(): array
