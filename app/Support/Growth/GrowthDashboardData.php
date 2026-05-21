@@ -30,6 +30,8 @@ class GrowthDashboardData
 
     private array $tablePresence = [];
 
+    private array $columnPresence = [];
+
     public function kpiOverview(): array
     {
         $today = Carbon::today();
@@ -289,32 +291,42 @@ class GrowthDashboardData
 
     public function activationFunnel(): array
     {
+        $hasVehicles = $this->hasTable('vehicles');
+        $hasMaintenanceLogs = $this->hasTable('maintenance_logs');
+        $hasVehicleDocuments = $this->hasTable('vehicle_documents');
+        $hasFuelLogs = $this->hasTable('fuel_logs');
+        $hasFirstLoginAt = $this->hasColumn('users', 'first_login_at');
+        $hasLastLoginAt = $this->hasColumn('users', 'last_login_at');
+
         $stats = [
             'total_users' => User::query()->count(),
-            'users_with_vehicle' => User::query()->whereHas('vehicles')->count(),
-            'users_with_maintenance' => User::query()->whereHas('vehicles.maintenanceLogs')->count(),
-            'users_with_three_maintenance' => $this->usersWithMinimumMaintenanceLogs(3),
-            'users_with_documents' => User::query()->whereHas('vehicles.documents')->count(),
-            'users_with_fuel_entries' => User::query()->whereHas('vehicles.fuelLogs')->count(),
-            'active_last_7_days' => User::query()->where('last_login_at', '>=', Carbon::now()->subDays(7))->count(),
-            'active_last_30_days' => User::query()->where('last_login_at', '>=', Carbon::now()->subDays(30))->count(),
+            'users_with_vehicle' => $hasVehicles ? User::query()->whereHas('vehicles')->count() : null,
+            'users_with_maintenance' => $hasVehicles && $hasMaintenanceLogs ? User::query()->whereHas('vehicles.maintenanceLogs')->count() : null,
+            'users_with_three_maintenance' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithMinimumMaintenanceLogs(3) : null,
+            'users_with_documents' => $hasVehicles && $hasVehicleDocuments ? User::query()->whereHas('vehicles.documents')->count() : null,
+            'users_with_fuel_entries' => $hasVehicles && $hasFuelLogs ? User::query()->whereHas('vehicles.fuelLogs')->count() : null,
+            'active_last_7_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(7))->count() : null,
+            'active_last_30_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(30))->count() : null,
         ];
 
         $totalUsers = max(1, $stats['total_users']);
+        $returnedAfterSevenDays = null;
 
-        if (DB::getDriverName() === 'sqlite') {
-            $returnedAfterSevenDays = User::query()
-                ->whereNotNull('first_login_at')
-                ->whereNotNull('last_login_at')
-                ->whereColumn('last_login_at', '>', DB::raw("datetime(first_login_at, '+7 days')"))
-                ->count();
-        } else {
-            $returnedAfterSevenDays = User::query()
-                ->whereNotNull('first_login_at')
-                ->whereNotNull('last_login_at')
-                ->get(['first_login_at', 'last_login_at'])
-                ->filter(fn (User $user) => $user->last_login_at?->gte($user->first_login_at?->copy()->addDays(7)))
-                ->count();
+        if ($hasFirstLoginAt && $hasLastLoginAt) {
+            if (DB::getDriverName() === 'sqlite') {
+                $returnedAfterSevenDays = User::query()
+                    ->whereNotNull('first_login_at')
+                    ->whereNotNull('last_login_at')
+                    ->whereColumn('last_login_at', '>', DB::raw("datetime(first_login_at, '+7 days')"))
+                    ->count();
+            } else {
+                $returnedAfterSevenDays = User::query()
+                    ->whereNotNull('first_login_at')
+                    ->whereNotNull('last_login_at')
+                    ->get(['first_login_at', 'last_login_at'])
+                    ->filter(fn (User $user) => $user->last_login_at?->gte($user->first_login_at?->copy()->addDays(7)))
+                    ->count();
+            }
         }
 
         $funnel = [
@@ -329,9 +341,9 @@ class GrowthDashboardData
             'stats' => $stats,
             'funnel' => array_map(fn (array $row) => [
                 ...$row,
-                'percentage' => $stats['total_users'] > 0
+                'percentage' => $stats['total_users'] > 0 && $row['count'] !== null
                     ? round(($row['count'] / $totalUsers) * 100, 1)
-                    : 0.0,
+                    : null,
             ], $funnel),
         ];
     }
@@ -353,46 +365,54 @@ class GrowthDashboardData
             ])
             ->all();
 
-        $vehicles = Vehicle::query()
-            ->join('users', 'users.id', '=', 'vehicles.user_id')
-            ->select([
-                'vehicles.id',
-                'vehicles.created_at',
-                'vehicles.brand',
-                'vehicles.model',
-                'vehicles.nickname',
-                'users.id as user_id',
-                'users.name as user_name',
-            ])
-            ->latest('vehicles.created_at')
-            ->limit(5)
-            ->get()
-            ->map(fn ($vehicle) => [
-                'label' => trim(($vehicle->nickname ?: trim($vehicle->brand . ' ' . $vehicle->model) ?: 'Voertuig') . ' door ' . ($vehicle->user_name ?: 'user') . ' (#' . $vehicle->user_id . ')'),
-                'timestamp' => Carbon::parse($vehicle->created_at)->format('d-m-Y H:i'),
-                'source' => $registrationSources->get($vehicle->user_id, '—'),
-            ])
-            ->all();
+        $vehicles = [];
 
-        $maintenanceLogs = MaintenanceLog::query()
-            ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
-            ->join('users', 'users.id', '=', 'vehicles.user_id')
-            ->select([
-                'maintenance_logs.id',
-                'maintenance_logs.created_at',
-                'maintenance_logs.description',
-                'users.id as user_id',
-                'users.name as user_name',
-            ])
-            ->latest('maintenance_logs.created_at')
-            ->limit(5)
-            ->get()
-            ->map(fn ($log) => [
-                'label' => trim(($log->description ?: 'Onderhoudslog') . ' door ' . ($log->user_name ?: 'user') . ' (#' . $log->user_id . ')'),
-                'timestamp' => Carbon::parse($log->created_at)->format('d-m-Y H:i'),
-                'source' => $registrationSources->get($log->user_id, '—'),
-            ])
-            ->all();
+        if ($this->hasTable('vehicles')) {
+            $vehicles = Vehicle::query()
+                ->join('users', 'users.id', '=', 'vehicles.user_id')
+                ->select([
+                    'vehicles.id',
+                    'vehicles.created_at',
+                    'vehicles.brand',
+                    'vehicles.model',
+                    'vehicles.nickname',
+                    'users.id as user_id',
+                    'users.name as user_name',
+                ])
+                ->latest('vehicles.created_at')
+                ->limit(5)
+                ->get()
+                ->map(fn ($vehicle) => [
+                    'label' => trim(($vehicle->nickname ?: trim($vehicle->brand . ' ' . $vehicle->model) ?: 'Voertuig') . ' door ' . ($vehicle->user_name ?: 'user') . ' (#' . $vehicle->user_id . ')'),
+                    'timestamp' => Carbon::parse($vehicle->created_at)->format('d-m-Y H:i'),
+                    'source' => $registrationSources->get($vehicle->user_id, '—'),
+                ])
+                ->all();
+        }
+
+        $maintenanceLogs = [];
+
+        if ($this->hasTable('maintenance_logs') && $this->hasTable('vehicles')) {
+            $maintenanceLogs = MaintenanceLog::query()
+                ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
+                ->join('users', 'users.id', '=', 'vehicles.user_id')
+                ->select([
+                    'maintenance_logs.id',
+                    'maintenance_logs.created_at',
+                    'maintenance_logs.description',
+                    'users.id as user_id',
+                    'users.name as user_name',
+                ])
+                ->latest('maintenance_logs.created_at')
+                ->limit(5)
+                ->get()
+                ->map(fn ($log) => [
+                    'label' => trim(($log->description ?: 'Onderhoudslog') . ' door ' . ($log->user_name ?: 'user') . ' (#' . $log->user_id . ')'),
+                    'timestamp' => Carbon::parse($log->created_at)->format('d-m-Y H:i'),
+                    'source' => $registrationSources->get($log->user_id, '—'),
+                ])
+                ->all();
+        }
 
         return [
             'registrations' => $registrations,
@@ -430,19 +450,20 @@ class GrowthDashboardData
             ->select([
                 'users.id',
                 'users.created_at',
-                'users.registration_source',
             ]);
 
+        if ($this->hasColumn('users', 'registration_source')) {
+            $query->addSelect('users.registration_source');
+        }
+
         if ($this->hasTable('user_attributions')) {
-            $query
-                ->leftJoin('user_attributions as ua', 'ua.user_id', '=', 'users.id')
-                ->addSelect([
-                    'ua.utm_source',
-                    'ua.utm_medium',
-                    'ua.utm_campaign',
-                    'ua.landing_page',
-                    'ua.referrer',
-                ]);
+            $query->leftJoin('user_attributions as ua', 'ua.user_id', '=', 'users.id');
+
+            foreach (['utm_source', 'utm_medium', 'utm_campaign', 'landing_page', 'referrer'] as $column) {
+                if ($this->hasColumn('user_attributions', $column)) {
+                    $query->addSelect('ua.' . $column);
+                }
+            }
         }
 
         return $query
@@ -452,7 +473,7 @@ class GrowthDashboardData
                 return [
                     'id' => (int) $row->id,
                     'created_at' => Carbon::parse($row->created_at),
-                    'registration_source' => $row->registration_source,
+                    'registration_source' => $row->registration_source ?? null,
                     'utm_source' => $row->utm_source ?? null,
                     'utm_medium' => $row->utm_medium ?? null,
                     'utm_campaign' => $row->utm_campaign ?? null,
@@ -466,11 +487,11 @@ class GrowthDashboardData
     private function attributedRegistrationRecords(): Collection
     {
         return $this->registrationAttributionRecords()
-            ->filter(fn (array $row) => filled($row["utm_source"])
-                || filled($row["utm_medium"])
-                || filled($row["utm_campaign"])
-                || filled($row["registration_source"])
-                || filled($row["referrer_host"]));
+            ->filter(fn (array $row) => filled($row['utm_source'])
+                || filled($row['utm_medium'])
+                || filled($row['utm_campaign'])
+                || filled($row['registration_source'])
+                || filled($row['referrer_host']));
     }
 
     private function analyticsTopPageUsersByPath(): array
@@ -649,5 +670,16 @@ class GrowthDashboardData
         }
 
         return $this->tablePresence[$table];
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        $key = $table . '.' . $column;
+
+        if (! array_key_exists($key, $this->columnPresence)) {
+            $this->columnPresence[$key] = $this->hasTable($table) && Schema::hasColumn($table, $column);
+        }
+
+        return $this->columnPresence[$key];
     }
 }
