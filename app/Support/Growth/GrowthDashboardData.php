@@ -586,14 +586,14 @@ class GrowthDashboardData
 
     private function usersWithMinimumMaintenanceLogs(int $minimumLogs): int
     {
-        return DB::table('users')
-            ->whereIn('users.id', function ($query) use ($minimumLogs): void {
+        return DB::query()
+            ->fromSub(function ($query) use ($minimumLogs): void {
                 $query->select('vehicles.user_id')
                     ->from('vehicles')
                     ->join('maintenance_logs', 'maintenance_logs.vehicle_id', '=', 'vehicles.id')
                     ->groupBy('vehicles.user_id')
                     ->havingRaw('COUNT(maintenance_logs.id) >= ?', [$minimumLogs]);
-            })
+            }, 'qualified_users')
             ->count();
     }
 
