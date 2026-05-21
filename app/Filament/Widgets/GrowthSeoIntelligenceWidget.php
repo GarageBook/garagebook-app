@@ -7,6 +7,8 @@ use Filament\Widgets\Widget;
 
 class GrowthSeoIntelligenceWidget extends Widget
 {
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.widgets.growth-seo-intelligence-widget';
 
     protected int | string | array $columnSpan = 'full';

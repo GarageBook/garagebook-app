@@ -2,6 +2,13 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\GrowthAcquisitionPerformanceWidget;
+use App\Filament\Widgets\GrowthKpiOverviewWidget;
+use App\Filament\Widgets\GrowthLandingPageConversionWidget;
+use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
+use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
+use App\Filament\Widgets\GrowthRecentActivityWidget;
+use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 
@@ -10,8 +17,6 @@ class GrowthDashboard extends Page
     protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedChartBarSquare;
 
     protected static ?int $navigationSort = 191;
-
-    protected string $view = 'filament.pages.growth-dashboard';
 
     public static function canAccess(): bool
     {
@@ -45,6 +50,27 @@ class GrowthDashboard extends Page
 
     public function getSubheading(): ?string
     {
-        return 'Experimenteel beheer-dashboard met acquisition-, SEO-, funnel- en activatiestatistieken op basis van lokaal opgeslagen data.';
+        return 'Experimenteel beheer-dashboard met acquisitie-, SEO-, funnel- en activatiestatistieken op basis van lokaal opgeslagen data.';
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            GrowthKpiOverviewWidget::class,
+            GrowthAcquisitionPerformanceWidget::class,
+            GrowthPartnerPerformanceWidget::class,
+            GrowthSeoIntelligenceWidget::class,
+            GrowthLandingPageConversionWidget::class,
+            GrowthProductActivationFunnelWidget::class,
+            GrowthRecentActivityWidget::class,
+        ];
+    }
+
+    public function getHeaderWidgetsColumns(): int | array
+    {
+        return [
+            'md' => 2,
+            'xl' => 2,
+        ];
     }
 }

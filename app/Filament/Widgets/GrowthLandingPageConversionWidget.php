@@ -7,9 +7,11 @@ use Filament\Widgets\Widget;
 
 class GrowthLandingPageConversionWidget extends Widget
 {
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.widgets.growth-landing-page-conversion-widget';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = 1;
 
     public static function canView(): bool
     {

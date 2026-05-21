@@ -7,6 +7,8 @@ use Filament\Widgets\Widget;
 
 class GrowthRecentActivityWidget extends Widget
 {
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.widgets.growth-recent-activity-widget';
 
     protected int | string | array $columnSpan = 'full';
