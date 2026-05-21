@@ -1,0 +1,653 @@
+<?php
+
+namespace App\Support\Growth;
+
+use App\Models\AnalyticsDailySummary;
+use App\Models\AnalyticsTopPage;
+use App\Models\MaintenanceLog;
+use App\Models\SearchConsolePage;
+use App\Models\SearchConsoleQuery;
+use App\Models\User;
+use App\Models\Vehicle;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+class GrowthDashboardData
+{
+    private const PARTNERS = [
+        'geratel',
+        'motorfreaks',
+        'nieuwsmotor',
+        'motoplus',
+        'knmv',
+        'reddit',
+        'motor-forum',
+        'tweakers',
+        'garagebook.nl',
+    ];
+
+    private array $tablePresence = [];
+
+    public function kpiOverview(): array
+    {
+        $today = Carbon::today();
+        $sevenDayStart = $today->copy()->subDays(6);
+        $thirtyDayStart = $today->copy()->subDays(29);
+
+        $visitorCounts = $this->visitorCounts($today, $sevenDayStart, $thirtyDayStart);
+
+        $registrationsToday = User::query()
+            ->where('created_at', '>=', $today->copy()->startOfDay())
+            ->count();
+
+        $registrationsSevenDays = User::query()
+            ->where('created_at', '>=', $sevenDayStart->copy()->startOfDay())
+            ->count();
+
+        $registrationsThirtyDays = User::query()
+            ->where('created_at', '>=', $thirtyDayStart->copy()->startOfDay())
+            ->count();
+
+        $latestRegistration = User::query()
+            ->select(['id', 'name', 'created_at'])
+            ->latest('created_at')
+            ->first();
+
+        $conversionRateThirtyDays = filled($visitorCounts['thirty_days']) && $visitorCounts['thirty_days'] > 0
+            ? round(($registrationsThirtyDays / $visitorCounts['thirty_days']) * 100, 2)
+            : null;
+
+        return [
+            'cards' => [
+                [
+                    'label' => 'Bezoekers vandaag',
+                    'value' => $visitorCounts['today'],
+                    'is_available' => $visitorCounts['today'] !== null,
+                ],
+                [
+                    'label' => 'Bezoekers laatste 7 dagen',
+                    'value' => $visitorCounts['seven_days'],
+                    'is_available' => $visitorCounts['seven_days'] !== null,
+                ],
+                [
+                    'label' => 'Bezoekers laatste 30 dagen',
+                    'value' => $visitorCounts['thirty_days'],
+                    'is_available' => $visitorCounts['thirty_days'] !== null,
+                ],
+                [
+                    'label' => 'Registraties vandaag',
+                    'value' => $registrationsToday,
+                    'is_available' => true,
+                ],
+                [
+                    'label' => 'Registraties laatste 7 dagen',
+                    'value' => $registrationsSevenDays,
+                    'is_available' => true,
+                ],
+                [
+                    'label' => 'Registraties laatste 30 dagen',
+                    'value' => $registrationsThirtyDays,
+                    'is_available' => true,
+                ],
+                [
+                    'label' => 'Conversieratio 30 dagen',
+                    'value' => $conversionRateThirtyDays,
+                    'is_available' => $conversionRateThirtyDays !== null,
+                    'suffix' => '%',
+                ],
+                [
+                    'label' => 'Laatste registratie',
+                    'value' => $latestRegistration?->name ?: 'Nog geen registraties',
+                    'is_available' => $latestRegistration !== null,
+                    'meta' => $latestRegistration?->created_at?->format('d-m-Y H:i'),
+                ],
+            ],
+        ];
+    }
+
+    public function acquisitionPerformance(): array
+    {
+        $rows = $this->attributedRegistrationRecords();
+
+        if ($rows->isEmpty()) {
+            return [
+                'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+                'rows' => [],
+            ];
+        }
+
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $source = $this->sourceLabel($row);
+            $medium = $this->mediumLabel($row);
+            $campaign = $this->campaignLabel($row);
+            $key = implode('|', [$source, $medium, $campaign]);
+
+            if (! array_key_exists($key, $grouped)) {
+                $grouped[$key] = [
+                    'source' => $source,
+                    'medium' => $medium,
+                    'campaign' => $campaign,
+                    'visits' => null,
+                    'registrations' => 0,
+                    'conversion_rate' => null,
+                    'latest_activity_at' => null,
+                    'note' => 'Gebaseerd op beschikbare attribution data',
+                ];
+            }
+
+            $grouped[$key]['registrations']++;
+
+            if ($grouped[$key]['latest_activity_at'] === null || $row['created_at']->gt($grouped[$key]['latest_activity_at'])) {
+                $grouped[$key]['latest_activity_at'] = $row['created_at'];
+            }
+        }
+
+        $rows = collect($grouped)
+            ->sortByDesc(fn (array $row) => [$row['registrations'], $row['latest_activity_at']?->timestamp ?? 0])
+            ->values()
+            ->map(fn (array $row) => [
+                ...$row,
+                'latest_activity' => $row['latest_activity_at']?->format('d-m-Y H:i') ?? '—',
+            ])
+            ->all();
+
+        return [
+            'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+            'rows' => $rows,
+        ];
+    }
+
+    public function partnerPerformance(): array
+    {
+        $rows = $this->attributedRegistrationRecords();
+
+        $partners = collect(self::PARTNERS)->mapWithKeys(fn (string $partner) => [
+            $partner => [
+                'partner' => $partner,
+                'visits' => null,
+                'registrations' => 0,
+                'conversion_rate' => null,
+                'latest_registration_at' => null,
+                'status' => 'Gebaseerd op beschikbare attribution data',
+            ],
+        ])->all();
+
+        foreach ($rows as $row) {
+            foreach (array_keys($partners) as $partner) {
+                if (! $this->matchesPartner($partner, $row)) {
+                    continue;
+                }
+
+                $partners[$partner]['registrations']++;
+
+                if ($partners[$partner]['latest_registration_at'] === null || $row['created_at']->gt($partners[$partner]['latest_registration_at'])) {
+                    $partners[$partner]['latest_registration_at'] = $row['created_at'];
+                }
+            }
+        }
+
+        $result = collect($partners)
+            ->map(fn (array $row) => [
+                ...$row,
+                'latest_registration' => $row['latest_registration_at']?->format('d-m-Y H:i') ?? '—',
+            ])
+            ->sortByDesc(fn (array $row) => [$row['registrations'], $row['latest_registration_at']?->timestamp ?? 0])
+            ->values()
+            ->all();
+
+        return [
+            'rows' => $result,
+        ];
+    }
+
+    public function seoIntelligence(): array
+    {
+        return [
+            'has_queries' => $this->hasTable('search_console_queries'),
+            'has_pages' => $this->hasTable('search_console_pages'),
+            'top_queries_by_clicks' => $this->searchConsoleQueryRows('clicks'),
+            'top_queries_by_impressions' => $this->searchConsoleQueryRows('impressions'),
+            'high_impression_low_ctr_queries' => $this->searchConsoleQueryRows('impressions', fn ($query) => $query
+                ->havingRaw('SUM(impressions) >= 100')
+                ->havingRaw('AVG(ctr) < 0.02')),
+            'position_opportunity_queries' => $this->searchConsoleQueryRows('position', fn ($query) => $query
+                ->havingRaw('AVG(position) between 4 and 15')),
+            'top_pages' => $this->searchConsolePageRows('clicks'),
+            'high_impression_low_ctr_pages' => $this->searchConsolePageRows('impressions', fn ($query) => $query
+                ->havingRaw('SUM(impressions) >= 100')
+                ->havingRaw('AVG(ctr) < 0.02')),
+        ];
+    }
+
+    public function landingPageConversion(): array
+    {
+        $rows = $this->registrationAttributionRecords()
+            ->filter(fn (array $row) => filled($row['landing_page']));
+
+        if ($rows->isEmpty()) {
+            return [
+                'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+                'rows' => [],
+            ];
+        }
+
+        $visitsByPage = $this->analyticsTopPageUsersByPath();
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $landingPage = $row['landing_page'];
+
+            if (! array_key_exists($landingPage, $grouped)) {
+                $grouped[$landingPage] = [
+                    'landing_page' => $landingPage,
+                    'visits' => $visitsByPage[$landingPage] ?? null,
+                    'registrations' => 0,
+                    'latest_registration_at' => null,
+                    'top_source_counts' => [],
+                ];
+            }
+
+            $grouped[$landingPage]['registrations']++;
+            $source = $this->sourceLabel($row);
+            $grouped[$landingPage]['top_source_counts'][$source] = ($grouped[$landingPage]['top_source_counts'][$source] ?? 0) + 1;
+
+            if ($grouped[$landingPage]['latest_registration_at'] === null || $row['created_at']->gt($grouped[$landingPage]['latest_registration_at'])) {
+                $grouped[$landingPage]['latest_registration_at'] = $row['created_at'];
+            }
+        }
+
+        $result = collect($grouped)
+            ->map(function (array $row) {
+                arsort($row['top_source_counts']);
+                $topSource = array_key_first($row['top_source_counts']);
+                $conversionRate = filled($row['visits']) && $row['visits'] > 0
+                    ? round(($row['registrations'] / $row['visits']) * 100, 2)
+                    : null;
+
+                return [
+                    'landing_page' => $row['landing_page'],
+                    'visits' => $row['visits'],
+                    'registrations' => $row['registrations'],
+                    'conversion_rate' => $conversionRate,
+                    'top_source' => $topSource ?: '—',
+                    'latest_registration' => $row['latest_registration_at']?->format('d-m-Y H:i') ?? '—',
+                ];
+            })
+            ->sortByDesc(fn (array $row) => [$row['registrations'], $row['visits'] ?? 0])
+            ->values()
+            ->all();
+
+        return [
+            'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+            'rows' => $result,
+        ];
+    }
+
+    public function activationFunnel(): array
+    {
+        $stats = [
+            'total_users' => User::query()->count(),
+            'users_with_vehicle' => User::query()->whereHas('vehicles')->count(),
+            'users_with_maintenance' => User::query()->whereHas('vehicles.maintenanceLogs')->count(),
+            'users_with_three_maintenance' => $this->usersWithMinimumMaintenanceLogs(3),
+            'users_with_documents' => User::query()->whereHas('vehicles.documents')->count(),
+            'users_with_fuel_entries' => User::query()->whereHas('vehicles.fuelLogs')->count(),
+            'active_last_7_days' => User::query()->where('last_login_at', '>=', Carbon::now()->subDays(7))->count(),
+            'active_last_30_days' => User::query()->where('last_login_at', '>=', Carbon::now()->subDays(30))->count(),
+        ];
+
+        $totalUsers = max(1, $stats['total_users']);
+
+        if (DB::getDriverName() === 'sqlite') {
+            $returnedAfterSevenDays = User::query()
+                ->whereNotNull('first_login_at')
+                ->whereNotNull('last_login_at')
+                ->whereColumn('last_login_at', '>', DB::raw("datetime(first_login_at, '+7 days')"))
+                ->count();
+        } else {
+            $returnedAfterSevenDays = User::query()
+                ->whereNotNull('first_login_at')
+                ->whereNotNull('last_login_at')
+                ->get(['first_login_at', 'last_login_at'])
+                ->filter(fn (User $user) => $user->last_login_at?->gte($user->first_login_at?->copy()->addDays(7)))
+                ->count();
+        }
+
+        $funnel = [
+            ['step' => 'Registratie', 'count' => $stats['total_users']],
+            ['step' => 'Voertuig toegevoegd', 'count' => $stats['users_with_vehicle']],
+            ['step' => 'Onderhoudslog toegevoegd', 'count' => $stats['users_with_maintenance']],
+            ['step' => 'Document/upload toegevoegd', 'count' => $stats['users_with_documents']],
+            ['step' => 'Teruggekomen na 7 dagen', 'count' => $returnedAfterSevenDays],
+        ];
+
+        return [
+            'stats' => $stats,
+            'funnel' => array_map(fn (array $row) => [
+                ...$row,
+                'percentage' => $stats['total_users'] > 0
+                    ? round(($row['count'] / $totalUsers) * 100, 1)
+                    : 0.0,
+            ], $funnel),
+        ];
+    }
+
+    public function recentActivity(): array
+    {
+        $registrationSources = $this->registrationAttributionRecords()
+            ->mapWithKeys(fn (array $row) => [$row['id'] => $this->sourceLabel($row)]);
+
+        $registrations = User::query()
+            ->select(['id', 'name', 'created_at'])
+            ->latest('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (User $user) => [
+                'label' => trim(($user->name ?: 'Gebruiker') . ' (#' . $user->id . ')'),
+                'timestamp' => $user->created_at?->format('d-m-Y H:i') ?? '—',
+                'source' => $registrationSources->get($user->id, '—'),
+            ])
+            ->all();
+
+        $vehicles = Vehicle::query()
+            ->join('users', 'users.id', '=', 'vehicles.user_id')
+            ->select([
+                'vehicles.id',
+                'vehicles.created_at',
+                'vehicles.brand',
+                'vehicles.model',
+                'vehicles.nickname',
+                'users.id as user_id',
+                'users.name as user_name',
+            ])
+            ->latest('vehicles.created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn ($vehicle) => [
+                'label' => trim(($vehicle->nickname ?: trim($vehicle->brand . ' ' . $vehicle->model) ?: 'Voertuig') . ' door ' . ($vehicle->user_name ?: 'user') . ' (#' . $vehicle->user_id . ')'),
+                'timestamp' => Carbon::parse($vehicle->created_at)->format('d-m-Y H:i'),
+                'source' => $registrationSources->get($vehicle->user_id, '—'),
+            ])
+            ->all();
+
+        $maintenanceLogs = MaintenanceLog::query()
+            ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
+            ->join('users', 'users.id', '=', 'vehicles.user_id')
+            ->select([
+                'maintenance_logs.id',
+                'maintenance_logs.created_at',
+                'maintenance_logs.description',
+                'users.id as user_id',
+                'users.name as user_name',
+            ])
+            ->latest('maintenance_logs.created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn ($log) => [
+                'label' => trim(($log->description ?: 'Onderhoudslog') . ' door ' . ($log->user_name ?: 'user') . ' (#' . $log->user_id . ')'),
+                'timestamp' => Carbon::parse($log->created_at)->format('d-m-Y H:i'),
+                'source' => $registrationSources->get($log->user_id, '—'),
+            ])
+            ->all();
+
+        return [
+            'registrations' => $registrations,
+            'vehicles' => $vehicles,
+            'maintenance_logs' => $maintenanceLogs,
+        ];
+    }
+
+    private function visitorCounts(Carbon $today, Carbon $sevenDayStart, Carbon $thirtyDayStart): array
+    {
+        if (! $this->hasTable('analytics_daily_summaries')) {
+            return [
+                'today' => null,
+                'seven_days' => null,
+                'thirty_days' => null,
+            ];
+        }
+
+        return [
+            'today' => (int) (AnalyticsDailySummary::query()
+                ->whereDate('date', $today->toDateString())
+                ->sum('users')),
+            'seven_days' => (int) (AnalyticsDailySummary::query()
+                ->whereDate('date', '>=', $sevenDayStart->toDateString())
+                ->sum('users')),
+            'thirty_days' => (int) (AnalyticsDailySummary::query()
+                ->whereDate('date', '>=', $thirtyDayStart->toDateString())
+                ->sum('users')),
+        ];
+    }
+
+    private function registrationAttributionRecords(): Collection
+    {
+        $query = User::query()
+            ->select([
+                'users.id',
+                'users.created_at',
+                'users.registration_source',
+            ]);
+
+        if ($this->hasTable('user_attributions')) {
+            $query
+                ->leftJoin('user_attributions as ua', 'ua.user_id', '=', 'users.id')
+                ->addSelect([
+                    'ua.utm_source',
+                    'ua.utm_medium',
+                    'ua.utm_campaign',
+                    'ua.landing_page',
+                    'ua.referrer',
+                ]);
+        }
+
+        return $query
+            ->orderByDesc('users.created_at')
+            ->get()
+            ->map(function ($row): array {
+                return [
+                    'id' => (int) $row->id,
+                    'created_at' => Carbon::parse($row->created_at),
+                    'registration_source' => $row->registration_source,
+                    'utm_source' => $row->utm_source ?? null,
+                    'utm_medium' => $row->utm_medium ?? null,
+                    'utm_campaign' => $row->utm_campaign ?? null,
+                    'landing_page' => $row->landing_page ?? null,
+                    'referrer' => $row->referrer ?? null,
+                    'referrer_host' => $this->referrerHost($row->referrer ?? null),
+                ];
+            });
+    }
+
+    private function attributedRegistrationRecords(): Collection
+    {
+        return $this->registrationAttributionRecords()
+            ->filter(fn (array $row) => filled($row["utm_source"])
+                || filled($row["utm_medium"])
+                || filled($row["utm_campaign"])
+                || filled($row["registration_source"])
+                || filled($row["referrer_host"]));
+    }
+
+    private function analyticsTopPageUsersByPath(): array
+    {
+        if (! $this->hasTable('analytics_top_pages')) {
+            return [];
+        }
+
+        return AnalyticsTopPage::query()
+            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->selectRaw('page_path')
+            ->selectRaw('SUM(users) as users')
+            ->groupBy('page_path')
+            ->pluck('users', 'page_path')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+    }
+
+    private function searchConsoleQueryRows(string $sortBy, ?callable $constraint = null): array
+    {
+        if (! $this->hasTable('search_console_queries')) {
+            return [];
+        }
+
+        $query = SearchConsoleQuery::query()
+            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->selectRaw('MIN(id) as id')
+            ->selectRaw('query')
+            ->selectRaw('SUM(clicks) as clicks')
+            ->selectRaw('SUM(impressions) as impressions')
+            ->selectRaw('AVG(ctr) as ctr')
+            ->selectRaw('AVG(position) as position')
+            ->groupBy('query');
+
+        if ($constraint !== null) {
+            $constraint($query);
+        }
+
+        if ($sortBy === 'position') {
+            $query->orderBy('position');
+        } else {
+            $query->orderByDesc($sortBy);
+        }
+
+        return $query
+            ->limit(10)
+            ->get()
+            ->map(fn ($row) => [
+                'label' => $row->query,
+                'clicks' => (int) $row->clicks,
+                'impressions' => (int) $row->impressions,
+                'ctr' => $row->ctr !== null ? round((float) $row->ctr * 100, 2) : null,
+                'position' => $row->position !== null ? round((float) $row->position, 2) : null,
+            ])
+            ->all();
+    }
+
+    private function searchConsolePageRows(string $sortBy, ?callable $constraint = null): array
+    {
+        if (! $this->hasTable('search_console_pages')) {
+            return [];
+        }
+
+        $query = SearchConsolePage::query()
+            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->selectRaw('MIN(id) as id')
+            ->selectRaw('page')
+            ->selectRaw('SUM(clicks) as clicks')
+            ->selectRaw('SUM(impressions) as impressions')
+            ->selectRaw('AVG(ctr) as ctr')
+            ->selectRaw('AVG(position) as position')
+            ->groupBy('page');
+
+        if ($constraint !== null) {
+            $constraint($query);
+        }
+
+        $query->orderByDesc($sortBy);
+
+        return $query
+            ->limit(10)
+            ->get()
+            ->map(fn ($row) => [
+                'label' => $row->page,
+                'clicks' => (int) $row->clicks,
+                'impressions' => (int) $row->impressions,
+                'ctr' => $row->ctr !== null ? round((float) $row->ctr * 100, 2) : null,
+                'position' => $row->position !== null ? round((float) $row->position, 2) : null,
+            ])
+            ->all();
+    }
+
+    private function usersWithMinimumMaintenanceLogs(int $minimumLogs): int
+    {
+        return DB::table('users')
+            ->join('vehicles', 'vehicles.user_id', '=', 'users.id')
+            ->join('maintenance_logs', 'maintenance_logs.vehicle_id', '=', 'vehicles.id')
+            ->groupBy('users.id')
+            ->havingRaw('COUNT(maintenance_logs.id) >= ?', [$minimumLogs])
+            ->get()
+            ->count();
+    }
+
+    private function sourceLabel(array $row): string
+    {
+        if (filled($row['utm_source'])) {
+            return (string) $row['utm_source'];
+        }
+
+        if (filled($row['registration_source'])) {
+            return (string) $row['registration_source'];
+        }
+
+        if (filled($row['referrer_host'])) {
+            return (string) $row['referrer_host'];
+        }
+
+        return 'direct/unknown';
+    }
+
+    private function mediumLabel(array $row): string
+    {
+        if (filled($row['utm_medium'])) {
+            return (string) $row['utm_medium'];
+        }
+
+        if (filled($row['registration_source'])) {
+            return 'partner';
+        }
+
+        if (filled($row['referrer_host'])) {
+            return 'referral';
+        }
+
+        return '—';
+    }
+
+    private function campaignLabel(array $row): string
+    {
+        return filled($row['utm_campaign']) ? (string) $row['utm_campaign'] : '—';
+    }
+
+    private function matchesPartner(string $partner, array $row): bool
+    {
+        $needles = array_filter([
+            mb_strtolower((string) ($row['utm_source'] ?? '')),
+            mb_strtolower((string) ($row['utm_campaign'] ?? '')),
+            mb_strtolower((string) ($row['registration_source'] ?? '')),
+            mb_strtolower((string) ($row['referrer_host'] ?? '')),
+        ]);
+
+        foreach ($needles as $needle) {
+            if (str_contains($needle, mb_strtolower($partner))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function referrerHost(?string $referrer): ?string
+    {
+        if (! filled($referrer)) {
+            return null;
+        }
+
+        $host = parse_url($referrer, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : null;
+    }
+
+    private function hasTable(string $table): bool
+    {
+        if (! array_key_exists($table, $this->tablePresence)) {
+            $this->tablePresence[$table] = Schema::hasTable($table);
+        }
+
+        return $this->tablePresence[$table];
+    }
+}

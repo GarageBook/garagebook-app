@@ -6,6 +6,7 @@ use App\Filament\Auth\GeratelRegister;
 use App\Filament\Auth\Register;
 use App\Filament\Pages\AnalyticsDashboard;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\GrowthDashboard;
 use App\Filament\Pages\LocalizationOverview;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
@@ -53,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 Timeline::class,
                 AnalyticsDashboard::class,
+                GrowthDashboard::class,
                 LocalizationOverview::class,
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
