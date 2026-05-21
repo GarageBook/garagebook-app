@@ -13,8 +13,8 @@ class AnalyticsAttributionTest extends TestCase
     public function test_first_touch_utm_parameters_are_captured_in_session(): void
     {
         $this->withHeader('referer', 'https://garagebook.nl/blogs/onderhoud')
-            ->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id')
-            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id');
+            ->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id&_gl=test123')
+            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id&_gl=test123');
 
         $this->assertSame([
             'utm_source' => 'google',

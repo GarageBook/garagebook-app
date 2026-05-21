@@ -5,6 +5,7 @@ use App\Models\Page;
 use App\Models\Vehicle;
 use App\Models\Blog;
 use App\Http\Controllers\PublicGarageController;
+use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicImageController;
 use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleDocumentController;
@@ -21,16 +22,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/start', function () {
-    $queryString = request()->server('QUERY_STRING');
-    $targetUrl = '/admin/register';
+Route::get('/start', StartRedirectController::class);
 
-    if ($queryString) {
-        $targetUrl .= '?'.$queryString;
-    }
-
-    return redirect($targetUrl, 302);
-});
 
 Route::get('/website', function () {
     return redirect('/', 301);
