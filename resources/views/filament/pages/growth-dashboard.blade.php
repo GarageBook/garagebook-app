@@ -41,14 +41,9 @@
 
             @livewire(\App\Filament\Widgets\GrowthSeoIntelligenceWidget::class)
 
-            <div class="grid gap-8 xl:grid-cols-2 2xl:grid-cols-2">
-                <div class="xl:col-span-2 2xl:col-span-2">
-                    @livewire(\App\Filament\Widgets\GrowthLandingPageConversionWidget::class)
-                </div>
-
-                <div class="xl:col-span-2 2xl:col-span-2">
-                    @livewire(\App\Filament\Widgets\GrowthProductActivationFunnelWidget::class)
-                </div>
+            <div class="grid gap-8 xl:grid-cols-[1.05fr,0.95fr]">
+                @livewire(\App\Filament\Widgets\GrowthLandingPageConversionWidget::class)
+                @livewire(\App\Filament\Widgets\GrowthProductActivationFunnelWidget::class)
             </div>
 
             @livewire(\App\Filament\Widgets\GrowthRecentActivityWidget::class)

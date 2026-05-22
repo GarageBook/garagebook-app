@@ -11,7 +11,12 @@ class GrowthProductActivationFunnelWidget extends Widget
 
     protected string $view = 'filament.widgets.growth-product-activation-funnel-widget';
 
-    protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = [
+        'default' => 1,
+        'md' => 2,
+        'xl' => 2,
+        '2xl' => 2,
+    ];
 
     public static function canView(): bool
     {
