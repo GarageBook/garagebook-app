@@ -1,52 +1,67 @@
 <x-filament-widgets::widget>
-    <x-filament::section
-        heading="Acquisitie"
-        :description="$disclaimer"
-        icon="heroicon-o-megaphone"
-        compact
-    >
-        <div class="space-y-4">
-            <div class="flex justify-end">
-                <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+    <section class="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/5">
+        <div class="space-y-6 p-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div class="flex items-start gap-3">
+                    <span class="inline-flex rounded-2xl bg-amber-50 p-3 text-amber-700 ring-1 ring-amber-200">
+                        <x-filament::icon icon="heroicon-o-megaphone" class="h-5 w-5" />
+                    </span>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-semibold text-slate-950">Acquisitie</h3>
+                        <p class="text-sm text-slate-500">{{ $disclaimer }}</p>
+                    </div>
+                </div>
+
+                <span class="inline-flex items-center rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
                     {{ $disclaimer }}
                 </span>
             </div>
 
             @if (count($rows) === 0)
-                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center dark:border-white/10 dark:bg-white/5">
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200">Nog geen attributionregistraties beschikbaar.</p>
-                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Acquisitiegegevens verschijnen zodra attributiedata is opgeslagen.</p>
+                <div class="rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                    <p class="text-sm font-semibold text-slate-700">Nog geen attributionregistraties beschikbaar.</p>
+                    <p class="mt-2 text-sm text-slate-500">Acquisitiegegevens verschijnen zodra attributiedata is opgeslagen.</p>
                 </div>
             @else
-                <div class="overflow-x-auto rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
-                    <table class="min-w-full table-auto divide-y divide-slate-200 text-sm dark:divide-white/10">
-                        <thead class="bg-slate-50/90 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                            <tr>
-                                <th class="px-4 py-3">Source</th>
-                                <th class="px-4 py-3">Medium</th>
-                                <th class="px-4 py-3">Campaign</th>
-                                <th class="px-4 py-3 text-right">Users / visits</th>
-                                <th class="px-4 py-3 text-right">Registraties</th>
-                                <th class="px-4 py-3 text-right">Conversieratio</th>
-                                <th class="px-4 py-3">Laatste activiteit</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white dark:divide-white/5 dark:bg-transparent">
-                            @foreach ($rows as $row)
-                                <tr class="align-top text-slate-700 transition hover:bg-slate-50/70 dark:text-slate-200 dark:hover:bg-white/[0.03]">
-                                    <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ $row['source'] ?: '—' }}</td>
-                                    <td class="px-4 py-3">{{ $row['medium'] ?: '—' }}</td>
-                                    <td class="px-4 py-3">{{ $row['campaign'] ?: '—' }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ $row['visits'] === null ? '—' : number_format($row['visits'], 0, ',', '.') }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['registrations'], 0, ',', '.') }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ $row['conversion_rate'] === null ? '—' : number_format($row['conversion_rate'], 1, ',', '.') . '%' }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">{{ $row['latest_activity'] ?? '—' }}</td>
+                <div class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-50/70">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full table-fixed divide-y divide-slate-200 text-sm">
+                            <thead class="bg-white text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                <tr>
+                                    <th class="w-[14%] px-4 py-3">Source</th>
+                                    <th class="w-[14%] px-4 py-3">Medium</th>
+                                    <th class="w-[22%] px-4 py-3">Campaign</th>
+                                    <th class="w-[12%] px-4 py-3 text-right">Users / visits</th>
+                                    <th class="w-[12%] px-4 py-3 text-right">Registraties</th>
+                                    <th class="w-[12%] px-4 py-3 text-right">Conversieratio</th>
+                                    <th class="w-[14%] px-4 py-3">Laatste activiteit</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 bg-white">
+                                @foreach (collect($rows)->take(8) as $row)
+                                    <tr class="align-top text-slate-700 transition hover:bg-slate-50/80">
+                                        <td class="px-4 py-3 font-medium text-slate-900">
+                                            <span class="block truncate">{{ $row['source'] ?: '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="block truncate">{{ $row['medium'] ?: '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="block truncate">{{ $row['campaign'] ?: '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ $row['visits'] === null ? '—' : number_format($row['visits'], 0, ',', '.') }}</td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['registrations'], 0, ',', '.') }}</td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ $row['conversion_rate'] === null ? '—' : number_format($row['conversion_rate'], 1, ',', '.') . '%' }}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="block truncate">{{ $row['latest_activity'] ?? '—' }}</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             @endif
         </div>
-    </x-filament::section>
+    </section>
 </x-filament-widgets::widget>

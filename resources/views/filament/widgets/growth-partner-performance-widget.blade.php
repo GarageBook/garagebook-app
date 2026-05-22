@@ -1,50 +1,63 @@
 <x-filament-widgets::widget>
-    <x-filament::section
-        heading="Partner performance"
-        description="Partner- en PR-bronnen op basis van lokaal opgeslagen attribution data en registration sources."
-        icon="heroicon-o-users"
-        compact
-    >
-        <div class="space-y-4">
-            <div class="flex justify-end">
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-white/5 dark:text-slate-300">
+    <section class="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/5">
+        <div class="space-y-6 p-6">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div class="flex items-start gap-3">
+                    <span class="inline-flex rounded-2xl bg-slate-100 p-3 text-slate-700">
+                        <x-filament::icon icon="heroicon-o-users" class="h-5 w-5" />
+                    </span>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-semibold text-slate-950">Partner performance</h3>
+                        <p class="text-sm text-slate-500">Partner- en PR-bronnen op basis van lokaal opgeslagen attribution data en registration sources.</p>
+                    </div>
+                </div>
+
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                     PR / partners
                 </span>
             </div>
 
             @if (count($rows) === 0)
-                <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center dark:border-white/10 dark:bg-white/5">
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200">Nog geen data beschikbaar</p>
-                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Partnerperformance wordt zichtbaar zodra registraties aan bekende bronnen gekoppeld zijn.</p>
+                <div class="rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                    <p class="text-sm font-semibold text-slate-700">Nog geen data beschikbaar</p>
+                    <p class="mt-2 text-sm text-slate-500">Partnerperformance wordt zichtbaar zodra registraties aan bekende bronnen gekoppeld zijn.</p>
                 </div>
             @else
-                <div class="overflow-x-auto rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
-                    <table class="min-w-full table-auto divide-y divide-slate-200 text-sm dark:divide-white/10">
-                        <thead class="bg-slate-50/90 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                            <tr>
-                                <th class="px-4 py-3">Partner / source</th>
-                                <th class="px-4 py-3 text-right">Clicks / bezoeken</th>
-                                <th class="px-4 py-3 text-right">Registraties</th>
-                                <th class="px-4 py-3 text-right">Conversieratio</th>
-                                <th class="px-4 py-3">Laatste registratie</th>
-                                <th class="px-4 py-3">Opmerking / status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white dark:divide-white/5 dark:bg-transparent">
-                            @foreach ($rows as $row)
-                                <tr class="align-top text-slate-700 transition hover:bg-slate-50/70 dark:text-slate-200 dark:hover:bg-white/[0.03]">
-                                    <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{{ $row['partner'] }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ $row['visits'] === null ? '—' : number_format($row['visits'], 0, ',', '.') }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['registrations'], 0, ',', '.') }}</td>
-                                    <td class="px-4 py-3 text-right tabular-nums">{{ $row['conversion_rate'] === null ? '—' : number_format($row['conversion_rate'], 1, ',', '.') . '%' }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">{{ $row['latest_registration'] ?? '—' }}</td>
-                                    <td class="px-4 py-3">{{ $row['status'] ?: '—' }}</td>
+                <div class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-50/70">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full table-fixed divide-y divide-slate-200 text-sm">
+                            <thead class="bg-white text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                <tr>
+                                    <th class="w-[24%] px-4 py-3">Partner / source</th>
+                                    <th class="w-[14%] px-4 py-3 text-right">Clicks / bezoeken</th>
+                                    <th class="w-[12%] px-4 py-3 text-right">Registraties</th>
+                                    <th class="w-[12%] px-4 py-3 text-right">Conversieratio</th>
+                                    <th class="w-[16%] px-4 py-3">Laatste registratie</th>
+                                    <th class="w-[22%] px-4 py-3">Opmerking / status</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 bg-white">
+                                @foreach (collect($rows)->take(8) as $row)
+                                    <tr class="align-top text-slate-700 transition hover:bg-slate-50/80">
+                                        <td class="px-4 py-3 font-medium text-slate-900">
+                                            <span class="block truncate">{{ $row['partner'] ?: '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ $row['visits'] === null ? '—' : number_format($row['visits'], 0, ',', '.') }}</td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['registrations'], 0, ',', '.') }}</td>
+                                        <td class="px-4 py-3 text-right tabular-nums">{{ $row['conversion_rate'] === null ? '—' : number_format($row['conversion_rate'], 1, ',', '.') . '%' }}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="block truncate">{{ $row['latest_registration'] ?? '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="block truncate">{{ $row['status'] ?: '—' }}</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             @endif
         </div>
-    </x-filament::section>
+    </section>
 </x-filament-widgets::widget>
