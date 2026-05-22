@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    <div class="-mx-4 space-y-8 rounded-[2rem] bg-slate-100/80 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div class="-mx-4 space-y-8 overflow-x-hidden rounded-[2rem] bg-slate-100/80 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <section class="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/5">
             <div class="flex flex-col gap-6 px-6 py-7 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
                 <div class="max-w-3xl space-y-4">
