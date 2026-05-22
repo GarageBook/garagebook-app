@@ -109,15 +109,24 @@ class SyncSearchConsoleCommandTest extends TestCase
         $this->assertSame(1, SearchConsolePage::query()->count());
     }
 
-    public function test_command_defaults_to_three_days_ago_when_no_date_options_are_given(): void
+    public function test_command_defaults_to_a_recent_rolling_window_when_no_date_options_are_given(): void
     {
         CarbonImmutable::setTestNow('2026-05-14 10:00:00');
 
+        $expectedDates = [
+            '2026-05-07',
+            '2026-05-08',
+            '2026-05-09',
+            '2026-05-10',
+            '2026-05-11',
+            '2026-05-12',
+        ];
+
         $service = Mockery::mock(SearchConsoleService::class);
         $service->shouldReceive('isConfigured')->once()->andReturn(true);
-        $service->shouldReceive('fetchDailySummary')->once()->withArgs(fn ($date) => $date->toDateString() === '2026-05-11')->andReturn(null);
-        $service->shouldReceive('fetchTopQueries')->once()->withArgs(fn ($date, $limit) => $date->toDateString() === '2026-05-11' && $limit === 25)->andReturn([]);
-        $service->shouldReceive('fetchTopPages')->once()->withArgs(fn ($date, $limit) => $date->toDateString() === '2026-05-11' && $limit === 25)->andReturn([]);
+        $service->shouldReceive('fetchDailySummary')->times(count($expectedDates))->withArgs(fn ($date) => in_array($date->toDateString(), $expectedDates, true))->andReturn(null);
+        $service->shouldReceive('fetchTopQueries')->times(count($expectedDates))->withArgs(fn ($date, $limit) => in_array($date->toDateString(), $expectedDates, true) && $limit === 25)->andReturn([]);
+        $service->shouldReceive('fetchTopPages')->times(count($expectedDates))->withArgs(fn ($date, $limit) => in_array($date->toDateString(), $expectedDates, true) && $limit === 25)->andReturn([]);
 
         $this->app->instance(SearchConsoleService::class, $service);
 

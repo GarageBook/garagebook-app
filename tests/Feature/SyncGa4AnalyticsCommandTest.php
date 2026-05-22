@@ -86,14 +86,14 @@ class SyncGa4AnalyticsCommandTest extends TestCase
         $this->assertSame(1, AnalyticsTopPage::query()->count());
     }
 
-    public function test_command_defaults_to_yesterday_when_no_date_options_are_given(): void
+    public function test_command_defaults_to_today_and_yesterday_when_no_date_options_are_given(): void
     {
         CarbonImmutable::setTestNow('2026-05-14 10:00:00');
 
         $service = Mockery::mock(Ga4AnalyticsService::class);
         $service->shouldReceive('isConfigured')->once()->andReturn(true);
-        $service->shouldReceive('fetchDailySummary')->once()->withArgs(fn ($date) => $date->toDateString() === '2026-05-13')->andReturn(null);
-        $service->shouldReceive('fetchTopPages')->once()->withArgs(fn ($date, $limit) => $date->toDateString() === '2026-05-13' && $limit === 25)->andReturn([]);
+        $service->shouldReceive('fetchDailySummary')->twice()->withArgs(fn ($date) => in_array($date->toDateString(), ['2026-05-13', '2026-05-14'], true))->andReturn(null);
+        $service->shouldReceive('fetchTopPages')->twice()->withArgs(fn ($date, $limit) => in_array($date->toDateString(), ['2026-05-13', '2026-05-14'], true) && $limit === 25)->andReturn([]);
 
         $this->app->instance(Ga4AnalyticsService::class, $service);
 

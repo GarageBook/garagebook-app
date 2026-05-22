@@ -75,15 +75,16 @@ class SyncSearchConsoleCommand extends Command
      */
     private function resolveDateRange(): array
     {
-        $defaultDate = CarbonImmutable::today()->subDays(3);
+        $defaultFrom = CarbonImmutable::today()->subDays(7);
+        $defaultTo = CarbonImmutable::today()->subDays(2);
 
         $from = $this->option('from')
             ? CarbonImmutable::parse((string) $this->option('from'))->startOfDay()
-            : $defaultDate->startOfDay();
+            : $defaultFrom->startOfDay();
 
         $to = $this->option('to')
             ? CarbonImmutable::parse((string) $this->option('to'))->startOfDay()
-            : $from;
+            : $defaultTo->startOfDay();
 
         if ($to->lt($from)) {
             [$from, $to] = [$to, $from];

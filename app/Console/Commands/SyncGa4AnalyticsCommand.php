@@ -27,7 +27,7 @@ class SyncGa4AnalyticsCommand extends Command
             return self::SUCCESS;
         }
 
-        [$from, $to] = $this->resolveDateRange(defaultOffsetDays: 1);
+        [$from, $to] = $this->resolveDateRange(defaultOffsetDays: 2);
 
         if ($this->option('debug-response')) {
             $this->line('GA4 debug response');
@@ -79,15 +79,16 @@ class SyncGa4AnalyticsCommand extends Command
      */
     private function resolveDateRange(int $defaultOffsetDays): array
     {
-        $defaultDate = CarbonImmutable::yesterday()->subDays($defaultOffsetDays - 1);
+        $defaultFrom = CarbonImmutable::today()->subDays($defaultOffsetDays - 1);
+        $defaultTo = CarbonImmutable::today();
 
         $from = $this->option('from')
             ? CarbonImmutable::parse((string) $this->option('from'))->startOfDay()
-            : $defaultDate->startOfDay();
+            : $defaultFrom->startOfDay();
 
         $to = $this->option('to')
             ? CarbonImmutable::parse((string) $this->option('to'))->startOfDay()
-            : $from;
+            : $defaultTo->startOfDay();
 
         if ($to->lt($from)) {
             [$from, $to] = [$to, $from];
