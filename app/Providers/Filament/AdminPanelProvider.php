@@ -47,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
             })
             ->passwordReset()
             ->defaultThemeMode(ThemeMode::Light)
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors([
                 'primary' => '#ffd200',
             ])
