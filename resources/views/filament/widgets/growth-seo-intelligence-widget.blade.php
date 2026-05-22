@@ -48,29 +48,31 @@
 
 <x-filament-widgets::widget>
     <section class="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/5">
-        <div class="space-y-6 p-6">
+        <div class="border-b border-slate-200/80 px-6 py-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div class="flex items-start gap-3">
                     <span class="inline-flex rounded-2xl bg-emerald-50 p-3 text-emerald-700 ring-1 ring-emerald-200">
                         <x-filament::icon icon="heroicon-o-globe-alt" class="h-5 w-5" />
                     </span>
-                    <div class="space-y-1">
+                    <div>
                         <h3 class="text-base font-semibold text-slate-950">SEO intelligence</h3>
-                        <p class="max-w-3xl text-sm text-slate-500">Zoekgedrag en contentkansen uit lokaal opgeslagen Search Console data, zonder live API-calls.</p>
+                        <p class="mt-1 max-w-3xl text-sm text-slate-500">Zoekgedrag en contentkansen uit lokaal opgeslagen Search Console data, zonder live API-calls.</p>
                     </div>
                 </div>
 
-                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
                     Search Console snapshots
                 </span>
             </div>
+        </div>
 
+        <div class="px-6 py-6">
             <div class="grid gap-6 xl:grid-cols-2">
                 @foreach ($sections as $section)
-                    <article class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-50/70 shadow-sm {{ $section['span'] ?? '' }}">
-                        <div class="flex flex-col gap-1 border-b border-slate-200/80 bg-white/80 px-5 py-4">
+                    <article class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-sm {{ $section['span'] ?? '' }}">
+                        <div class="border-b border-slate-200/80 px-5 py-4">
                             <h4 class="text-sm font-semibold text-slate-900">{{ $section['title'] }}</h4>
-                            <p class="text-sm text-slate-500">{{ $section['subtitle'] }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ $section['subtitle'] }}</p>
                         </div>
 
                         @if (count($section['rows']) === 0)
@@ -93,9 +95,7 @@
                                     <tbody class="divide-y divide-slate-200 bg-white">
                                         @foreach (collect($section['rows'])->take(8) as $row)
                                             <tr class="align-top text-slate-700 transition hover:bg-slate-50/80">
-                                                <td class="px-4 py-3 font-medium text-slate-900">
-                                                    <span class="block truncate">{{ $row[$section['value_key']] ?: '—' }}</span>
-                                                </td>
+                                                <td class="px-4 py-3 font-medium text-slate-900"><span class="block truncate">{{ $row[$section['value_key']] ?: '—' }}</span></td>
                                                 <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['clicks'], 0, ',', '.') }}</td>
                                                 <td class="px-4 py-3 text-right tabular-nums">{{ number_format($row['impressions'], 0, ',', '.') }}</td>
                                                 <td class="px-4 py-3 text-right tabular-nums">{{ $row['ctr'] === null ? '—' : number_format($row['ctr'], 2, ',', '.') . '%' }}</td>
