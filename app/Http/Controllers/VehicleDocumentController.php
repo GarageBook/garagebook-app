@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\VehicleDocument;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -38,6 +40,11 @@ class VehicleDocumentController extends Controller
     private function authorizeDocument(VehicleDocument $document): void
     {
         abort_unless(auth()->check(), 403);
-        abort_unless($document->vehicle()->where('user_id', auth()->id())->exists(), 404);
+
+        try {
+            Gate::authorize('view', $document);
+        } catch (AuthorizationException) {
+            abort(404);
+        }
     }
 }

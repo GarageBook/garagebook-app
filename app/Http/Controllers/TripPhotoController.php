@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\TripLog;
 use App\Support\MediaPath;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -12,7 +14,12 @@ class TripPhotoController extends Controller
     public function show(TripLog $trip, int $photoIndex): BinaryFileResponse
     {
         abort_unless(auth()->check(), 403);
-        abort_unless($trip->vehicle()->where('user_id', auth()->id())->exists(), 404);
+
+        try {
+            Gate::authorize('view', $trip);
+        } catch (AuthorizationException) {
+            abort(404);
+        }
 
         $photos = collect($trip->photos)
             ->filter(fn (mixed $path) => is_string($path) && filled($path) && MediaPath::isImage($path))
