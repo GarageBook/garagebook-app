@@ -12,17 +12,38 @@
 <script>
     window.dataLayer = window.dataLayer || [];
     window.garagebookAnalyticsEvents = window.garagebookAnalyticsEvents || [];
+    window.garagebookTrackState = window.garagebookTrackState || {
+        lastPageViewKey: null,
+        lastPageViewAt: 0,
+        livewireListenerRegistered: false,
+    };
 
     window.garagebookTrack = window.garagebookTrack || function (eventName, params = {}) {
         if (typeof eventName !== 'string' || eventName === '') {
             return;
         }
 
+        const now = Date.now();
+
         const payload = {
             page_location: window.location.href,
             page_path: window.location.pathname,
             ...(params && typeof params === 'object' ? params : {}),
         };
+
+        if (eventName === 'page_view') {
+            const dedupeKey = `${payload.page_location}|${payload.page_path}`;
+
+            if (
+                window.garagebookTrackState.lastPageViewKey === dedupeKey &&
+                now - window.garagebookTrackState.lastPageViewAt < 1500
+            ) {
+                return;
+            }
+
+            window.garagebookTrackState.lastPageViewKey = dedupeKey;
+            window.garagebookTrackState.lastPageViewAt = now;
+        }
 
         try {
             if (window.google_tag_manager && Array.isArray(window.dataLayer)) {
@@ -51,9 +72,13 @@
         }
     };
 
-    document.addEventListener('livewire:navigated', () => {
-        window.garagebookTrack('page_view');
-    });
+    if (!window.garagebookTrackState.livewireListenerRegistered) {
+        document.addEventListener('livewire:navigated', () => {
+            window.garagebookTrack('page_view');
+        });
+
+        window.garagebookTrackState.livewireListenerRegistered = true;
+    }
 
     (() => {
         const analyticsEvents = @json($analyticsEvents);
