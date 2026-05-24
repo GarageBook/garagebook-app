@@ -51,6 +51,10 @@
         }
     };
 
+    document.addEventListener('livewire:navigated', () => {
+        window.garagebookTrack('page_view');
+    });
+
     (() => {
         const analyticsEvents = @json($analyticsEvents);
 

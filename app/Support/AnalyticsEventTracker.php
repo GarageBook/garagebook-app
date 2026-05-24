@@ -18,7 +18,7 @@ class AnalyticsEventTracker
 
     public function queueRegisterStart(?array $attribution = null): void
     {
-        $this->queue('register_start', [
+        $this->queue('registration_started', [
             'page_location' => request()->fullUrl(),
             'page_path' => request()->getPathInfo(),
             'utm_source' => Arr::get($attribution, 'utm_source'),
@@ -37,7 +37,7 @@ class AnalyticsEventTracker
             $params['registration_source'] = $registrationSource;
         }
 
-        $this->queue('sign_up', $params);
+        $this->queue('registration_completed', $params);
     }
 
     public function queueLogin(string $method = 'email'): void
@@ -59,6 +59,29 @@ class AnalyticsEventTracker
     {
         $this->queue('maintenance_log_created', [
             'source' => 'filament',
+        ]);
+    }
+
+    public function queueReminderCreated(Vehicle $vehicle, string $type): void
+    {
+        $this->queue('reminder_created', [
+            'source' => 'filament',
+            'type' => $type,
+            'vehicle_id' => $vehicle->id,
+        ]);
+    }
+
+    public function queuePublicVehiclePageViewed(Vehicle $vehicle): void
+    {
+        $this->queue('public_vehicle_page_viewed', [
+            'vehicle_id' => $vehicle->id,
+        ]);
+    }
+
+    public function queueExportClicked(string $type): void
+    {
+        $this->queue('export_clicked', [
+            'type' => $type,
         ]);
     }
 

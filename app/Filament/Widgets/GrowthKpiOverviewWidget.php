@@ -26,6 +26,15 @@ class GrowthKpiOverviewWidget extends StatsOverviewWidget
         return auth()->user()?->isAdmin() ?? false;
     }
 
+    protected function getViewData(): array
+    {
+        $data = app(GrowthDashboardData::class)->kpiOverview();
+
+        return [
+            'is_analytics_incomplete' => $data['is_analytics_incomplete'] ?? false,
+        ];
+    }
+
     protected function getStats(): array
     {
         $cards = app(GrowthDashboardData::class)->kpiOverview()['cards'];

@@ -9,6 +9,7 @@ use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
+use App\Support\AnalyticsEventTracker;
 use App\Support\Growth\GrowthDashboardData;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -28,6 +29,8 @@ class GrowthDashboard extends Page
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(function () {
+                    app(AnalyticsEventTracker::class)->queueExportClicked('growth');
+
                     return response()->streamDownload(function () {
                         echo "\xEF\xBB\xBF"; // UTF-8 BOM
                         $handle = fopen('php://output', 'w');

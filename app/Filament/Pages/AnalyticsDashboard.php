@@ -7,6 +7,7 @@ use App\Models\AnalyticsTopPage;
 use App\Models\SearchConsoleDailySummary;
 use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
+use App\Support\AnalyticsEventTracker;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -28,6 +29,8 @@ class AnalyticsDashboard extends Page
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(function () {
+                    app(AnalyticsEventTracker::class)->queueExportClicked('analytics');
+
                     return response()->streamDownload(function () {
                         echo "\xEF\xBB\xBF"; // UTF-8 BOM
                         $handle = fopen('php://output', 'w');

@@ -57,11 +57,19 @@ class GrowthDashboardData
             ->latest('created_at')
             ->first();
 
-        $conversionRateThirtyDays = filled($visitorCounts['thirty_days']) && $visitorCounts['thirty_days'] > 0
-            ? round(($registrationsThirtyDays / $visitorCounts['thirty_days']) * 100, 2)
-            : null;
+        $conversionRateThirtyDays = null;
+        if (filled($visitorCounts['thirty_days']) && $visitorCounts['thirty_days'] >= 10) {
+            $conversionRateThirtyDays = round(($registrationsThirtyDays / $visitorCounts['thirty_days']) * 100, 2);
+            // Cap at 100% if data is inconsistent
+            if ($conversionRateThirtyDays > 100) {
+                $conversionRateThirtyDays = 100;
+            }
+        }
+
+        $isAnalyticsIncomplete = $registrationsThirtyDays > 0 && ($visitorCounts['thirty_days'] ?? 0) < $registrationsThirtyDays;
 
         return [
+            'is_analytics_incomplete' => $isAnalyticsIncomplete,
             'cards' => [
                 [
                     'label' => 'Bezoekers vandaag',

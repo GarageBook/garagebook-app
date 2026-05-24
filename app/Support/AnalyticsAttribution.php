@@ -12,7 +12,7 @@ class AnalyticsAttribution
 
     public function captureFromRequest(Request $request): void
     {
-        if (! $request->hasSession() || $request->session()->has(self::SESSION_KEY)) {
+        if (! $request->hasSession()) {
             return;
         }
 
@@ -20,6 +20,12 @@ class AnalyticsAttribution
 
         if ($payload === null) {
             return;
+        }
+
+        $existing = $request->session()->get(self::SESSION_KEY);
+
+        if (is_array($existing)) {
+            $payload = array_merge($existing, $payload);
         }
 
         $request->session()->put(self::SESSION_KEY, $payload);

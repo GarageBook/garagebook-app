@@ -32,4 +32,22 @@ class CreateMaintenanceLog extends CreateRecord
         app(AnalyticsEventTracker::class)->queueMaintenanceLogCreated($this->record);
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
+
+    public function getHeading(): string
+    {
+        if (request()->query('onboarding') === '1') {
+            return 'Voeg je eerste onderhoud toe';
+        }
+
+        return parent::getHeading();
+    }
+
+    public function getSubheading(): ?string
+    {
+        if (request()->query('onboarding') === '1') {
+            return 'Gefeliciteerd! Je voertuig is toegevoegd. Leg nu je laatste onderhoud vast om je historie te starten en de waarde van je motor te borgen.';
+        }
+
+        return parent::getSubheading();
+    }
 }

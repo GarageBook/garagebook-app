@@ -414,7 +414,7 @@ class AnalyticsEventTrackingTest extends TestCase
         );
     }
 
-    public function test_register_page_renders_register_start_with_safe_utm_params(): void
+    public function test_register_page_renders_registration_started_with_safe_utm_params(): void
     {
         $this->app['env'] = 'production';
 
@@ -424,7 +424,7 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->get('/admin/register?utm_source=garagebook&utm_medium=referral&utm_campaign=spring_launch&utm_content=hero&utm_term=garagebook')
             ->assertOk()
-            ->assertSee('register_start', false)
+            ->assertSee('registration_started', false)
             ->assertSee('"utm_source":"garagebook"', false)
             ->assertSee('"utm_medium":"referral"', false)
             ->assertSee('"utm_campaign":"spring_launch"', false)
@@ -432,7 +432,7 @@ class AnalyticsEventTrackingTest extends TestCase
             ->assertSee('"page_location"', false);
     }
 
-    public function test_register_start_queue_only_keeps_safe_marketing_params(): void
+    public function test_registration_started_queue_only_keeps_safe_marketing_params(): void
     {
         session()->start();
 
@@ -449,23 +449,23 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);
 
-        $this->assertSessionEventNames($events, ['register_start']);
-        $this->assertSame('/admin/register', $this->eventParams($events, 'register_start')['page_path'] ?? null);
-        $this->assertSame('garagebook', $this->eventParams($events, 'register_start')['utm_source'] ?? null);
-        $this->assertSame('referral', $this->eventParams($events, 'register_start')['utm_medium'] ?? null);
-        $this->assertSame('spring_launch', $this->eventParams($events, 'register_start')['utm_campaign'] ?? null);
-        $this->assertStringContainsString('/admin/register?', $this->eventParams($events, 'register_start')['page_location'] ?? '');
-        $this->assertStringContainsString('utm_source=garagebook', $this->eventParams($events, 'register_start')['page_location'] ?? '');
-        $this->assertStringContainsString('utm_medium=referral', $this->eventParams($events, 'register_start')['page_location'] ?? '');
-        $this->assertStringContainsString('utm_campaign=spring_launch', $this->eventParams($events, 'register_start')['page_location'] ?? '');
+        $this->assertSessionEventNames($events, ['registration_started']);
+        $this->assertSame('/admin/register', $this->eventParams($events, 'registration_started')['page_path'] ?? null);
+        $this->assertSame('garagebook', $this->eventParams($events, 'registration_started')['utm_source'] ?? null);
+        $this->assertSame('referral', $this->eventParams($events, 'registration_started')['utm_medium'] ?? null);
+        $this->assertSame('spring_launch', $this->eventParams($events, 'registration_started')['utm_campaign'] ?? null);
+        $this->assertStringContainsString('/admin/register?', $this->eventParams($events, 'registration_started')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_source=garagebook', $this->eventParams($events, 'registration_started')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_medium=referral', $this->eventParams($events, 'registration_started')['page_location'] ?? '');
+        $this->assertStringContainsString('utm_campaign=spring_launch', $this->eventParams($events, 'registration_started')['page_location'] ?? '');
 
         $this->assertPayloadDoesNotContainKeys(
-            $this->eventParams($events, 'register_start'),
+            $this->eventParams($events, 'registration_started'),
             ['utm_content', 'utm_term', 'source_url', 'user_id_hash', 'email', 'name']
         );
     }
 
-    public function test_registration_success_queues_sign_up_after_successful_user_creation(): void
+    public function test_registration_success_queues_registration_completed_after_successful_user_creation(): void
     {
         session()->start();
 
@@ -503,17 +503,17 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);
 
-        $this->assertSessionEventNames($events, ['login', 'sign_up']);
+        $this->assertSessionEventNames($events, ['login', 'registration_completed']);
         $this->assertSame(['method' => 'email'], $this->eventParams($events, 'login'));
-        $this->assertSame(['method' => 'email'], $this->eventParams($events, 'sign_up'));
+        $this->assertSame(['method' => 'email'], $this->eventParams($events, 'registration_completed'));
 
         $this->assertPayloadDoesNotContainKeys(
-            $this->eventParams($events, 'sign_up'),
+            $this->eventParams($events, 'registration_completed'),
             ['email', 'name', 'user_id', 'user_id_hash', 'source_url', 'utm_content', 'utm_term', 'utm_source', 'utm_medium', 'utm_campaign', 'registration_source']
         );
     }
 
-    public function test_geratel_registration_success_queues_sign_up_with_registration_source(): void
+    public function test_geratel_registration_success_queues_registration_completed_with_registration_source(): void
     {
         session()->start();
 
@@ -533,16 +533,16 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);
 
-        $this->assertSessionEventNames($events, ['login', 'sign_up']);
-        $this->assertSame(['method' => 'email', 'registration_source' => 'geratel'], $this->eventParams($events, 'sign_up'));
+        $this->assertSessionEventNames($events, ['login', 'registration_completed']);
+        $this->assertSame(['method' => 'email', 'registration_source' => 'geratel'], $this->eventParams($events, 'registration_completed'));
 
         $this->assertPayloadDoesNotContainKeys(
-            $this->eventParams($events, 'sign_up'),
+            $this->eventParams($events, 'registration_completed'),
             ['email', 'name', 'user_id', 'user_id_hash', 'source_url', 'utm_content', 'utm_term', 'utm_source', 'utm_medium', 'utm_campaign']
         );
     }
 
-    public function test_registration_validation_errors_do_not_queue_sign_up(): void
+    public function test_registration_validation_errors_do_not_queue_registration_completed(): void
     {
         session()->start();
 
@@ -559,7 +559,7 @@ class AnalyticsEventTrackingTest extends TestCase
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);
 
         $this->assertSessionEventNames($events, []);
-        $this->assertNull($this->eventParams($events, 'sign_up'));
+        $this->assertNull($this->eventParams($events, 'registration_completed'));
     }
 
     public function test_consume_pulls_queued_events_once(): void
@@ -662,6 +662,14 @@ class AnalyticsEventTrackingTest extends TestCase
     private function assertSessionEventNames(array $events, array $expectedNames): void
     {
         $this->assertSame($expectedNames, array_map(
+            fn (array $event): string => $event['name'],
+            $events,
+        ));
+    }
+
+    private function assertSessionEventName(array $events, string $expectedName): void
+    {
+        $this->assertContains($expectedName, array_map(
             fn (array $event): string => $event['name'],
             $events,
         ));

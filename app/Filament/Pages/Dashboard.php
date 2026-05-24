@@ -10,6 +10,7 @@ use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use App\Filament\Widgets\CumulativeCostTrendChart;
+use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -65,6 +66,7 @@ class Dashboard extends BaseDashboard
         }
 
         return $schema->components([
+            Livewire::make(DashboardOnboardingWidget::class),
             Grid::make([
                 'md' => 2,
             ])->schema([

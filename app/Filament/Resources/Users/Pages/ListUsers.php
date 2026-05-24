@@ -7,6 +7,7 @@ use App\Filament\Resources\Users\Widgets\UserActivationStats;
 use App\Filament\Resources\Users\Widgets\UserGrowthChart;
 use App\Filament\Resources\Users\Widgets\UserRetentionStats;
 use App\Models\User;
+use App\Support\AnalyticsEventTracker;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -23,6 +24,8 @@ class ListUsers extends ListRecords
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(function () {
+                    app(AnalyticsEventTracker::class)->queueExportClicked('users');
+
                     return response()->streamDownload(function () {
                         echo "\xEF\xBB\xBF"; // UTF-8 BOM
                         $handle = fopen('php://output', 'w');

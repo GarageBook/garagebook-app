@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Vehicles\Pages;
 
+use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Services\DistanceUnitService;
 use App\Support\AnalyticsEventTracker;
@@ -27,6 +28,14 @@ class CreateVehicle extends CreateRecord
         );
 
         return $data;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return MaintenanceLogResource::getUrl('create', [
+            'vehicle_id' => $this->record->id,
+            'onboarding' => 1,
+        ]);
     }
 
     protected function afterCreate(): void

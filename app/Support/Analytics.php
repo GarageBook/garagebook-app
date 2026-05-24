@@ -13,7 +13,7 @@ class Analytics
 
     public static function frontendTrackingEnabled(): bool
     {
-        return self::ga4Enabled() || app()->environment('local');
+        return self::ga4Enabled();
     }
 
     public static function frontendDebugEnabled(): bool
