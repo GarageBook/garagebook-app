@@ -12,6 +12,7 @@ Treat these areas as high-risk and validate them carefully before and after chan
 - tests and regression coverage
 - CSS consistency between public app and Filament admin
 - domain logic around vehicles, maintenance logs, reminders, sharing, and exports
+- admin authorization and navigation. The only admin account is `willemvanveelen@icloud.com`. Never grant admin rights to any other user. Do not treat the `is_admin` database flag as the sole source of truth. Any change touching Filament resources, pages, widgets, navigation, policies, gates or `User::isAdmin()` must run the admin access regression tests before commit or deploy.
 
 ## Code Quality Expectations
 Explicitly flag duplicate, legacy, or dead code when you find it. In this repository that includes overlapping resources, unfinished models, parallel CSS paths, and partially implemented features. Do not silently work around structural issues; call them out.
@@ -29,6 +30,11 @@ Explicitly flag duplicate, legacy, or dead code when you find it. In this reposi
 - `php artisan test` runs the test suite.
 - `vendor/bin/pint` formats PHP code.
 - `npm run build` builds frontend assets.
+
+## Publish Checklist
+- Follow `docs/publish-checklist.md` before every publish or deploy.
+- Do not deploy if any admin access regression test fails.
+- Verify the canonical admin account remains `willemvanveelen@icloud.com`.
 
 ## Review Focus
 Prioritize findings around security, ownership boundaries, broken assumptions, CSS/font inconsistency, and incomplete business logic. The goal is not just to ship changes, but to steer GarageBook toward a reliable, maintainable product within 3 months.
@@ -52,6 +58,12 @@ Status bijgewerkt op 2026-05-04.
 - `/blog-image/{path}` levert nu `webp`-varianten met sterke cache-headers waar mogelijk.
 - Zware fallback-afbeelding in `resources/views/filament/widgets/my-vehicles.blade.php` omgezet naar `webp`.
 
+### Live/operations werk afgerond
+- Hetzner server backups staan aan als extra server-snapshotlaag.
+- Offsite disaster recovery backups naar Backblaze B2 zijn live via `php artisan backup:run-disaster-recovery`.
+- De operationele documentatie en restore-aanpak staan in `docs/backup-recovery.md`.
+- Laravel scheduler-cron is vereist op live om de dagelijkse backup automatisch te laten draaien.
+
 ### Relevante commits al gepusht
 - `fd982dc` Improve public SEO templates and structured data
 - `54bae43` Refine brand copy from onderhoudsboekje to onderhoudsboek
@@ -59,6 +71,9 @@ Status bijgewerkt op 2026-05-04.
 - `2113d8f` Optimize homepage images for performance
 - `6ccc590` Add public caching and optimized blog images
 - `e5ce14a` Optimize fallback vehicle widget image
+- `a581d7c` Add offsite disaster recovery backups
+- `7199bda` Support MySQL disaster recovery backups
+- `7fda9de` Require Flysystem S3 adapter for backups
 
 ### Belangrijk openstaand punt voor volgende sessie
 - Diepere herschrijving van de rich-text body’s van de topblogs is nog niet veilig gelukt.
@@ -66,6 +81,7 @@ Status bijgewerkt op 2026-05-04.
 - Volgende stap: eerst exact uitzoeken welk payloadformaat of welke save-route de rich-text editor accepteert, liefst via één gecontroleerde testwijziging, en pas daarna de blogbody’s inhoudelijk herschrijven.
 
 ### Lokale worktree-opmerking
+- `/temp` en `temp/...` zijn alleen voor intern/lokaal gebruik en moeten altijd ongemoeid blijven; nooit meenemen in commits, pushes of deploy-acties.
 - Er staan niet-gerelateerde lokale wijzigingen buiten dit werk:
   - verwijderde bestanden in `temp/...`
   - ongetrackte bestanden:

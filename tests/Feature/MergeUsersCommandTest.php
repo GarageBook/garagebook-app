@@ -21,10 +21,8 @@ class MergeUsersCommandTest extends TestCase
             'airtable_record_id' => 'recGnzeD8Bk4CH5ak',
         ]);
 
-        $target = User::factory()->create([
+        $target = User::factory()->admin()->create([
             'name' => 'Willem',
-            'email' => 'willemvanveelen@icloud.com',
-            'is_admin' => true,
         ]);
 
         $vehicle = Vehicle::query()->create([
@@ -63,7 +61,8 @@ class MergeUsersCommandTest extends TestCase
         $vehicle = $vehicle->fresh();
 
         $this->assertSame('recGnzeD8Bk4CH5ak', $target->airtable_record_id);
-        $this->assertTrue($target->is_admin);
+        $this->assertSame(User::ADMIN_EMAIL, $target->email);
+        $this->assertTrue($target->isAdmin());
         $this->assertSame($target->id, $vehicle->user_id);
         $this->assertDatabaseMissing('users', [
             'id' => $source->id,

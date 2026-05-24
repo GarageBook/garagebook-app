@@ -106,6 +106,30 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/localization-overview', false);
     }
 
+    public function test_admin_email_match_is_case_insensitive_and_does_not_depend_on_is_admin_flag(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'WillemVanVeelen@ICloud.Com',
+            'is_admin' => false,
+        ]);
+
+        $this->assertTrue($admin->isAdmin());
+
+        $this->actingAs($admin)
+            ->get('/admin/users')
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('/admin/users', false)
+            ->assertSee('/admin/blogs', false)
+            ->assertSee('/admin/pages', false)
+            ->assertSee('/admin/analytics-dashboard', false)
+            ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/localization-overview', false);
+    }
+
     public function test_admin_only_user_management_widgets_are_hidden_for_regular_users_and_visible_for_admins(): void
     {
         $admin = User::factory()->admin()->create();

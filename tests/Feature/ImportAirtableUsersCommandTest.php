@@ -110,11 +110,9 @@ class ImportAirtableUsersCommandTest extends TestCase
 
     public function test_command_preserves_local_login_email_for_user_already_linked_by_airtable_record(): void
     {
-        User::factory()->create([
+        User::factory()->admin()->create([
             'name' => 'Willem',
-            'email' => 'willemvanveelen@icloud.com',
             'airtable_record_id' => 'recWillem123',
-            'is_admin' => true,
         ]);
 
         Http::fake([
@@ -137,8 +135,7 @@ class ImportAirtableUsersCommandTest extends TestCase
         $this->assertDatabaseHas('users', [
             'email' => 'willemvanveelen@icloud.com',
             'airtable_record_id' => 'recWillem123',
-            'is_admin' => true,
-        ]);
+            ]);
 
         $this->assertDatabaseMissing('users', [
             'email' => 'willem@garagebook.nl',
