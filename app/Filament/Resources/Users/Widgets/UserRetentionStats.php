@@ -9,6 +9,11 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class UserRetentionStats extends StatsOverviewWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected ?string $heading = 'Gebruikersretentie';
 
     protected function getStats(): array

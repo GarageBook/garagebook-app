@@ -9,6 +9,11 @@ use Illuminate\Support\Collection;
 
 class UserGrowthChart extends ChartWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected ?string $heading = 'Gebruikersgroei';
 
     protected int|string|array $columnSpan = 'full';

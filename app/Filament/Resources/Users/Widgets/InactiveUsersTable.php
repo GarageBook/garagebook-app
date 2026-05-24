@@ -10,6 +10,11 @@ use Illuminate\Database\Eloquent\Builder;
 
 class InactiveUsersTable extends TableWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getTableHeading(): string

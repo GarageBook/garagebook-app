@@ -8,6 +8,11 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class UserActivationStats extends StatsOverviewWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected ?string $heading = 'Gebruikersactivatie';
 
     protected function getStats(): array
