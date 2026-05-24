@@ -646,10 +646,12 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->assertStringContainsString('G-TEST123456', $googleTag);
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
+        $this->assertStringContainsString('send_page_view: false', $googleTag);
         $this->assertStringContainsString('page_location: window.location.href', $trackingTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
         $this->assertStringContainsString('lastPageViewKey', $trackingTag);
         $this->assertStringContainsString('livewireListenerRegistered', $trackingTag);
+        $this->assertStringContainsString('initialPageViewTracked', $trackingTag);
         $this->assertStringContainsString("window.garagebookTrack('page_view')", $trackingTag);
         $this->assertStringContainsString('"source":"filament"', $trackingTag);
         $this->assertStringNotContainsString('hostname:', $trackingTag);

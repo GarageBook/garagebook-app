@@ -16,6 +16,7 @@
         lastPageViewKey: null,
         lastPageViewAt: 0,
         livewireListenerRegistered: false,
+        initialPageViewTracked: false,
     };
 
     window.garagebookTrack = window.garagebookTrack || function (eventName, params = {}) {
@@ -71,6 +72,11 @@
         } catch (error) {
         }
     };
+
+    if (!window.garagebookTrackState.initialPageViewTracked) {
+        window.garagebookTrack('page_view');
+        window.garagebookTrackState.initialPageViewTracked = true;
+    }
 
     if (!window.garagebookTrackState.livewireListenerRegistered) {
         document.addEventListener('livewire:navigated', () => {

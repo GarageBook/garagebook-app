@@ -16,6 +16,7 @@
     gtag('js', new Date());
 
     gtag('config', @json($measurementId), {
+        send_page_view: false,
         linker: {
             accept_incoming: true,
             domains: @json($linkerDomains),

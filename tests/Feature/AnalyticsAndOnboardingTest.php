@@ -54,9 +54,9 @@ class AnalyticsAndOnboardingTest extends TestCase
 
         $this->get('/')
             ->assertSee('googletagmanager.com/gtag/js?id=G-TEST123')
-            ->assertSee("gtag('config', \"G-TEST123\"", false);
-    }
+            ->assertSee('send_page_view: false', false);
 
+    }
     public function test_onboarding_redirect_after_vehicle_creation(): void
     {
         $user = User::factory()->create();
