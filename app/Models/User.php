@@ -17,6 +17,8 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
+    public const ADMIN_EMAIL = 'willemvanveelen@icloud.com';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -27,7 +29,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function isAdmin(): bool
     {
-        return (bool) $this->is_admin;
+        return str($this->email)->lower()->value() === self::ADMIN_EMAIL;
     }
 
     public function isGeratelUser(): bool

@@ -15,9 +15,7 @@ class BlogContentSaveTest extends TestCase
 
     public function test_admin_can_save_rich_blog_content_via_active_edit_blog_page(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $blog = Blog::query()->create([
             'title' => 'Test blog',

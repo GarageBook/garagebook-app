@@ -13,9 +13,7 @@ class LocalizationOverviewPageTest extends TestCase
 
     public function test_admin_can_view_localization_overview_page(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->get(LocalizationOverview::getUrl())

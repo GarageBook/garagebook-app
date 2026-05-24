@@ -16,9 +16,7 @@ class TimelinePageTest extends TestCase
 
     public function test_authenticated_user_sees_only_the_selected_vehicles_timeline(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
         $otherUser = User::factory()->create();
 
         $selectedVehicle = Vehicle::query()->create([
@@ -111,9 +109,7 @@ class TimelinePageTest extends TestCase
 
     public function test_timeline_defaults_to_vehicle_with_most_recent_maintenance(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
 
         $olderVehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -155,9 +151,7 @@ class TimelinePageTest extends TestCase
 
     public function test_timeline_shows_miles_for_vehicle_that_uses_miles(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -183,9 +177,7 @@ class TimelinePageTest extends TestCase
 
     public function test_timeline_integrates_trips_into_the_same_chronological_track(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -234,9 +226,7 @@ class TimelinePageTest extends TestCase
 
     public function test_timeline_still_scopes_trips_to_the_active_vehicle_owner(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
         $otherUser = User::factory()->create();
 
         $vehicle = Vehicle::query()->create([
@@ -280,9 +270,7 @@ class TimelinePageTest extends TestCase
 
     public function test_timeline_without_trips_still_renders_maintenance_correctly(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,

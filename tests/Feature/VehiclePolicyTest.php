@@ -47,9 +47,7 @@ class VehiclePolicyTest extends TestCase
 
     public function test_admin_bypass_applies_to_vehicle_policy(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
         $owner = User::factory()->create();
 
         $vehicle = Vehicle::query()->create([

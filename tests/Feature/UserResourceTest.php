@@ -17,9 +17,7 @@ class UserResourceTest extends TestCase
 
     public function test_admin_can_update_user_without_overwriting_password(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $user = User::factory()->create([
             'name' => 'Oude naam',
@@ -51,9 +49,7 @@ class UserResourceTest extends TestCase
 
     public function test_admin_can_change_user_password_with_confirmation(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $user = User::factory()->create([
             'password' => Hash::make('oud-wachtwoord'),
@@ -79,9 +75,7 @@ class UserResourceTest extends TestCase
 
     public function test_admin_can_create_user_with_password_confirmation(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin);
 

@@ -18,9 +18,7 @@ class AnalyticsDashboardWidgetsTest extends TestCase
 
     public function test_admin_sees_empty_state_when_no_analytics_data_is_available(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin);
 
@@ -34,9 +32,7 @@ class AnalyticsDashboardWidgetsTest extends TestCase
 
     public function test_widgets_are_only_visible_to_admins(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $user = User::factory()->create([
             'is_admin' => false,
@@ -59,9 +55,7 @@ class AnalyticsDashboardWidgetsTest extends TestCase
 
     public function test_admin_dashboard_still_loads_when_analytics_tables_are_missing(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         Schema::dropIfExists('analytics_daily_summaries');
         Schema::dropIfExists('analytics_top_pages');
@@ -83,9 +77,7 @@ class AnalyticsDashboardWidgetsTest extends TestCase
 
     public function test_grouped_search_queries_widget_query_does_not_append_qualified_primary_key_sort(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin);
 

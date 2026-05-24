@@ -109,10 +109,7 @@ class BlogResourceAuthorizationTest extends TestCase
 
     public function test_admin_can_access_blog_management(): void
     {
-        $user = User::factory()->create([
-            'email' => 'willemvanveelen@icloud.com',
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->admin()->create();
 
         $blog = Blog::query()->create([
             'title' => 'Admin blog',

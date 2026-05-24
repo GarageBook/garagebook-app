@@ -58,11 +58,9 @@ class AdminManagementAccessTest extends TestCase
         }
     }
 
-    public function test_admin_can_open_admin_only_management_routes(): void
+    public function test_admin_can_open_admin_only_management_routes_and_sees_management_links(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $managedUser = User::factory()->create();
         $blog = Blog::query()->create([
@@ -97,13 +95,20 @@ class AdminManagementAccessTest extends TestCase
         foreach ($urls as $url) {
             $this->get($url)->assertOk();
         }
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee('/admin/users', false)
+            ->assertSee('/admin/blogs', false)
+            ->assertSee('/admin/pages', false)
+            ->assertSee('/admin/analytics-dashboard', false)
+            ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/localization-overview', false);
     }
 
     public function test_admin_only_user_management_widgets_are_hidden_for_regular_users_and_visible_for_admins(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
         $user = User::factory()->create([
             'is_admin' => false,
         ]);
@@ -121,7 +126,40 @@ class AdminManagementAccessTest extends TestCase
         $this->assertFalse(InactiveUsersTable::canView());
     }
 
-    public function test_regular_user_keeps_access_to_normal_garagebook_functionality(): void
+    public function test_user_with_legacy_is_admin_flag_but_other_email_is_not_treated_as_admin(): void
+    {
+        $legacyFlagUser = User::factory()->create([
+            'email' => 'legacy-admin@example.com',
+            'is_admin' => true,
+        ]);
+
+        $this->assertFalse($legacyFlagUser->isAdmin());
+
+        $this->actingAs($legacyFlagUser)
+            ->get('/admin')
+            ->assertOk()
+            ->assertDontSee('/admin/users', false)
+            ->assertDontSee('/admin/blogs', false)
+            ->assertDontSee('/admin/pages', false)
+            ->assertDontSee('/admin/analytics-dashboard', false)
+            ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/localization-overview', false);
+
+        $this->actingAs($legacyFlagUser);
+        $this->assertFalse(UserActivationStats::canView());
+        $this->assertFalse(UserRetentionStats::canView());
+        $this->assertFalse(UserGrowthChart::canView());
+        $this->assertFalse(InactiveUsersTable::canView());
+
+        $this->get('/admin/users')->assertForbidden();
+        $this->get('/admin/blogs')->assertForbidden();
+        $this->get('/admin/pages')->assertForbidden();
+        $this->get('/admin/analytics-dashboard')->assertForbidden();
+        $this->get('/admin/growth-dashboard')->assertForbidden();
+        $this->get('/admin/localization-overview')->assertForbidden();
+    }
+
+    public function test_regular_user_keeps_access_to_normal_garagebook_functionality_and_sees_no_management_links(): void
     {
         $user = User::factory()->create([
             'is_admin' => false,
@@ -138,7 +176,13 @@ class AdminManagementAccessTest extends TestCase
         $this->actingAs($user)
             ->get('/admin')
             ->assertOk()
-            ->assertSeeText('Mijn voertuigen');
+            ->assertSeeText('Mijn voertuigen')
+            ->assertDontSee('/admin/users', false)
+            ->assertDontSee('/admin/blogs', false)
+            ->assertDontSee('/admin/pages', false)
+            ->assertDontSee('/admin/analytics-dashboard', false)
+            ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/localization-overview', false);
 
         $this->actingAs($user)
             ->get('/admin/vehicles')

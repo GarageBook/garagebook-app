@@ -21,9 +21,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_admin_can_open_growth_dashboard(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->get('/admin/growth-dashboard')
@@ -48,9 +46,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_growth_dashboard_does_not_crash_without_analytics_data(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         Schema::dropIfExists('analytics_daily_summaries');
         Schema::dropIfExists('analytics_top_pages');
@@ -68,8 +64,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_growth_dashboard_shows_registration_kpis_with_existing_users(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
+        $admin = User::factory()->admin()->create([
             'created_at' => now()->subDays(60),
         ]);
 
@@ -109,9 +104,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_growth_funnel_counts_users_with_vehicles_and_maintenance_logs_correctly(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $userWithEverything = User::factory()->create([
             'first_login_at' => now()->subDays(20),
@@ -186,9 +179,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_growth_funnel_counts_maintenance_logs_across_multiple_vehicles_for_one_user(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $multiVehicleUser = User::factory()->create();
 
@@ -234,9 +225,7 @@ class GrowthDashboardTest extends TestCase
 
     public function test_existing_analytics_dashboard_remains_reachable(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->get('/admin/analytics-dashboard')

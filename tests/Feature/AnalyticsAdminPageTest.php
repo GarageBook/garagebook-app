@@ -28,9 +28,7 @@ class AnalyticsAdminPageTest extends TestCase
 
     public function test_admin_sees_analytics_dashboard_navigation_and_page(): void
     {
-        $admin = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
             ->get('/admin')
