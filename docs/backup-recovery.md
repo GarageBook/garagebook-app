@@ -71,6 +71,8 @@ php artisan backup:run-disaster-recovery --keep=7
 9. Restart the web server, PHP-FPM, and queue workers.
 10. Validate login, admin, uploads, blog images, and a write path such as a maintenance log change.
 
+For the full production-oriented recovery sequence, see [disaster-recovery-runbook.md](/home/willem/garagebook/docs/disaster-recovery-runbook.md:1).
+
 ## Legacy Scripts
 
 The old repository-level `backup.sh` and `restore-latest.sh` were local-only helpers. They are no longer authoritative for disaster recovery because they did not create an offsite restore point and did not safely cover full server recovery.

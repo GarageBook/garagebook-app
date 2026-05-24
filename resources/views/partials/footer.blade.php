@@ -18,6 +18,19 @@
 
             <div>
                 <h3>
+                    Onderhoud bijhouden
+                </h3>
+
+                <div class="gb-footer-links">
+                    <a href="/onderhoudsboekje-motor/">Onderhoudsboekje motor</a>
+                    <a href="/motor-onderhoud-bijhouden/">Motor onderhoud bijhouden</a>
+                    <a href="/motor-onderhoud-app/">Motor onderhoud app</a>
+                    <a href="/digitaal-onderhoudsboekje/">Digitaal onderhoudsboekje</a>
+                </div>
+            </div>
+
+            <div>
+                <h3>
                     Over GarageBook
                 </h3>
 

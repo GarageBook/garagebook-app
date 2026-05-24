@@ -85,6 +85,19 @@
                     </a>
                 @endif
             </div>
+
+            <div class="gb-related-content__items" style="margin-top: 24px;">
+                <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 12px;">Onderhoud Dossier</h3>
+                <a href="/onderhoudsboekje-motor/" class="gb-related-content__item">
+                    <strong>Onderhoudsboekje motor</strong>
+                </a>
+                <a href="/motor-onderhoud-bijhouden/" class="gb-related-content__item">
+                    <strong>Motor onderhoud bijhouden</strong>
+                </a>
+                <a href="/motor-onderhoud-app/" class="gb-related-content__item">
+                    <strong>Motor onderhoud app</strong>
+                </a>
+            </div>
         </aside>
     @endif
 
