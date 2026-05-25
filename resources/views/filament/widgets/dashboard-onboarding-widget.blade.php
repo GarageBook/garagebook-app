@@ -1,38 +1,48 @@
 <x-filament::widget>
-    <x-filament::card>
-        <div class="flex flex-col gap-6">
-            <div>
-                <h2 class="text-xl font-bold tracking-tight">Klaar om te starten?</h2>
-                <p class="text-sm text-gray-500">Voltooi de volgende stappen om het maximale uit GarageBook te halen.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                @foreach($steps as $step)
-                    <div class="flex flex-col justify-between p-5 border border-gray-100 rounded-2xl bg-gray-50/50">
-                        <div class="mb-4">
-                            <div class="flex items-center justify-center w-10 h-10 mb-4 bg-white rounded-lg shadow-sm">
-                                <x-filament::icon
-                                    :icon="$step['icon']"
-                                    class="w-6 h-6 text-gray-700"
-                                />
-                            </div>
-                            <h3 class="font-bold text-gray-900">{{ $step['title'] }}</h3>
-                            <p class="mt-1 text-sm text-gray-600">{{ $step['description'] }}</p>
-                        </div>
-
-                        <x-filament::button
-                            :href="$step['url']"
-                            tag="a"
-                            :color="($step['primary'] ?? false) ? 'warning' : 'gray'"
-                            size="sm"
-                            class="w-full shadow-sm"
-                            style="{{ ($step['primary'] ?? false) ? 'background-color: #ffd200; color: #000;' : '' }}"
-                        >
-                            {{ $step['cta'] }}
-                        </x-filament::button>
+    @if ($panel)
+        <x-filament::card>
+            <div class="flex flex-col gap-4 {{ $panel['tone'] === 'subtle' ? 'md:flex-row md:items-center md:justify-between' : '' }}">
+                <div class="flex gap-4">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {{ $panel['tone'] === 'subtle' ? 'bg-gray-100' : 'bg-white shadow-sm ring-1 ring-gray-100' }}">
+                        <x-filament::icon
+                            :icon="$panel['icon']"
+                            class="h-6 w-6 text-gray-700"
+                        />
                     </div>
-                @endforeach
+
+                    <div>
+                        @if ($state === 'no_vehicles')
+                            <p class="text-sm font-medium text-warning-600">Stap 1</p>
+                        @endif
+
+                        <h2 class="text-xl font-bold tracking-tight text-gray-900">{{ $panel['title'] }}</h2>
+                        <p class="mt-1 text-sm text-gray-600">{{ $panel['description'] }}</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 sm:flex-row {{ $panel['tone'] === 'subtle' ? 'md:justify-end' : '' }}">
+                    <x-filament::button
+                        :href="$panel['primaryCta']['url']"
+                        tag="a"
+                        :color="$panel['tone'] === 'subtle' ? 'gray' : 'warning'"
+                        class="shadow-sm"
+                        style="{{ $panel['tone'] === 'subtle' ? '' : 'background-color: #ffd200; color: #000;' }}"
+                    >
+                        {{ $panel['primaryCta']['label'] }}
+                    </x-filament::button>
+
+                    @if (! empty($panel['secondaryCta']))
+                        <x-filament::button
+                            :href="$panel['secondaryCta']['url']"
+                            tag="a"
+                            color="gray"
+                            class="shadow-sm"
+                        >
+                            {{ $panel['secondaryCta']['label'] }}
+                        </x-filament::button>
+                    @endif
+                </div>
             </div>
-        </div>
-    </x-filament::card>
+        </x-filament::card>
+    @endif
 </x-filament::widget>

@@ -11,65 +11,98 @@ use Filament\Widgets\Widget;
 
 class DashboardOnboardingWidget extends Widget
 {
+    private const STATE_NO_VEHICLES = 'no_vehicles';
+
+    private const STATE_NEEDS_MAINTENANCE = 'needs_maintenance';
+
+    private const STATE_NEEDS_DOCUMENTS = 'needs_documents';
+
+    private const STATE_COMPLETE = 'complete';
+
     protected string $view = 'filament.widgets.dashboard-onboarding-widget';
 
     protected int | string | array $columnSpan = 'full';
 
     public static function canView(): bool
     {
-        /** @var User $user */
+        /** @var User|null $user */
         $user = auth()->user();
-        
-        // Hide if user already has maintenance logs
-        return $user->vehicles()->withCount('maintenanceLogs')->get()->sum('maintenance_logs_count') === 0;
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return static::resolveStateForUser($user) !== self::STATE_COMPLETE;
     }
 
     protected function getViewData(): array
     {
         /** @var User $user */
         $user = auth()->user();
-        $vehicleCount = $user->vehicles()->count();
-        $vehicle = $user->vehicles()->first();
-
-        $steps = [];
-
-        if ($vehicleCount === 0) {
-            $steps[] = [
-                'title' => 'Stap 1: Voeg je motor toe',
-                'description' => 'Begin met het vastleggen van je motorfiets om je digitale garage te starten.',
-                'cta' => 'Voeg motor toe',
-                'url' => VehicleResource::getUrl('create'),
-                'icon' => 'heroicon-o-plus-circle',
-            ];
-        } else {
-            $steps[] = [
-                'title' => 'Stap 2: Voeg je eerste onderhoud toe',
-                'description' => 'Houd je historie actueel. Voeg je laatste beurt of reparatie toe.',
-                'cta' => 'Onderhoud toevoegen',
-                'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
-                'icon' => 'heroicon-o-wrench-screwdriver',
-                'primary' => true,
-            ];
-
-            $steps[] = [
-                'title' => 'Stap 3: Upload een document of foto',
-                'description' => 'Sla je facturen, kentekenbewijs of foto\'s veilig op in de cloud.',
-                'cta' => 'Document uploaden',
-                'url' => VehicleDocumentResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
-                'icon' => 'heroicon-o-document-arrow-up',
-            ];
-
-            $steps[] = [
-                'title' => 'Maak je garage compleet',
-                'description' => 'Voeg meer details toe aan je voertuig voor een volledig overzicht.',
-                'cta' => 'Voertuig aanpassen',
-                'url' => VehicleResource::getUrl('edit', ['record' => $vehicle->id]),
-                'icon' => 'heroicon-o-pencil-square',
-            ];
-        }
+        $state = self::resolveStateForUser($user);
+        $vehicle = $user->vehicles()->orderBy('id')->first();
 
         return [
-            'steps' => $steps,
+            'state' => $state,
+            'panel' => $this->buildPanel($state, $vehicle),
         ];
+    }
+
+    private static function resolveStateForUser(User $user): string
+    {
+        if (! $user->vehicles()->exists()) {
+            return self::STATE_NO_VEHICLES;
+        }
+
+        if (! $user->vehicles()->whereHas('maintenanceLogs')->exists()) {
+            return self::STATE_NEEDS_MAINTENANCE;
+        }
+
+        if (! $user->vehicles()->whereHas('documents')->exists()) {
+            return self::STATE_NEEDS_DOCUMENTS;
+        }
+
+        return self::STATE_COMPLETE;
+    }
+
+    private function buildPanel(string $state, ?Vehicle $vehicle): ?array
+    {
+        return match ($state) {
+            self::STATE_NO_VEHICLES => [
+                'tone' => 'prominent',
+                'title' => 'Voeg je eerste voertuig toe',
+                'description' => 'Start je digitale garage door eerst je motor toe te voegen.',
+                'icon' => 'heroicon-o-plus-circle',
+                'primaryCta' => [
+                    'label' => 'Voertuig toevoegen',
+                    'url' => VehicleResource::getUrl('create'),
+                ],
+            ],
+            self::STATE_NEEDS_MAINTENANCE => [
+                'tone' => 'prominent',
+                'title' => 'Voeg je eerste onderhoud toe',
+                'description' => 'Je voertuig staat klaar. Leg nu je eerste beurt of reparatie vast.',
+                'icon' => 'heroicon-o-wrench-screwdriver',
+                'primaryCta' => [
+                    'label' => 'Onderhoud toevoegen',
+                    'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
+                ],
+                'secondaryCta' => $vehicle ? [
+                    'label' => 'Voertuig aanpassen',
+                    'url' => VehicleResource::getUrl('edit', ['record' => $vehicle->id]),
+                ] : null,
+            ],
+            self::STATE_NEEDS_DOCUMENTS => [
+                'tone' => 'subtle',
+                'title' => 'Maak je garage completer',
+                'description' => 'Upload een factuur, foto of document als extra bewijs bij je historie.',
+                'icon' => 'heroicon-o-document-arrow-up',
+                'primaryCta' => [
+                    'label' => 'Document uploaden',
+                    'url' => VehicleDocumentResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
+                ],
+            ],
+            default => null,
+        };
     }
 }
