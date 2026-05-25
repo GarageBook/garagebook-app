@@ -30,7 +30,7 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->assertSessionHas(AnalyticsAttribution::SESSION_KEY);
     }
 
-    public function test_utm_parameters_can_be_updated_with_new_values(): void
+    public function test_existing_utm_parameters_remain_first_touch_values(): void
     {
         $this->get('/?utm_source=first&utm_medium=email')
             ->assertSessionHas(AnalyticsAttribution::SESSION_KEY, [
@@ -41,9 +41,8 @@ class AnalyticsAndOnboardingTest extends TestCase
 
         $this->get('/?utm_source=second&utm_campaign=win')
             ->assertSessionHas(AnalyticsAttribution::SESSION_KEY, [
-                'utm_source' => 'second',
+                'utm_source' => 'first',
                 'utm_medium' => 'email',
-                'utm_campaign' => 'win',
                 'landing_page' => '/',
             ]);
     }

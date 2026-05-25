@@ -16,16 +16,16 @@ class AnalyticsAttribution
             return;
         }
 
+        $existing = $request->session()->get(self::SESSION_KEY);
+
+        if (is_array($existing) && $existing !== []) {
+            return;
+        }
+
         $payload = $this->buildPayloadFromRequest($request);
 
         if ($payload === null) {
             return;
-        }
-
-        $existing = $request->session()->get(self::SESSION_KEY);
-
-        if (is_array($existing)) {
-            $payload = array_merge($existing, $payload);
         }
 
         $request->session()->put(self::SESSION_KEY, $payload);
