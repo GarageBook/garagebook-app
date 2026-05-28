@@ -10,7 +10,6 @@
     $debugEnabled = Analytics::frontendDebugEnabled();
 @endphp
 <script>
-    window.dataLayer = window.dataLayer || [];
     window.garagebookAnalyticsEvents = window.garagebookAnalyticsEvents || [];
     window.garagebookTrackState = window.garagebookTrackState || {
         lastPageViewKey: null,
@@ -47,18 +46,8 @@
         }
 
         try {
-            if (window.google_tag_manager && Array.isArray(window.dataLayer)) {
-                window.dataLayer.push({
-                    event: eventName,
-                    ...payload,
-                });
-            } else if (typeof window.gtag === 'function') {
+            if (typeof window.gtag === 'function') {
                 window.gtag('event', eventName, payload);
-            } else if (Array.isArray(window.dataLayer)) {
-                window.dataLayer.push({
-                    event: eventName,
-                    ...payload,
-                });
             }
 
             window.garagebookAnalyticsEvents.push({

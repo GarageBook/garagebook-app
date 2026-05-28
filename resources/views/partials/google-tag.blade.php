@@ -8,18 +8,10 @@
     $measurementId = Analytics::ga4MeasurementId();
     $linkerDomains = Analytics::ga4LinkerDomains();
 @endphp
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ $measurementId }}"></script>
 <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', @json($measurementId), {
-        send_page_view: false,
-        linker: {
-            accept_incoming: true,
-            domains: @json($linkerDomains),
-        },
-    });
+    window.garageBookAnalyticsConsent = {
+        enabled: true,
+        measurementId: @json($measurementId),
+        linkerDomains: @json($linkerDomains),
+    };
 </script>

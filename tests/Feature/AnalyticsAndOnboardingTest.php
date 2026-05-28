@@ -53,8 +53,9 @@ class AnalyticsAndOnboardingTest extends TestCase
         config(['analytics.ga4.measurement_id' => 'G-TEST123']);
 
         $this->get('/')
-            ->assertSee('googletagmanager.com/gtag/js?id=G-TEST123')
-            ->assertSee('send_page_view: false', false);
+            ->assertSee('window.garageBookAnalyticsConsent', false)
+            ->assertSee('measurementId: "G-TEST123"', false)
+            ->assertDontSee('googletagmanager.com/gtag/js?id=G-TEST123', false);
     }
 
     public function test_onboarding_redirect_after_vehicle_creation(): void

@@ -1288,3 +1288,97 @@ p, span, div, li, a, input, textarea, button {
         padding-right: 16px;
     }
 }
+
+
+/* =========================
+   KLARO COOKIE CONSENT
+========================= */
+.klaro .cookie-notice {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10000;
+    max-width: 760px;
+    margin: 0 auto;
+    color: #ffffff;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+}
+
+.klaro .cookie-notice.cookie-notice-hidden {
+    display: none;
+}
+
+.klaro .cookie-notice .cn-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+}
+
+.klaro .cookie-notice p {
+    margin: 0;
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.klaro .cookie-notice .cn-ok {
+    flex: 0 0 auto;
+}
+
+.klaro .cookie-notice .cn-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.klaro .cookie-notice .cm-btn {
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.klaro .cookie-notice .cm-btn-success {
+    background: #ffd200;
+    color: #000000;
+}
+
+.klaro .cookie-notice .cm-btn-danger {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 400;
+}
+
+.klaro .cookie-notice .cm-btn-danger:hover,
+.klaro .cookie-notice .cm-btn-danger:focus {
+    color: #ffffff;
+}
+
+@media (max-width: 640px) {
+    .klaro .cookie-notice {
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+    }
+
+    .klaro .cookie-notice .cn-body,
+    .klaro .cookie-notice .cn-buttons {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .klaro .cookie-notice .cn-ok,
+    .klaro .cookie-notice .cm-btn {
+        width: 100%;
+    }
+}
