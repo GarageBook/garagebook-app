@@ -646,7 +646,8 @@ class AnalyticsEventTrackingTest extends TestCase
 
         $this->assertStringContainsString('G-TEST123456', $googleTag);
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
-        $this->assertStringContainsString('send_page_view: false', $googleTag);
+        $this->assertStringContainsString('window.garageBookAnalyticsConsent', $googleTag);
+        $this->assertStringNotContainsString('googletagmanager.com/gtag/js', $googleTag);
         $this->assertStringContainsString('page_location: window.location.href', $trackingTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
         $this->assertStringContainsString('lastPageViewKey', $trackingTag);
