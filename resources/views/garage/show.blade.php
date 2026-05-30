@@ -251,15 +251,43 @@
                                 <p style="margin:0; color:#374151; white-space:pre-line; line-height:1.7; overflow-wrap:normal;">{{ $item['notes'] }}</p>
                             @endif
 
-                            @if($item['public_attachments'] !== [])
+                            @if($item['public_image_attachments'] !== [])
                                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
-                                    @foreach($item['public_attachments'] as $attachment)
-                                        <a href="{{ $attachment['url'] }}" target="_blank" rel="noopener noreferrer">
+                                    @foreach($item['public_image_attachments'] as $attachmentIndex => $attachment)
+                                        <button
+                                            type="button"
+                                            data-gallery-open
+                                            data-gallery-group="timeline-{{ $loop->parent->index }}"
+                                            data-gallery-index="{{ $attachmentIndex }}"
+                                            data-gallery-url="{{ $attachment['url'] }}"
+                                            data-gallery-alt="{{ $attachment['alt'] }}"
+                                            style="padding:0; border:none; background:transparent; cursor:pointer;"
+                                        >
                                             <img
                                                 src="{{ $attachment['thumbnail_url'] }}"
                                                 alt="{{ $attachment['alt'] }}"
                                                 style="width:100%; height:160px; object-fit:cover; border-radius:18px; background:#f3f4f6;"
                                             >
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            @if($item['public_other_attachments'] !== [])
+                                <div style="display:grid; gap:10px; margin-top:12px;">
+                                    @foreach($item['public_other_attachments'] as $attachment)
+                                        <a
+                                            href="{{ $attachment['url'] }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; border:1px solid #e5e7eb; background:#fafafa; color:#111827; text-decoration:none;"
+                                        >
+                                            <span style="display:inline-flex; align-items:center; justify-content:center; min-width:72px; padding:6px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; font-weight:700; text-transform:uppercase;">
+                                                {{ $attachment['kind'] ?? 'bestand' }}
+                                            </span>
+                                            <span style="font-weight:600; line-height:1.4; overflow-wrap:normal;">
+                                                {{ $attachment['label'] ?? basename($attachment['url']) }}
+                                            </span>
                                         </a>
                                     @endforeach
                                 </div>

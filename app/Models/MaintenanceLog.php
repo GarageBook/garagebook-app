@@ -20,6 +20,7 @@ class MaintenanceLog extends Model
         'attachments',
         'media_attachments',
         'file_attachments',
+        'share_attachments_publicly',
         'notes',
 
         // reminders
@@ -35,6 +36,7 @@ class MaintenanceLog extends Model
         'attachments' => 'array',
         'media_attachments' => 'array',
         'file_attachments' => 'array',
+        'share_attachments_publicly' => 'boolean',
         'airtable_synced_at' => 'datetime',
         'maintenance_date' => 'date',
         'last_date' => 'date',

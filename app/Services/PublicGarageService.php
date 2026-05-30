@@ -199,14 +199,23 @@ class PublicGarageService
                 ->filter(fn ($path) => is_string($path) && filled($path))
                 ->values();
 
-            $publicAttachments = $vehicle->share_attachments_publicly
+            $publicAttachments = $log->share_attachments_publicly
                 ? $attachments
-                    ->filter(fn (string $path) => MediaPath::isImage($path))
                     ->map(fn (string $path): ?array => $this->publicAttachmentImage($path, $vehicle))
                     ->filter()
                     ->values()
                     ->all()
                 : [];
+
+            $publicImageAttachments = array_values(array_filter(
+                $publicAttachments,
+                fn (array $attachment): bool => ($attachment['kind'] ?? null) === 'image'
+            ));
+
+            $publicOtherAttachments = array_values(array_filter(
+                $publicAttachments,
+                fn (array $attachment): bool => ($attachment['kind'] ?? null) !== 'image'
+            ));
 
             return [
                 'date_label' => $log->maintenance_date?->format('d-m-Y'),
@@ -221,14 +230,16 @@ class PublicGarageService
                 'has_km_reading' => $log->km_reading > 0,
                 'has_cost' => $log->cost !== null,
                 'has_public_attachments' => $publicAttachments !== [],
-                'has_private_attachments' => ! $vehicle->share_attachments_publicly && $attachments->isNotEmpty(),
+                'has_private_attachments' => ! $log->share_attachments_publicly && $attachments->isNotEmpty(),
                 'evidence_labels' => array_values(array_filter([
                     $log->km_reading > 0 ? 'Kilometerstand vastgelegd' : null,
-                    $publicAttachments !== [] ? 'Foto bewijs zichtbaar' : null,
-                    ! $vehicle->share_attachments_publicly && $attachments->isNotEmpty() ? 'Aanvullend bewijs privé bewaard' : null,
+                    $publicAttachments !== [] ? 'Bijlagen zichtbaar' : null,
+                    ! $log->share_attachments_publicly && $attachments->isNotEmpty() ? 'Aanvullend bewijs privé bewaard' : null,
                     $vehicle->share_costs_publicly && $log->cost !== null ? 'Kosten transparant gedeeld' : null,
                 ])),
                 'public_attachments' => $publicAttachments,
+                'public_image_attachments' => $publicImageAttachments,
+                'public_other_attachments' => $publicOtherAttachments,
             ];
         })->all();
     }
@@ -271,12 +282,12 @@ class PublicGarageService
                 'tone' => 'success',
             ],
             [
-                'label' => 'Foto\'s en bewijsstukken',
+                'label' => 'Bijlagen en bewijs',
                 'value' => $metrics['public_attachment_count'] > 0
-                    ? $metrics['public_attachment_count'] . ' zichtbare bewijsbeelden laten zien wat er aan dit voertuig is gedaan'
+                    ? $metrics['public_attachment_count'] . ' zichtbare bijlagen laten zien wat er aan dit voertuig is gedaan'
                     : ($metrics['public_vehicle_photo_count'] > 0
                         ? $metrics['public_vehicle_photo_count'] . ' voertuigfoto\'s ondersteunen de publieke presentatie van deze historie'
-                        : 'Er zijn nog geen publieke foto\'s zichtbaar, maar de eigenaar kan bewijs veilig blijven aanvullen'),
+                        : 'Er zijn nog geen publieke bijlagen zichtbaar, maar de eigenaar kan bewijs veilig blijven aanvullen'),
                 'tone' => 'neutral',
             ],
             [
@@ -308,8 +319,10 @@ class PublicGarageService
 
     public function publicVerificationNote(Vehicle $vehicle): string
     {
-        if ($vehicle->share_attachments_publicly) {
-            return 'Onderhoud met datum, kilometerstand en zichtbare foto\'s maakt deze historie beter onderbouwd voor kopers, garages en liefhebbers.';
+        $metrics = $this->publicTimelineMetrics($vehicle);
+
+        if ($metrics['public_attachment_count'] > 0) {
+            return 'Onderhoud met datum, kilometerstand en zichtbare bijlagen maakt deze historie beter onderbouwd voor kopers, garages en liefhebbers.';
         }
 
         return 'Deze historie is gedeeld door de eigenaar. Niet elk bewijsstuk hoeft openbaar te zijn: aanvullende foto\'s, facturen of documenten kunnen privé in het account blijven.';
@@ -480,17 +493,32 @@ class PublicGarageService
     private function publicAttachmentImage(string $path, Vehicle $vehicle): ?array
     {
         $path = ltrim($path, '/');
-        $thumbnailPath = ImageThumbnail::path($path, 720) ?: $path;
 
         if (! $this->publicStoragePathExists($path)) {
             return null;
         }
 
-        return [
-            'alt' => 'Publieke foto bij onderhoud van ' . $this->publicVehicleName($vehicle),
-            'thumbnail_url' => asset('storage/' . ltrim($thumbnailPath, '/')),
+        $kind = MediaPath::isImage($path)
+            ? 'image'
+            : (MediaPath::isVideo($path)
+                ? 'video'
+                : (MediaPath::isPdf($path) ? 'pdf' : 'file'));
+
+        $attachment = [
+            'kind' => $kind,
+            'label' => MediaPath::label($path),
+            'alt' => 'Publieke bijlage bij onderhoud van ' . $this->publicVehicleName($vehicle),
+            'thumbnail_url' => null,
             'url' => asset('storage/' . $path),
         ];
+
+        if ($kind === 'image') {
+            $thumbnailPath = ImageThumbnail::path($path, 720) ?: $path;
+            $attachment['alt'] = 'Publieke foto bij onderhoud van ' . $this->publicVehicleName($vehicle);
+            $attachment['thumbnail_url'] = asset('storage/' . ltrim($thumbnailPath, '/'));
+        }
+
+        return $attachment;
     }
 
     private function publicStoragePathExists(string $path): bool

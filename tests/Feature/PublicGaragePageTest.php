@@ -62,8 +62,9 @@ class PublicGaragePageTest extends TestCase
         $vehiclePhoto = UploadedFile::fake()->image('voertuig.jpg');
         $vehiclePhoto->storeAs('vehicles', 'voertuig.jpg', 'public');
 
-        $maintenancePhoto = UploadedFile::fake()->image('bewijs.jpg');
-        $maintenancePhoto->storeAs('maintenance-attachments', 'bewijs.jpg', 'public');
+        UploadedFile::fake()->image('bewijs.jpg')->storeAs('maintenance-attachments', 'bewijs.jpg', 'public');
+        UploadedFile::fake()->create('factuur.pdf', 100, 'application/pdf')->storeAs('maintenance-attachments', 'factuur.pdf', 'public');
+        UploadedFile::fake()->create('clip.mp4', 100, 'video/mp4')->storeAs('maintenance-attachments', 'clip.mp4', 'public');
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -73,7 +74,7 @@ class PublicGaragePageTest extends TestCase
             'photo' => 'vehicles/voertuig.jpg',
             'is_public' => true,
             'share_costs_publicly' => true,
-            'share_attachments_publicly' => true,
+            'share_attachments_publicly' => false,
         ]);
 
         MaintenanceLog::query()->create([
@@ -82,8 +83,11 @@ class PublicGaragePageTest extends TestCase
             'km_reading' => 48210,
             'maintenance_date' => '2026-05-11',
             'cost' => 245.95,
-            'media_attachments' => [
+            'share_attachments_publicly' => true,
+            'attachments' => [
                 'maintenance-attachments/bewijs.jpg',
+                'maintenance-attachments/factuur.pdf',
+                'maintenance-attachments/clip.mp4',
             ],
         ]);
 
@@ -92,14 +96,16 @@ class PublicGaragePageTest extends TestCase
         $response->assertOk();
         $response->assertSee('Historieperiode');
         $response->assertSee('Sinds 11-05-2026');
-        $response->assertSee('1 moment');
-        $response->assertSee('2 zichtbaar');
+        $response->assertSee('4 zichtbaar');
         $response->assertSee('1 gedeeld');
-        $response->assertSee('1 zichtbare bewijsbeelden laten zien wat er aan dit voertuig is gedaan');
+        $response->assertSee('3 zichtbare bijlagen laten zien wat er aan dit voertuig is gedaan');
+        $response->assertSee('Bijlagen en bewijs');
         $response->assertSee('Deel deze onderhoudsgeschiedenis met een koper, garage of liefhebber wanneer je wilt.');
         $response->assertSee('Bij verkoop kan deze historie straks worden overgedragen aan de volgende eigenaar. Die overdracht is nog niet actief.');
         $response->assertSee('Kosten: € 245,95');
         $response->assertSee('storage/maintenance-attachments/bewijs.jpg', false);
+        $response->assertSee('storage/maintenance-attachments/factuur.pdf', false);
+        $response->assertSee('storage/maintenance-attachments/clip.mp4', false);
     }
 
     public function test_old_share_route_redirects_permanently_to_new_public_garage_url(): void
@@ -224,7 +230,6 @@ class PublicGaragePageTest extends TestCase
             'model' => 'R 1200 GS',
             'year' => 2011,
             'is_public' => true,
-            'share_attachments_publicly' => false,
         ]);
 
         MaintenanceLog::query()->create([
@@ -232,10 +237,8 @@ class PublicGaragePageTest extends TestCase
             'description' => 'Voorvork nagekeken',
             'km_reading' => 67890,
             'maintenance_date' => '2026-05-06',
-            'media_attachments' => [
+            'attachments' => [
                 'maintenance-attachments/foto.jpg',
-            ],
-            'file_attachments' => [
                 'maintenance-attachments/factuur.pdf',
             ],
         ]);
@@ -466,10 +469,10 @@ class PublicGaragePageTest extends TestCase
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
 
-        $visiblePhoto = UploadedFile::fake()->image('visible.jpg');
-        $visiblePhoto->storeAs('maintenance-attachments', 'visible.jpg', 'public');
-        $hiddenPhoto = UploadedFile::fake()->image('hidden.jpg');
-        $hiddenPhoto->storeAs('maintenance-attachments', 'hidden.jpg', 'public');
+        UploadedFile::fake()->image('visible-1.jpg')->storeAs('maintenance-attachments', 'visible-1.jpg', 'public');
+        UploadedFile::fake()->image('visible-2.jpg')->storeAs('maintenance-attachments', 'visible-2.jpg', 'public');
+        UploadedFile::fake()->create('hidden.pdf', 100, 'application/pdf')->storeAs('maintenance-attachments', 'hidden.pdf', 'public');
+        UploadedFile::fake()->image('hidden.jpg')->storeAs('maintenance-attachments', 'hidden.jpg', 'public');
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $owner->id,
@@ -477,7 +480,7 @@ class PublicGaragePageTest extends TestCase
             'model' => 'MT-07',
             'year' => 2020,
             'is_public' => true,
-            'share_attachments_publicly' => true,
+            'share_attachments_publicly' => false,
         ]);
 
         MaintenanceLog::query()->create([
@@ -485,8 +488,11 @@ class PublicGaragePageTest extends TestCase
             'description' => 'Kleine beurt',
             'km_reading' => 12345,
             'maintenance_date' => '2026-05-10',
+            'share_attachments_publicly' => true,
             'attachments' => [
-                ['url' => 'maintenance-attachments/visible.jpg'],
+                'maintenance-attachments/visible-1.jpg',
+                'maintenance-attachments/visible-2.jpg',
+                'maintenance-attachments/hidden.pdf',
             ],
         ]);
 
@@ -496,7 +502,7 @@ class PublicGaragePageTest extends TestCase
             'model' => 'SV650',
             'year' => 2019,
             'is_public' => true,
-            'share_attachments_publicly' => true,
+            'share_attachments_publicly' => false,
         ]);
 
         MaintenanceLog::query()->create([
@@ -504,14 +510,18 @@ class PublicGaragePageTest extends TestCase
             'description' => 'Andere log',
             'km_reading' => 34567,
             'maintenance_date' => '2026-05-09',
+            'share_attachments_publicly' => true,
             'attachments' => ['maintenance-attachments/hidden.jpg'],
         ]);
 
         $response = $this->get('/garage/' . $vehicle->public_slug);
 
         $response->assertOk();
-        $response->assertSee('storage/maintenance-attachments/visible.jpg', false);
+        $response->assertSee('storage/maintenance-attachments/visible-1.jpg', false);
+        $response->assertSee('storage/maintenance-attachments/visible-2.jpg', false);
+        $response->assertSee('storage/maintenance-attachments/hidden.pdf', false);
         $response->assertDontSee('storage/maintenance-attachments/hidden.jpg', false);
+        $response->assertDontSee('storage/maintenance-attachments/visible.jpg', false);
     }
 
     public function test_public_page_hides_maintenance_image_when_attachment_sharing_disabled(): void
