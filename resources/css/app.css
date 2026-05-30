@@ -38,6 +38,7 @@ html, body {
     color: #181818;
     background: #ffffff;
     line-height: 1.6;
+    overflow-x: clip;
 }
 
 body.gb-public-body {
@@ -63,16 +64,19 @@ body.gb-public-body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-width: 0;
 }
 
 .gb-public-header__logo {
     height: 42px;
+    max-width: 100%;
 }
 
 .gb-public-header__actions {
     display: flex;
     align-items: center;
     gap: 20px;
+    min-width: 0;
 }
 
 .gb-public-header__login {
@@ -95,18 +99,21 @@ body.gb-public-body {
     max-width: 1200px;
     margin: 60px auto;
     padding: 0 40px 80px;
+    min-width: 0;
 }
 
 .gb-section-shell {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 40px;
+    min-width: 0;
 }
 
 .gb-section-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     align-items: center;
+    min-width: 0;
 }
 
 .gb-feature-grid {
@@ -120,6 +127,8 @@ body.gb-public-body {
     padding: 28px;
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .gb-media-rounded {
@@ -136,6 +145,7 @@ body.gb-public-body {
     max-width: 900px;
     margin: 60px auto;
     padding: 0 20px;
+    min-width: 0;
 }
 
 .gb-contact-card {
@@ -145,6 +155,7 @@ body.gb-public-body {
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    min-width: 0;
 }
 
 .gb-contact-card__title {
@@ -230,6 +241,7 @@ body.gb-public-body {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 30px;
+    min-width: 0;
 }
 
 .gb-card-link {
@@ -246,6 +258,7 @@ body.gb-public-body {
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     height: 100%;
+    min-width: 0;
 }
 
 .gb-card-image {
@@ -265,17 +278,20 @@ body.gb-public-body {
     font-size: 20px;
     margin: 0;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .gb-card-text {
     color: #6b7280;
     margin: 0;
     line-height: 1.55;
+    overflow-wrap: anywhere;
 }
 
 .gb-page-title {
     font-size: 36px;
     margin-bottom: 30px;
+    overflow-wrap: anywhere;
 }
 
 .gb-page-title--tight {
@@ -301,6 +317,7 @@ body.gb-public-body {
     font-size: 36px;
     line-height: 1.1;
     margin-bottom: 30px;
+    overflow-wrap: anywhere;
 }
 
 .gb-hero {
@@ -359,6 +376,7 @@ body.gb-public-body {
     color: #111827;
     margin: 40px 0 16px;
     line-height: 1.1;
+    overflow-wrap: anywhere;
 }
 
 .gb-page-content img,
@@ -389,6 +407,7 @@ body.gb-public-body {
     max-width: 960px;
     margin: 60px auto;
     padding: 0 24px 80px;
+    min-width: 0;
 }
 
 .gb-blog-detail__back {
@@ -407,6 +426,7 @@ body.gb-public-body {
     letter-spacing: -0.03em;
     text-transform: none;
     margin-bottom: 30px;
+    overflow-wrap: anywhere;
 }
 
 .gb-blog-detail__hero {
@@ -458,6 +478,7 @@ body.gb-public-body {
     line-height: 1.08;
     margin: 56px 0 20px;
     color: #111827;
+    overflow-wrap: anywhere;
 }
 
 .gb-blog-detail__content h2 {
@@ -489,6 +510,8 @@ body.gb-public-body {
     border-radius: 18px;
     background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
     color: #fff;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .gb-content-promo__eyebrow {
@@ -532,6 +555,7 @@ body.gb-public-body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
+    min-width: 0;
 }
 
 .gb-related-content__item {
@@ -545,6 +569,8 @@ body.gb-public-body {
     color: #111827;
     text-decoration: none;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .gb-related-content__item--featured {
@@ -582,12 +608,14 @@ body.gb-public-body {
     font-weight: 700;
     margin: 0 0 24px;
     letter-spacing: -1px;
+    overflow-wrap: anywhere;
 }
 
 .gb-home-lead {
     font-size: 26px;
     color: #4b5563;
     margin: 0 0 36px;
+    overflow-wrap: anywhere;
 }
 
 .gb-home-actions {
@@ -603,6 +631,8 @@ body.gb-public-body {
     text-decoration: none;
     font-weight: 700;
     font-size: 18px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .gb-button--primary {
@@ -621,6 +651,7 @@ body.gb-public-body {
     font-size: 24px;
     margin: 0 0 70px 30px;
     width: 50%;
+    overflow-wrap: anywhere;
 }
 
 .pressMention,
@@ -757,6 +788,7 @@ h1 {
     margin: 0;
     font-size: 56px;
     line-height: 0.9;
+    overflow-wrap: anywhere;
 }
 
 h2, h3, h4, h5, h6 {
@@ -764,6 +796,7 @@ h2, h3, h4, h5, h6 {
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 0;
+    overflow-wrap: anywhere;
 }
 
 h2 {

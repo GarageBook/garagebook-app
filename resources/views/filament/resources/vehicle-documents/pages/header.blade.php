@@ -24,7 +24,7 @@
         gap:16px;
         flex-wrap:wrap;
     ">
-        <div style="min-width:280px;">
+        <div style="width:min(100%, 280px); min-width:0;">
             <label for="activeDocumentVehicleId" style="
                 display:block;
                 margin-bottom:8px;
@@ -84,7 +84,7 @@
                 <div style="font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.66);">
                     {{ __('documents.header.private_vault') }}
                 </div>
-                <div style="margin-top:6px; font-size:clamp(1.9rem, 4vw, 2.7rem); line-height:0.96; font-weight:700;">
+                <div style="margin-top:6px; font-size:clamp(1.9rem, 4vw, 2.7rem); line-height:0.96; font-weight:700; overflow-wrap:anywhere;">
                     {{ $activeVehicle->nickname ?: ($activeVehicle->brand . ' ' . $activeVehicle->model) }}
                 </div>
                 <div style="margin-top:10px; max-width:44rem; color:rgba(255,255,255,0.74); font-size:0.98rem; line-height:1.6;">
@@ -92,14 +92,14 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap:12px;">
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
                     <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('documents.header.documents_count') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $activeVehicle->documents_count }}</div>
                 </div>
                 <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
                     <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('documents.header.privacy') }}</div>
-                    <div style="margin-top:6px; font-size:1.1rem; font-weight:700;">
+                    <div style="margin-top:6px; font-size:1.1rem; font-weight:700; overflow-wrap:anywhere;">
                         {{ $hasDocuments ? __('documents.header.privacy_has_documents') : __('documents.header.privacy_empty') }}
                     </div>
                 </div>

@@ -1,13 +1,13 @@
 <x-filament::widget>
     <x-filament::card>
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:18px;">
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:18px; overflow-wrap:anywhere;">
             Kosten
         </h2>
 
         @if($hasVehicles && $hasCosts)
             <div style="
                 display:grid;
-                grid-template-columns:repeat(2, minmax(0, 1fr));
+                grid-template-columns:repeat(auto-fit, minmax(min(100%, 150px), 1fr));
                 gap:16px;
             ">
                 <div style="
@@ -19,7 +19,7 @@
                     <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.08em;">
                         Totale kosten
                     </div>
-                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#0f172a;">
+                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#0f172a; overflow-wrap:anywhere;">
                         EUR {{ number_format((float) $overallTotalCost, 2, ',', '.') }}
                     </div>
                 </div>
@@ -33,7 +33,7 @@
                     <div style="font-size:12px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.08em;">
                         Maandelijkse kosten
                     </div>
-                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#111827;">
+                    <div style="margin-top:8px; font-size:24px; line-height:1.05; font-weight:800; color:#111827; overflow-wrap:anywhere;">
                         EUR {{ number_format((float) $overallMonthlyCost, 2, ',', '.') }}
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 <x-filament::widget>
     <x-filament::card>
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:20px; overflow-wrap:anywhere;">
             {{ __('reminders.widget_heading') }}
         </h2>
 
@@ -9,6 +9,7 @@
                 <a href="/admin/maintenance-logs/{{ $reminder['log']->id }}/edit"
                    style="
                     padding:15px 16px;
+                    min-width:0;
                     border-radius:12px;
                     background:#f9fafb;
                     border:1px solid #e5e7eb;
@@ -16,7 +17,7 @@
                     display:block;
                    ">
 
-                    <div style="font-size:15px; color:#111827; font-weight:700; line-height:1.3;">
+                    <div style="font-size:15px; color:#111827; font-weight:700; line-height:1.3; overflow-wrap:anywhere;">
                         {{ $reminder['log']->vehicle->brand }} {{ $reminder['log']->vehicle->model }}: {{ $reminder['status']['heading'] }}
                     </div>
 

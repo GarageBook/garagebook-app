@@ -35,7 +35,7 @@
                                 @endif
                             </div>
 
-                            <div class="font-semibold" style="margin:15px 0 0 0;font-style:italic;">
+                            <div class="font-semibold" style="margin:15px 0 0 0;font-style:italic; overflow-wrap:anywhere;">
                                 {{ $vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model }}
                             </div>
                         </div>
@@ -44,11 +44,11 @@
             </div>
 
             <div style="margin:30px 0 0 0;">
-                <div style="display:flex; flex-direction:row; gap:15px; align-items:center;">
+                <div style="display:flex; flex-direction:row; flex-wrap:wrap; gap:15px; align-items:center;">
                     <a
                         href="/admin/vehicles"
                         class="fi-btn rounded-xl px-5 py-3"
-                        style="display:inline-flex;"
+                        style="display:inline-flex; max-width:100%; white-space:normal; overflow-wrap:anywhere;"
                     >
                         {{ __('dashboard.actions_widget.manage_vehicles') }}
                     </a>
@@ -59,7 +59,7 @@
                         @foreach ($addMaintenanceAttributes as $attribute => $value)
                             {{ $attribute }}="{{ $value }}"
                         @endforeach
-                        style="display:inline-flex;"
+                        style="display:inline-flex; max-width:100%; white-space:normal; overflow-wrap:anywhere;"
                     >
                         {{ __('dashboard.actions_widget.add_maintenance') }}
                     </a>

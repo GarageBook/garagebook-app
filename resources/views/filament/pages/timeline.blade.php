@@ -44,6 +44,7 @@
             align-items: end;
             justify-content: space-between;
             gap: 1rem;
+            min-width: 0;
         }
 
         .gb-timeline-hero__eyebrow {
@@ -58,6 +59,7 @@
             font-size: clamp(2rem, 4vw, 3rem);
             line-height: 0.96;
             font-weight: 700;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-hero__subtitle {
@@ -65,12 +67,14 @@
             color: rgba(255, 255, 255, 0.74);
             font-size: 0.98rem;
             line-height: 1.6;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-selector {
             min-width: min(100%, 21rem);
             display: grid;
             gap: 0.55rem;
+            max-width: 100%;
         }
 
         .gb-timeline-selector__label {
@@ -109,6 +113,7 @@
             border-radius: 18px;
             background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(10px);
+            min-width: 0;
         }
 
         .gb-timeline-summary__label {
@@ -123,6 +128,7 @@
             font-size: 1.35rem;
             line-height: 1.1;
             font-weight: 700;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-board {
@@ -154,6 +160,7 @@
             gap: 1rem;
             margin-bottom: 0.9rem;
             padding: 0 0.3rem;
+            min-width: 0;
         }
 
         .gb-timeline-board__legend-label {
@@ -162,6 +169,7 @@
             letter-spacing: 0.14em;
             text-transform: uppercase;
             color: #64748b;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-scroll {
@@ -301,6 +309,7 @@
             background: var(--gb-timeline-panel);
             backdrop-filter: blur(12px);
             box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+            min-width: 0;
         }
 
         .gb-timeline-card__media {
@@ -349,6 +358,7 @@
             align-items: start;
             justify-content: space-between;
             gap: 0.75rem;
+            min-width: 0;
         }
 
         .gb-timeline-card__date {
@@ -379,6 +389,7 @@
             font-size: 1.15rem;
             line-height: 1.3;
             color: var(--gb-timeline-ink);
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-card__summary {
@@ -397,11 +408,15 @@
             color: var(--gb-timeline-muted);
             font-size: 0.82rem;
             font-weight: 600;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
 
         .gb-timeline-card__notes {
             color: var(--gb-timeline-muted);
             line-height: 1.7;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-card__button {
@@ -416,6 +431,8 @@
             color: white;
             font-weight: 700;
             cursor: pointer;
+            max-width: 100%;
+            white-space: normal;
         }
 
         .gb-timeline-empty {
@@ -464,6 +481,7 @@
             line-height: 1.3;
             font-weight: 700;
             color: #0f172a;
+            overflow-wrap: anywhere;
         }
 
         .gb-trips-card__meta {
@@ -519,6 +537,9 @@
             color: white;
             font-weight: 700;
             text-decoration: none;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-modal {
@@ -544,6 +565,7 @@
             border-radius: 28px;
             background: white;
             box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+            min-width: 0;
         }
 
         .gb-timeline-modal__grid {
@@ -606,6 +628,7 @@
             display: grid;
             gap: 1rem;
             padding: 1.5rem;
+            min-width: 0;
         }
 
         .gb-timeline-modal__eyebrow {
@@ -620,11 +643,13 @@
             line-height: 1.05;
             color: #0f172a;
             font-weight: 700;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-modal__text {
             color: #475569;
             line-height: 1.7;
+            overflow-wrap: anywhere;
         }
 
         .gb-timeline-modal__files {
@@ -641,6 +666,7 @@
             border: 1px solid rgba(226, 232, 240, 0.95);
             border-radius: 16px;
             background: #f8fafc;
+            min-width: 0;
         }
 
         .gb-timeline-file__meta {
@@ -668,6 +694,7 @@
             font-weight: 700;
             text-decoration: none;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .gb-timeline-modal__close {
@@ -705,12 +732,35 @@
             .gb-timeline-empty {
                 border-radius: 24px;
                 padding: 1rem;
+                min-width: 0;
             }
 
             .gb-timeline-track {
-                grid-auto-columns: minmax(16rem, 18rem);
+                grid-auto-columns: minmax(15.5rem, 18rem);
                 padding-top: 2.4rem;
                 padding-bottom: 2.6rem;
+            }
+
+            .gb-timeline-modal {
+                padding: 0.75rem;
+            }
+
+            .gb-timeline-modal__gallery {
+                min-height: 16rem;
+            }
+
+            .gb-timeline-modal__content {
+                padding: 1rem;
+            }
+
+            .gb-timeline-file {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.55rem;
+            }
+
+            .gb-timeline-file__link {
+                white-space: normal;
             }
 
             .gb-timeline-entry {

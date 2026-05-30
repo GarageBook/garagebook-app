@@ -159,6 +159,12 @@ class AdminPanelProvider extends PanelProvider
                         height: 44px;
                     }
 
+                    .gb-login-footer,
+                    .gb-footer-inner,
+                    .gb-footer-columns {
+                        min-width: 0;
+                    }
+
                     .gb-footer-columns {
                         display: grid;
                         grid-template-columns: 1fr 1fr 1fr;
@@ -207,6 +213,7 @@ class AdminPanelProvider extends PanelProvider
                         display: block;
                         width: min(100%, 24rem);
                         height: auto;
+                        max-width: 100%;
                         margin: 0;
                     }
 
@@ -239,6 +246,7 @@ class AdminPanelProvider extends PanelProvider
                         display: grid;
                         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
                         gap: 16px;
+                        min-width: 0;
                     }
 
                     .gb-maintenance-media-gallery__card {
@@ -246,6 +254,7 @@ class AdminPanelProvider extends PanelProvider
                         border-radius: 14px;
                         overflow: hidden;
                         background: white;
+                        min-width: 0;
                     }
 
                     .gb-maintenance-media-gallery__image,
@@ -278,6 +287,7 @@ class AdminPanelProvider extends PanelProvider
                         align-items: center;
                         gap: 10px;
                         flex-shrink: 0;
+                        flex-wrap: wrap;
                     }
 
                     .gb-maintenance-media-gallery__link,
@@ -307,6 +317,7 @@ class AdminPanelProvider extends PanelProvider
                         min-height: 160px;
                         padding: 18px;
                         background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+                        min-width: 0;
                     }
 
                     .gb-maintenance-media-gallery__file-type {
@@ -484,6 +495,18 @@ class AdminPanelProvider extends PanelProvider
                         .gb-login-footer {
                             padding-left: 16px;
                             padding-right: 16px;
+                        }
+
+                        .gb-geratel-topnav-logo {
+                            margin-inline-start: 0.25rem;
+                        }
+
+                        .gb-geratel-topnav-logo img {
+                            height: 2.4rem;
+                        }
+
+                        .gb-geratel-register-page .gb-geratel-register-hero__logo {
+                            width: min(100%, 18rem);
                         }
 
                         .gb-maintenance-media-gallery__grid {

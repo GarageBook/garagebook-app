@@ -8,7 +8,7 @@
 
 <x-filament::widget>
     <x-filament::card>
-        <h2 style="font-size:20px; font-weight:700; margin-bottom:20px;">
+        <h2 style="font-size:20px; font-weight:700; margin-bottom:20px; overflow-wrap:anywhere;">
             {{ $translations['heading'] }}
         </h2>
 
@@ -18,6 +18,7 @@
                 $hasMultiplePhotos = count($galleryPhotos) > 1;
             @endphp
             <div style="
+                min-width:0;
                 border-radius:16px;
                 overflow:hidden;
                 border:1px solid #e5e7eb;
@@ -123,7 +124,7 @@
                             decoding="async"
                             style="
                                 width:100%;
-                                height:400px;
+                                height:clamp(220px, 52vw, 400px);
                                 object-fit:cover;
                                 display:block;
                             "
@@ -152,12 +153,13 @@
 
                 <!-- CONTENT -->
                 <div style="padding:18px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px;">
-                        <div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px; flex-wrap:wrap; min-width:0;">
+                        <div style="min-width:min(100%, 12rem); flex:1 1 12rem;">
                             <div style="
                                 font-weight:700;
                                 font-size:16px;
                                 margin-bottom:4px;
+                                overflow-wrap:anywhere;
                             ">
                                 {{ $vehicle->nickname ?? ($vehicle->brand . ' ' . $vehicle->model) }}
                             </div>
@@ -176,7 +178,7 @@
                             background:linear-gradient(180deg, #fffdf2 0%, #fff7d1 100%);
                             border:1px solid #fde68a;
                             text-align:right;
-                            min-width:140px;
+                            min-width:min(100%, 140px);
                         ">
                             <div style="font-size:11px; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:0.08em;">
                                 {{ $translations['monthly'] }}
@@ -189,7 +191,7 @@
 
                     <div style="
                         display:grid;
-                        grid-template-columns:repeat(2, minmax(0, 1fr));
+                        grid-template-columns:repeat(auto-fit, minmax(min(100%, 150px), 1fr));
                         gap:10px;
                         margin-bottom:16px;
                     ">
@@ -222,7 +224,7 @@
                         </div>
                     </div>
 
-                    <div style="display:flex; gap:10px;">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <a href="/admin/vehicles/{{ $vehicle->id }}/edit"
                            style="
                             padding:10px 14px;
@@ -230,6 +232,8 @@
                             background:#f3f4f6;
                             text-decoration:none;
                             font-size:13px;
+                            max-width:100%;
+                            overflow-wrap:anywhere;
                             color:#111827;
                            ">
                             {{ $translations['view'] }}
@@ -243,6 +247,8 @@
                             color:#000;
                             text-decoration:none;
                             font-size:13px;
+                            max-width:100%;
+                            overflow-wrap:anywhere;
                             font-weight:600;
                            ">
                             {{ $translations['add_maintenance'] }}
@@ -262,7 +268,7 @@
                         display:flex;
                         align-items:center;
                         justify-content:center;
-                        padding:24px;
+                        padding:clamp(16px, 5vw, 24px);
                     "
                 >
                     <div
@@ -272,7 +278,7 @@
                             display:flex;
                             align-items:center;
                             justify-content:center;
-                            padding:24px;
+                            padding:clamp(16px, 5vw, 24px);
                         "
                     >
                         <img
@@ -297,7 +303,7 @@
                         aria-label="{{ $translations['aria_previous_photo_zoom'] }}"
                         style="
                             position:absolute;
-                            left:24px;
+                            left:clamp(10px, 5vw, 24px);
                             top:50%;
                             transform:translateY(-50%);
                             border:none;
@@ -317,7 +323,7 @@
                         aria-label="{{ $translations['aria_next_photo_zoom'] }}"
                         style="
                             position:absolute;
-                            right:24px;
+                            right:clamp(10px, 5vw, 24px);
                             top:50%;
                             transform:translateY(-50%);
                             border:none;
@@ -335,8 +341,8 @@
                         aria-label="{{ $translations['aria_close_gallery'] }}"
                         style="
                             position:absolute;
-                            top:24px;
-                            right:24px;
+                            top:clamp(10px, 5vw, 24px);
+                            right:clamp(10px, 5vw, 24px);
                             border:none;
                             background:transparent;
                             color:#fff;
