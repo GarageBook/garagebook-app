@@ -149,10 +149,10 @@ class MaintenanceLog extends Model
             return [];
         }
 
-        return array_values(array_filter(
-            $value,
-            fn (mixed $attachment) => is_string($attachment) && filled($attachment)
-        ));
+        return array_values(array_filter(array_map(
+            fn (mixed $attachment): ?string => self::extractAttachmentPath($attachment),
+            $value
+        )));
     }
 
     public static function splitAttachments(array $attachments): array
@@ -198,5 +198,32 @@ class MaintenanceLog extends Model
         }
 
         return number_format((float) $value, 2, '.', '');
+    }
+
+    private static function extractAttachmentPath(mixed $attachment): ?string
+    {
+        if (is_string($attachment)) {
+            $path = trim($attachment);
+
+            return $path !== '' ? $path : null;
+        }
+
+        if (! is_array($attachment)) {
+            return null;
+        }
+
+        foreach (['path', 'url'] as $key) {
+            if (! isset($attachment[$key]) || ! is_string($attachment[$key])) {
+                continue;
+            }
+
+            $path = trim($attachment[$key]);
+
+            if ($path !== '') {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }

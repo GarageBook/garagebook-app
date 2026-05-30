@@ -458,4 +458,91 @@ class PublicGaragePageTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
     }
+
+    public function test_public_page_renders_shared_maintenance_image_when_enabled(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $visiblePhoto = UploadedFile::fake()->image('visible.jpg');
+        $visiblePhoto->storeAs('maintenance-attachments', 'visible.jpg', 'public');
+        $hiddenPhoto = UploadedFile::fake()->image('hidden.jpg');
+        $hiddenPhoto->storeAs('maintenance-attachments', 'hidden.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $owner->id,
+            'brand' => 'Yamaha',
+            'model' => 'MT-07',
+            'year' => 2020,
+            'is_public' => true,
+            'share_attachments_publicly' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Kleine beurt',
+            'km_reading' => 12345,
+            'maintenance_date' => '2026-05-10',
+            'attachments' => [
+                ['url' => 'maintenance-attachments/visible.jpg'],
+            ],
+        ]);
+
+        $otherVehicle = Vehicle::query()->create([
+            'user_id' => $otherUser->id,
+            'brand' => 'Suzuki',
+            'model' => 'SV650',
+            'year' => 2019,
+            'is_public' => true,
+            'share_attachments_publicly' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $otherVehicle->id,
+            'description' => 'Andere log',
+            'km_reading' => 34567,
+            'maintenance_date' => '2026-05-09',
+            'attachments' => ['maintenance-attachments/hidden.jpg'],
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSee('storage/maintenance-attachments/visible.jpg', false);
+        $response->assertDontSee('storage/maintenance-attachments/hidden.jpg', false);
+    }
+
+    public function test_public_page_hides_maintenance_image_when_attachment_sharing_disabled(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        UploadedFile::fake()->image('private.jpg')->storeAs('maintenance-attachments', 'private.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $owner->id,
+            'brand' => 'Honda',
+            'model' => 'CB650R',
+            'year' => 2021,
+            'is_public' => true,
+            'share_attachments_publicly' => false,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Filter vervangen',
+            'km_reading' => 23456,
+            'maintenance_date' => '2026-05-12',
+            'attachments' => [
+                ['path' => 'maintenance-attachments/private.jpg'],
+            ],
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertDontSee('storage/maintenance-attachments/private.jpg', false);
+    }
 }
