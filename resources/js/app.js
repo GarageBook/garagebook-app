@@ -3,6 +3,7 @@ if (!localStorage.getItem('theme')) {
 }
 
 import './bootstrap';
+import './initial-scroll-position';
 import './klaro-consent';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
