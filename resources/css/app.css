@@ -1414,3 +1414,22 @@ p, span, div, li, a, input, textarea, button {
         width: 100%;
     }
 }
+
+/* Prevent automatic word breaking site-wide; allow normal wrapping only. */
+html,
+body,
+* {
+    hyphens: none;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+/* Keep long technical strings from breaking layout. */
+code,
+pre,
+kbd,
+samp,
+.gb-overflow-safe {
+    overflow-x: auto;
+    white-space: nowrap;
+}

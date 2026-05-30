@@ -195,7 +195,7 @@ class PublicGarageService
             : $vehicle->maintenanceLogs()->latest('maintenance_date')->latest('id')->get();
 
         return $logs->map(function ($log) use ($vehicle): array {
-            $attachments = collect($log->media_attachments)
+            $attachments = collect($log->attachments)
                 ->filter(fn ($path) => is_string($path) && filled($path))
                 ->values();
 
