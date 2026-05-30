@@ -1433,3 +1433,11 @@ samp,
     overflow-x: auto;
     white-space: nowrap;
 }
+
+/* Enforce no word-splitting on public pages, even when component rules set wrapping. */
+.gb-public-body,
+.gb-public-body * {
+    hyphens: none !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+}
