@@ -59,4 +59,50 @@ HTML;
         $this->assertStringContainsString('<strong>onderhoud</strong>', $blog->content);
         $this->assertStringContainsString('<em>historie</em>', $blog->content);
     }
+
+    public function test_admin_can_save_tiptap_json_payload_without_server_error_on_active_edit_blog_page(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $blog = Blog::query()->create([
+            'title' => 'JSON blog',
+            'slug' => 'json-blog',
+            'excerpt' => 'JSON payload test',
+            'content' => '<p>Startinhoud.</p>',
+            'published_at' => now(),
+        ]);
+
+        $tipTapLikeJson = [
+            'type' => 'doc',
+            'content' => [
+                [
+                    'type' => 'heading',
+                    'attrs' => ['level' => 2],
+                    'content' => [
+                        ['type' => 'text', 'text' => 'Onderhoudslog in de praktijk'],
+                    ],
+                ],
+                [
+                    'type' => 'paragraph',
+                    'content' => [
+                        ['type' => 'text', 'text' => 'Plan onderhoud en bewaar facturen per voertuig.'],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->actingAs($admin);
+
+        Livewire::test(EditBlog::class, ['record' => $blog->getRouteKey()])
+            ->set('data.content', $tipTapLikeJson)
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $blog->refresh();
+
+        $this->assertIsString($blog->content);
+        $this->assertStringContainsString('<h2>Onderhoudslog in de praktijk</h2>', $blog->content);
+        $this->assertStringContainsString('<p>Plan onderhoud en bewaar facturen per voertuig.</p>', $blog->content);
+        $this->assertStringNotContainsString('"type":"doc"', $blog->content);
+    }
 }
