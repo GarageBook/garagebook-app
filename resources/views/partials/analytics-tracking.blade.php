@@ -12,10 +12,37 @@
 <script>
     window.garagebookAnalyticsEvents = window.garagebookAnalyticsEvents || [];
     window.garagebookTrackState = window.garagebookTrackState || {
+        nextEventId: 1,
         lastPageViewKey: null,
         lastPageViewAt: 0,
         livewireListenerRegistered: false,
-        initialPageViewTracked: false,
+        initialPageViewQueued: false,
+    };
+
+    window.garagebookDispatchAnalyticsEvent = window.garagebookDispatchAnalyticsEvent || function (queuedEvent) {
+        if (
+            !queuedEvent ||
+            queuedEvent.dispatched ||
+            !window.garageBookAnalyticsState?.consentGranted ||
+            typeof window.gtag !== 'function'
+        ) {
+            return false;
+        }
+
+        window.gtag('event', queuedEvent.event, queuedEvent.params);
+        queuedEvent.dispatched = true;
+
+        return true;
+    };
+
+    window.garagebookFlushAnalyticsQueue = window.garagebookFlushAnalyticsQueue || function () {
+        if (!Array.isArray(window.garagebookAnalyticsEvents)) {
+            return;
+        }
+
+        for (const queuedEvent of window.garagebookAnalyticsEvents) {
+            window.garagebookDispatchAnalyticsEvent(queuedEvent);
+        }
     };
 
     window.garagebookTrack = window.garagebookTrack || function (eventName, params = {}) {
@@ -45,15 +72,16 @@
             window.garagebookTrackState.lastPageViewAt = now;
         }
 
-        try {
-            if (typeof window.gtag === 'function') {
-                window.gtag('event', eventName, payload);
-            }
+        const queuedEvent = {
+            id: window.garagebookTrackState.nextEventId++,
+            event: eventName,
+            params: payload,
+            dispatched: false,
+        };
 
-            window.garagebookAnalyticsEvents.push({
-                event: eventName,
-                params: payload,
-            });
+        try {
+            window.garagebookAnalyticsEvents.push(queuedEvent);
+            window.garagebookDispatchAnalyticsEvent(queuedEvent);
 
             if (@json($debugEnabled)) {
                 console.info('[GarageBook analytics]', eventName, payload);
@@ -62,9 +90,9 @@
         }
     };
 
-    if (!window.garagebookTrackState.initialPageViewTracked) {
+    if (!window.garagebookTrackState.initialPageViewQueued) {
         window.garagebookTrack('page_view');
-        window.garagebookTrackState.initialPageViewTracked = true;
+        window.garagebookTrackState.initialPageViewQueued = true;
     }
 
     if (!window.garagebookTrackState.livewireListenerRegistered) {
@@ -79,6 +107,8 @@
         const analyticsEvents = @json($analyticsEvents);
 
         if (!Array.isArray(analyticsEvents) || analyticsEvents.length === 0) {
+            window.garagebookFlushAnalyticsQueue();
+
             return;
         }
 
@@ -92,5 +122,7 @@
                 analyticsEvent.params && typeof analyticsEvent.params === 'object' ? analyticsEvent.params : {}
             );
         }
+
+        window.garagebookFlushAnalyticsQueue();
     })();
 </script>

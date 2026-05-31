@@ -55,7 +55,10 @@ class AnalyticsAndOnboardingTest extends TestCase
         $this->get('/')
             ->assertSee('window.garageBookAnalyticsConsent', false)
             ->assertSee('measurementId: "G-TEST123"', false)
-            ->assertDontSee('googletagmanager.com/gtag/js?id=G-TEST123', false);
+            ->assertSee('googletagmanager.com/gtag/js?id=G-TEST123', false)
+            ->assertSee("window.gtag('consent', 'default'", false)
+            ->assertSee("analytics_storage: 'denied'", false)
+            ->assertSee('send_page_view: false', false);
     }
 
     public function test_onboarding_redirect_after_vehicle_creation(): void

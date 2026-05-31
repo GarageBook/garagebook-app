@@ -647,15 +647,37 @@ class AnalyticsEventTrackingTest extends TestCase
         $this->assertStringContainsString('G-TEST123456', $googleTag);
         $this->assertStringContainsString('"garagebook.nl","app.garagebook.nl"', $googleTag);
         $this->assertStringContainsString('window.garageBookAnalyticsConsent', $googleTag);
-        $this->assertStringNotContainsString('googletagmanager.com/gtag/js', $googleTag);
+        $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-TEST123456', $googleTag);
+        $this->assertStringContainsString("window.gtag('consent', 'default'", $googleTag);
+        $this->assertStringContainsString("analytics_storage: 'denied'", $googleTag);
+        $this->assertStringContainsString('send_page_view: false', $googleTag);
+        $this->assertStringContainsString('window.garageBookGrantAnalyticsConsent', $googleTag);
+        $this->assertStringContainsString('window.garagebookFlushAnalyticsQueue();', $googleTag);
+        $this->assertTrue(
+            strpos($googleTag, "window.gtag('consent', 'default'") < strpos($googleTag, "window.gtag('config'")
+        );
         $this->assertStringContainsString('page_location: window.location.href', $trackingTag);
         $this->assertStringContainsString('page_path: window.location.pathname', $trackingTag);
         $this->assertStringContainsString('lastPageViewKey', $trackingTag);
         $this->assertStringContainsString('livewireListenerRegistered', $trackingTag);
-        $this->assertStringContainsString('initialPageViewTracked', $trackingTag);
+        $this->assertStringContainsString('initialPageViewQueued', $trackingTag);
+        $this->assertStringContainsString('window.garagebookDispatchAnalyticsEvent', $trackingTag);
+        $this->assertStringContainsString('window.garagebookFlushAnalyticsQueue', $trackingTag);
+        $this->assertStringContainsString('queuedEvent.dispatched = true', $trackingTag);
         $this->assertStringContainsString("window.garagebookTrack('page_view')", $trackingTag);
         $this->assertStringContainsString('"source":"filament"', $trackingTag);
         $this->assertStringNotContainsString('hostname:', $trackingTag);
+    }
+
+    public function test_klaro_consent_script_updates_consent_state_on_accept_and_decline(): void
+    {
+        $klaroScript = file_get_contents(resource_path('js/klaro-consent.js'));
+
+        $this->assertIsString($klaroScript);
+        $this->assertStringContainsString('window.garageBookGrantAnalyticsConsent', $klaroScript);
+        $this->assertStringContainsString('window.garageBookDenyAnalyticsConsent', $klaroScript);
+        $this->assertStringContainsString("storageName: consentOptions.storageName || 'garagebook-cookie-consent'", $klaroScript);
+        $this->assertStringNotContainsString('script.src = `https://www.googletagmanager.com/gtag/js', $klaroScript);
     }
 
     private function assertPayloadDoesNotContainKeys(array $payload, array $keys): void
