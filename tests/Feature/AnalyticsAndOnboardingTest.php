@@ -61,6 +61,16 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->assertSee('send_page_view: false', false);
     }
 
+    public function test_ga4_tracking_does_not_render_in_production_without_measurement_id(): void
+    {
+        $this->app['env'] = 'production';
+        config(['analytics.ga4.measurement_id' => null]);
+
+        $this->get('/')
+            ->assertDontSee('window.garageBookAnalyticsConsent', false)
+            ->assertDontSee('googletagmanager.com/gtag/js?id=', false);
+    }
+
     public function test_onboarding_redirect_after_vehicle_creation(): void
     {
         $user = User::factory()->create();
