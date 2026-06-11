@@ -62,8 +62,16 @@ class AnalyticsEventTracker
         ]);
     }
 
-    public function queueOnboardingWidgetViewed(string $nextStep, int $completedSteps, int $totalSteps): void
+    public function queueOnboardingWidgetViewed(mixed $nextStep, int $completedSteps, int $totalSteps): void
     {
+        if (is_array($nextStep)) {
+            $nextStep = (string) ($nextStep['key'] ?? $nextStep['step'] ?? 'vehicle');
+        }
+
+        if (! is_string($nextStep) || $nextStep === '') {
+            $nextStep = 'vehicle';
+        }
+
         $this->queue('onboarding_widget_viewed', [
             'next_step' => $nextStep,
             'completed_steps' => $completedSteps,

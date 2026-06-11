@@ -42,11 +42,15 @@ class DashboardOnboardingWidget extends Widget
         $user = auth()->user();
         $progress = static::resolveProgressForUser($user);
 
-        app(AnalyticsEventTracker::class)->queueOnboardingWidgetViewed(
-            $progress['next_step'],
-            $progress['completed_steps'],
-            $progress['total_steps']
-        );
+        try {
+            app(AnalyticsEventTracker::class)->queueOnboardingWidgetViewed(
+                $progress['next_step'],
+                $progress['completed_steps'],
+                $progress['total_steps']
+            );
+        } catch (\Throwable $throwable) {
+            report($throwable);
+        }
 
         return [
             'title' => $this->resolveTitle($progress),

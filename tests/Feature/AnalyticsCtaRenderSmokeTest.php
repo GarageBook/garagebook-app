@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\FuelLogs\Pages\ListFuelLogs;
+use App\Support\AnalyticsEventTracker;
 use App\Filament\Resources\VehicleDocuments\Pages\ListVehicleDocuments;
 use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Filament\Widgets\MyVehicles;
@@ -58,6 +59,23 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
             ->assertSeeHtml('data-analytics-click="true"')
             ->assertSeeHtml('data-analytics-event="onboarding_maintenance_cta_clicked"')
             ->assertSeeHtml('data-analytics-param-location="dashboard_onboarding_widget"');
+    }
+
+    public function test_onboarding_widget_tracking_normalizes_array_next_step(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        app(AnalyticsEventTracker::class)->queueOnboardingWidgetViewed([
+            'key' => 'maintenance',
+        ], 1, 3);
+
+        $events = app(AnalyticsEventTracker::class)->consume();
+
+        $this->assertSame('onboarding_widget_viewed', $events[0]['name'] ?? null);
+        $this->assertSame('maintenance', $events[0]['params']['next_step'] ?? null);
+        $this->assertSame(1, $events[0]['params']['completed_steps'] ?? null);
+        $this->assertSame(3, $events[0]['params']['total_steps'] ?? null);
     }
 
     public function test_fuel_logs_page_renders_app_cta_clicked_tracking_attributes(): void

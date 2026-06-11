@@ -95,4 +95,15 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->get('/admin/lifecycle-email-templates')->assertForbidden();
         $this->get('/admin/lifecycle-email-logs')->assertForbidden();
     }
+
+
+    public function test_admin_can_open_lifecycle_template_index_page(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-templates')
+            ->assertOk()
+            ->assertSeeText('Lifecycle E-mailtemplates');
+    }
 }
