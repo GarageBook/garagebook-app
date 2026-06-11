@@ -128,6 +128,25 @@ class AnalyticsEventTracker
         ]);
     }
 
+
+    public function queueLifecycleEmailSent(?User $user, string $emailKey): void
+    {
+        $params = [
+            'email_key' => $emailKey,
+            'user_state' => Analytics::userState($user),
+        ];
+
+        $this->queue('lifecycle_email_sent', $params);
+        logger()->info('lifecycle_email_sent', array_filter($params, fn (mixed $value): bool => $value !== null));
+    }
+
+    public function queueLifecycleEmailClicked(string $emailKey): void
+    {
+        $this->queue('lifecycle_email_clicked', [
+            'email_key' => $emailKey,
+        ]);
+    }
+
     public function queueDashboardViewed(User $user): void
     {
         $vehicles = Vehicle::query()

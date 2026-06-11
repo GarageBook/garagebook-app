@@ -9,6 +9,8 @@ use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicImageController;
 use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleDocumentController;
+use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
+use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +25,15 @@ Route::get('/', function () {
 });
 
 Route::get('/start', StartRedirectController::class);
+
+
+Route::get('/lifecycle-emails/click/{user}/{emailKey}', LifecycleEmailClickController::class)
+    ->middleware('signed')
+    ->name('lifecycle-emails.click');
+
+Route::get('/lifecycle-emails/unsubscribe/{user}', LifecycleEmailUnsubscribeController::class)
+    ->middleware('signed')
+    ->name('lifecycle-emails.unsubscribe');
 
 
 Route::get('/website', function () {
