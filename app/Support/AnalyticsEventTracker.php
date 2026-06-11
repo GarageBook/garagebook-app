@@ -62,6 +62,24 @@ class AnalyticsEventTracker
         ]);
     }
 
+    public function queueOnboardingWidgetViewed(string $nextStep, int $completedSteps, int $totalSteps): void
+    {
+        $this->queue('onboarding_widget_viewed', [
+            'next_step' => $nextStep,
+            'completed_steps' => $completedSteps,
+            'total_steps' => $totalSteps,
+        ]);
+    }
+
+    public function queueOnboardingCompleted(User $user, MaintenanceLog $maintenanceLog): void
+    {
+        $this->queue('onboarding_completed', [
+            'source' => 'filament',
+            'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $maintenanceLog->vehicle_id),
+            'user_state' => Analytics::userState($user),
+        ]);
+    }
+
     public function queueReminderCreated(Vehicle $vehicle, string $type): void
     {
         $this->queue('reminder_created', [

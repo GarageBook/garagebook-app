@@ -5,19 +5,20 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Filament\Resources\VehicleDocuments\VehicleDocumentResource;
 use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Analytics;
+use App\Support\AnalyticsEventTracker;
 use Filament\Widgets\Widget;
 
 class DashboardOnboardingWidget extends Widget
 {
-    private const STATE_NO_VEHICLES = 'no_vehicles';
+    private const STEP_VEHICLE = 'vehicle';
 
-    private const STATE_NEEDS_MAINTENANCE = 'needs_maintenance';
+    private const STEP_MAINTENANCE = 'maintenance';
 
-    private const STATE_NEEDS_DOCUMENTS = 'needs_documents';
-
-    private const STATE_COMPLETE = 'complete';
+    private const STEP_DOCUMENT = 'document';
 
     protected string $view = 'filament.widgets.dashboard-onboarding-widget';
 
@@ -32,77 +33,150 @@ class DashboardOnboardingWidget extends Widget
             return false;
         }
 
-        return static::resolveStateForUser($user) !== self::STATE_COMPLETE;
+        return ! static::resolveProgressForUser($user)['is_complete'];
     }
 
     protected function getViewData(): array
     {
         /** @var User $user */
         $user = auth()->user();
-        $state = self::resolveStateForUser($user);
-        $vehicle = $user->vehicles()->orderBy('id')->first();
+        $progress = static::resolveProgressForUser($user);
+
+        app(AnalyticsEventTracker::class)->queueOnboardingWidgetViewed(
+            $progress['next_step'],
+            $progress['completed_steps'],
+            $progress['total_steps']
+        );
 
         return [
-            'state' => $state,
-            'panel' => $this->buildPanel($state, $vehicle),
+            'title' => $this->resolveTitle($progress),
+            'description' => $this->resolveDescription($progress),
+            'microcopy' => $this->resolveMicrocopy($progress),
+            'progress' => $progress,
+            'primaryCta' => $this->buildPrimaryCta($progress),
         ];
     }
 
-    private static function resolveStateForUser(User $user): string
+    public static function resolveProgressForUser(User $user): array
     {
-        if (! $user->vehicles()->exists()) {
-            return self::STATE_NO_VEHICLES;
-        }
+        $vehicle = $user->vehicles()
+            ->withCount(['maintenanceLogs', 'documents'])
+            ->orderBy('id')
+            ->first();
 
-        if (! $user->vehicles()->whereHas('maintenanceLogs')->exists()) {
-            return self::STATE_NEEDS_MAINTENANCE;
-        }
+        $hasVehicle = $vehicle instanceof Vehicle;
+        $hasMaintenance = $hasVehicle
+            && MaintenanceLog::query()
+                ->whereHas('vehicle', fn ($query) => $query->where('user_id', $user->getKey()))
+                ->exists();
+        $hasDocument = $hasVehicle
+            && $user->vehicles()->whereHas('documents')->exists();
 
-        if (! $user->vehicles()->whereHas('documents')->exists()) {
-            return self::STATE_NEEDS_DOCUMENTS;
-        }
+        $steps = [
+            [
+                'key' => self::STEP_VEHICLE,
+                'label' => 'Voertuig toevoegen',
+                'status' => $hasVehicle ? 'completed' : 'open',
+                'is_optional' => false,
+            ],
+            [
+                'key' => self::STEP_MAINTENANCE,
+                'label' => 'Eerste onderhoudslog toevoegen',
+                'status' => $hasMaintenance ? 'completed' : 'open',
+                'is_optional' => false,
+            ],
+            [
+                'key' => self::STEP_DOCUMENT,
+                'label' => 'Factuur of foto toevoegen',
+                'status' => $hasDocument ? 'completed' : 'open',
+                'is_optional' => true,
+            ],
+        ];
 
-        return self::STATE_COMPLETE;
+        $completedSteps = collect($steps)
+            ->where('status', 'completed')
+            ->count();
+        $isComplete = $hasVehicle && $hasMaintenance;
+        $nextStep = collect($steps)
+            ->first(fn (array $step): bool => $step['status'] === 'open' && ! $step['is_optional']);
+        $nextStepKey = is_array($nextStep)
+            ? $nextStep['key']
+            : ($hasVehicle ? self::STEP_DOCUMENT : self::STEP_VEHICLE);
+
+        return [
+            'vehicle' => $vehicle,
+            'steps' => $steps,
+            'completed_steps' => $completedSteps,
+            'total_steps' => count($steps),
+            'completion_percentage' => (int) round(($completedSteps / count($steps)) * 100),
+            'next_step' => $nextStepKey,
+            'has_vehicle' => $hasVehicle,
+            'has_maintenance' => $hasMaintenance,
+            'has_document' => $hasDocument,
+            'is_complete' => $isComplete,
+        ];
     }
 
-    private function buildPanel(string $state, ?Vehicle $vehicle): ?array
+    private function resolveTitle(array $progress): string
     {
-        return match ($state) {
-            self::STATE_NO_VEHICLES => [
-                'tone' => 'prominent',
-                'title' => 'Voeg je eerste voertuig toe',
-                'description' => 'Start je digitale garage door eerst je motor toe te voegen.',
-                'icon' => 'heroicon-o-plus-circle',
-                'primaryCta' => [
-                    'label' => 'Voertuig toevoegen',
-                    'url' => VehicleResource::getUrl('create'),
-                ],
+        if ($progress['has_vehicle'] && ! $progress['has_maintenance']) {
+            return 'Mooi, je voertuig staat erin.';
+        }
+
+        return 'Maak je GarageBook compleet';
+    }
+
+    private function resolveDescription(array $progress): string
+    {
+        if ($progress['has_vehicle'] && ! $progress['has_maintenance']) {
+            return 'Voeg nu je laatste onderhoudsbeurt toe. Zelfs een registratie maakt je onderhoudsgeschiedenis direct waardevoller.';
+        }
+
+        return 'Een complete onderhoudshistorie begint met je eerste registratie. Voeg je voertuig en onderhoud toe en bouw direct aan een waardevol dossier.';
+    }
+
+    private function resolveMicrocopy(array $progress): ?string
+    {
+        if ($progress['next_step'] !== self::STEP_MAINTENANCE) {
+            return null;
+        }
+
+        return 'Bijvoorbeeld een oliebeurt, bandenwissel, kettingonderhoud of reparatie.';
+    }
+
+    private function buildPrimaryCta(array $progress): array
+    {
+        $vehicle = $progress['vehicle'];
+        $userState = Analytics::userState(auth()->user());
+
+        return match ($progress['next_step']) {
+            self::STEP_MAINTENANCE => [
+                'label' => 'Voeg je laatste onderhoud toe',
+                'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
+                'attributes' => Analytics::clickTrackingAttributes('onboarding_maintenance_cta_clicked', [
+                    'location' => 'dashboard_onboarding_widget',
+                    'user_state' => $userState,
+                    'completed_steps' => $progress['completed_steps'],
+                ]),
             ],
-            self::STATE_NEEDS_MAINTENANCE => [
-                'tone' => 'prominent',
-                'title' => 'Voeg je eerste onderhoud toe',
-                'description' => 'Je voertuig staat klaar. Leg nu je eerste beurt of reparatie vast.',
-                'icon' => 'heroicon-o-wrench-screwdriver',
-                'primaryCta' => [
-                    'label' => 'Onderhoud toevoegen',
-                    'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
-                ],
-                'secondaryCta' => $vehicle ? [
-                    'label' => 'Voertuig aanpassen',
-                    'url' => VehicleResource::getUrl('edit', ['record' => $vehicle->id]),
-                ] : null,
+            self::STEP_DOCUMENT => [
+                'label' => 'Factuur of foto toevoegen',
+                'url' => VehicleDocumentResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
+                'attributes' => Analytics::clickTrackingAttributes('onboarding_document_cta_clicked', [
+                    'location' => 'dashboard_onboarding_widget',
+                    'user_state' => $userState,
+                    'completed_steps' => $progress['completed_steps'],
+                ]),
             ],
-            self::STATE_NEEDS_DOCUMENTS => [
-                'tone' => 'subtle',
-                'title' => 'Maak je garage completer',
-                'description' => 'Upload een factuur, foto of document als extra bewijs bij je historie.',
-                'icon' => 'heroicon-o-document-arrow-up',
-                'primaryCta' => [
-                    'label' => 'Document uploaden',
-                    'url' => VehicleDocumentResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
-                ],
+            default => [
+                'label' => 'Voertuig toevoegen',
+                'url' => VehicleResource::getUrl('create'),
+                'attributes' => Analytics::clickTrackingAttributes('onboarding_vehicle_cta_clicked', [
+                    'location' => 'dashboard_onboarding_widget',
+                    'user_state' => $userState,
+                    'completed_steps' => $progress['completed_steps'],
+                ]),
             ],
-            default => null,
         };
     }
 }

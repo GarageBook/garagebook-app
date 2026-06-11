@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\FuelLogs\Pages\ListFuelLogs;
 use App\Filament\Resources\VehicleDocuments\Pages\ListVehicleDocuments;
+use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Filament\Widgets\MyVehicles;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -27,6 +28,36 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
             ->assertSeeHtml('data-analytics-param-cta-name="add_first_vehicle"')
             ->assertSeeHtml('data-analytics-param-location="my_vehicles_empty_state"')
             ->assertSeeHtml('data-analytics-param-user-state="new"');
+    }
+
+    public function test_dashboard_onboarding_widget_renders_vehicle_tracking_attributes(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(DashboardOnboardingWidget::class)
+            ->assertSeeHtml('data-analytics-click="true"')
+            ->assertSeeHtml('data-analytics-event="onboarding_vehicle_cta_clicked"')
+            ->assertSeeHtml('data-analytics-param-location="dashboard_onboarding_widget"');
+    }
+
+    public function test_dashboard_onboarding_widget_renders_maintenance_tracking_attributes(): void
+    {
+        $user = User::factory()->create();
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'Transalp',
+            'current_km' => 12000,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(DashboardOnboardingWidget::class)
+            ->assertSeeHtml('data-analytics-click="true"')
+            ->assertSeeHtml('data-analytics-event="onboarding_maintenance_cta_clicked"')
+            ->assertSeeHtml('data-analytics-param-location="dashboard_onboarding_widget"');
     }
 
     public function test_fuel_logs_page_renders_app_cta_clicked_tracking_attributes(): void

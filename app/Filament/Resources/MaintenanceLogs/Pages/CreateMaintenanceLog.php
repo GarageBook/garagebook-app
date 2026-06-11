@@ -29,7 +29,16 @@ class CreateMaintenanceLog extends CreateRecord
 
     protected function afterCreate(): void
     {
-        app(AnalyticsEventTracker::class)->queueMaintenanceLogCreated($this->record);
+        $tracker = app(AnalyticsEventTracker::class);
+        $tracker->queueMaintenanceLogCreated($this->record);
+
+        $user = auth()->user();
+        $maintenanceCount = $user?->vehicles()->withCount('maintenanceLogs')->get()->sum('maintenance_logs_count') ?? 0;
+
+        if ($user && $maintenanceCount === 1) {
+            $tracker->queueOnboardingCompleted($user, $this->record);
+        }
+
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
 

@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\VehicleDocument;
 use App\Support\AnalyticsAttribution;
 use App\Support\AnalyticsEventTracker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class AnalyticsAndOnboardingTest extends TestCase
@@ -25,7 +28,6 @@ class AnalyticsAndOnboardingTest extends TestCase
                 'landing_page' => '/',
             ]);
 
-        // Visit another page without UTMs, should still be there
         $this->get('/blogs')
             ->assertSessionHas(AnalyticsAttribution::SESSION_KEY);
     }
@@ -95,7 +97,6 @@ class AnalyticsAndOnboardingTest extends TestCase
     {
         $data = app(\App\Support\Growth\GrowthDashboardData::class)->kpiOverview();
 
-        // With 0 visitors and 0 registrations, conversion should be null or 0
         $this->assertNull(collect($data['cards'])->firstWhere('label', 'Conversieratio 30 dagen')['value']);
     }
 
@@ -104,7 +105,7 @@ class AnalyticsAndOnboardingTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        \Livewire\Livewire::test(\App\Filament\Resources\Vehicles\Pages\CreateVehicle::class)
+        Livewire::test(\App\Filament\Resources\Vehicles\Pages\CreateVehicle::class)
             ->fillForm([
                 'brand' => 'Suzuki',
                 'model' => 'GSX-R 750',
@@ -113,28 +114,30 @@ class AnalyticsAndOnboardingTest extends TestCase
             ])
             ->call('create')
             ->assertHasNoErrors()
-            ->assertRedirect();
-
-        $vehicle = Vehicle::where('brand', 'Suzuki')->first();
-        $this->assertNotNull($vehicle);
+            ->assertRedirect(MaintenanceLogResource::getUrl('create', [
+                'vehicle_id' => Vehicle::query()->where('brand', 'Suzuki')->value('id'),
+                'onboarding' => 1,
+            ]));
     }
 
-    public function test_user_without_vehicles_sees_vehicle_onboarding(): void
+    public function test_widget_is_visible_for_user_without_vehicle(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get('/admin')
             ->assertOk()
-            ->assertSeeText('Voeg je eerste voertuig toe')
+            ->assertSeeText('Maak je GarageBook compleet')
+            ->assertSeeText('0 van 3 stappen voltooid')
             ->assertSeeText('Voertuig toevoegen')
-            ->assertDontSeeText('Voeg je eerste onderhoud toe');
+            ->assertSee('href="' . e(VehicleResource::getUrl('create')) . '"', false)
+            ->assertSee('data-analytics-event="onboarding_vehicle_cta_clicked"', false);
     }
 
-    public function test_user_with_vehicle_but_without_maintenance_sees_maintenance_nudge(): void
+    public function test_widget_is_visible_for_user_with_vehicle_but_without_maintenance(): void
     {
         $user = User::factory()->create();
-        Vehicle::query()->create([
+        $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
             'brand' => 'Yamaha',
             'model' => 'MT-07',
@@ -144,13 +147,16 @@ class AnalyticsAndOnboardingTest extends TestCase
         $this->actingAs($user)
             ->get('/admin')
             ->assertOk()
-            ->assertSeeText('Voeg je eerste onderhoud toe')
-            ->assertSeeText('Onderhoud toevoegen')
-            ->assertSeeText('Voertuig aanpassen')
-            ->assertDontSeeText('Document uploaden');
+            ->assertSeeText('Mooi, je voertuig staat erin.')
+            ->assertSeeText('1 van 3 stappen voltooid')
+            ->assertSeeText('Voeg je laatste onderhoud toe')
+            ->assertSeeText('Bijvoorbeeld een oliebeurt, bandenwissel, kettingonderhoud of reparatie.')
+            ->assertSeeText('Factuur of foto toevoegen')
+            ->assertSee('href="' . e(MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id])) . '"', false)
+            ->assertSee('data-analytics-event="onboarding_maintenance_cta_clicked"', false);
     }
 
-    public function test_user_with_vehicle_and_maintenance_no_longer_sees_large_step_two_onboarding(): void
+    public function test_widget_is_hidden_when_user_has_vehicle_and_maintenance_even_without_document(): void
     {
         $user = User::factory()->create();
         $vehicle = Vehicle::query()->create([
@@ -167,46 +173,11 @@ class AnalyticsAndOnboardingTest extends TestCase
             'km_reading' => 32000,
         ]);
 
-        $this->actingAs($user)
-            ->get('/admin')
-            ->assertOk()
-            ->assertSeeText('Maak je garage completer')
-            ->assertSeeText('Document uploaden')
-            ->assertDontSeeText('Stap 2: Voeg je eerste onderhoud toe')
-            ->assertDontSeeText('Voertuig aanpassen');
-    }
+        $this->actingAs($user);
 
-    public function test_user_with_vehicle_maintenance_and_document_sees_no_onboarding_widget(): void
-    {
-        $user = User::factory()->create();
-        $vehicle = Vehicle::query()->create([
-            'user_id' => $user->id,
-            'brand' => 'Triumph',
-            'model' => 'Street Triple',
-            'current_km' => 21000,
-        ]);
+        $this->get('/admin')->assertOk();
 
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'description' => 'Grote beurt',
-            'maintenance_date' => '2026-03-10',
-            'km_reading' => 21000,
-        ]);
-
-        VehicleDocument::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'title' => 'Onderhoudsfactuur',
-            'document_type' => 'invoice',
-            'file_path' => 'documents/onderhoudsfactuur.pdf',
-        ]);
-
-        $this->actingAs($user)
-            ->get('/admin')
-            ->assertOk()
-            ->assertDontSeeText('Voeg je eerste voertuig toe')
-            ->assertDontSeeText('Voeg je eerste onderhoud toe')
-            ->assertDontSeeText('Maak je garage completer')
-            ->assertDontSeeText('Document uploaden');
+        $this->assertFalse(DashboardOnboardingWidget::canView());
     }
 
     public function test_other_users_data_does_not_affect_dashboard_onboarding_state(): void
@@ -235,20 +206,42 @@ class AnalyticsAndOnboardingTest extends TestCase
             'km_reading' => 9000,
         ]);
 
-        VehicleDocument::query()->create([
-            'vehicle_id' => $otherVehicle->id,
-            'title' => 'Factuur andere user',
-            'document_type' => 'invoice',
-            'file_path' => 'documents/other-user.pdf',
-        ]);
-
         $this->actingAs($user)
             ->get('/admin')
             ->assertOk()
-            ->assertSeeText('Voeg je eerste onderhoud toe')
-            ->assertSeeText('Onderhoud toevoegen')
-            ->assertSeeText('Voertuig aanpassen')
-            ->assertDontSeeText('Maak je garage completer')
-            ->assertDontSeeText('Factuur andere user');
+            ->assertSeeText('Mooi, je voertuig staat erin.')
+            ->assertSeeText('Voeg je laatste onderhoud toe')
+            ->assertDontSeeText('Desmo service');
+    }
+
+    public function test_first_maintenance_log_queues_onboarding_completed_event(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'Tuono',
+            'current_km' => 12345,
+            'distance_unit' => 'km',
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(\App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Oliebeurt',
+                'km_reading' => 12345,
+                'maintenance_date' => '2026-06-01',
+            ])
+            ->call('create')
+            ->assertHasNoErrors();
+
+        $events = app(AnalyticsEventTracker::class)->consume();
+
+        $this->assertSame('maintenance_log_created', $events[0]['name'] ?? null);
+        $this->assertSame('onboarding_completed', $events[1]['name'] ?? null);
+        $this->assertSame('filament', $events[1]['params']['source'] ?? null);
     }
 }

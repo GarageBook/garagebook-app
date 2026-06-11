@@ -142,6 +142,14 @@ class AnalyticsEventTrackingTest extends TestCase
                     'source' => 'filament',
                 ],
             ],
+            [
+                'name' => 'onboarding_completed',
+                'params' => [
+                    'source' => 'filament',
+                    'vehicle_id_hash' => \App\Support\Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'user_state' => 'active',
+                ],
+            ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
@@ -404,6 +412,14 @@ class AnalyticsEventTrackingTest extends TestCase
                     'maintenance_log_count' => 1,
                     'document_count' => 1,
                     'fuel_log_count' => 1,
+                ],
+            ],
+            [
+                'name' => 'onboarding_widget_viewed',
+                'params' => [
+                    'next_step' => 'document',
+                    'completed_steps' => 3,
+                    'total_steps' => 3,
                 ],
             ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
