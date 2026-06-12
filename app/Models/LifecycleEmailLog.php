@@ -22,11 +22,16 @@ class LifecycleEmailLog extends Model
         'sent_at',
         'failed_at',
         'error_message',
+        'retried_at',
+        'retry_status',
+        'retry_log_id',
+        'retry_error_message',
     ];
 
     protected $casts = [
         'sent_at' => 'datetime',
         'failed_at' => 'datetime',
+        'retried_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

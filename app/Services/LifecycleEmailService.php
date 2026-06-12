@@ -14,6 +14,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -23,6 +24,16 @@ use Throwable;
 
 class LifecycleEmailService
 {
+    public function retryableEmailKeys(): array
+    {
+        return [
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
+            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+        ];
+    }
+
     public function resolveEligibleEmailKey(User $user): ?string
     {
         if ($user->hasUnsubscribedFromLifecycleEmails() || ! $user->vehicles()->exists()) {
@@ -259,6 +270,137 @@ class LifecycleEmailService
         return 'test_' . $templateEmailKey . '_' . now()->format('YmdHisv');
     }
 
+    public function makeRetryEmailKey(LifecycleEmailLog $originalLog): string
+    {
+        return 'retry_' . $originalLog->email_key . '_' . now()->format('YmdHis') . '_' . $originalLog->getKey();
+    }
+
+    public function retryStatusForLog(LifecycleEmailLog $log, ?User $user, bool $ignoreEligibility = false): string
+    {
+        if ($log->retried_at !== null || filled($log->retry_status) || filled($log->retry_log_id)) {
+            return 'already_retried';
+        }
+
+        if (! in_array($log->email_key, $this->retryableEmailKeys(), true)) {
+            return 'email_key_not_allowed';
+        }
+
+        if (str_starts_with($log->email_key, 'test_')) {
+            return 'test_log';
+        }
+
+        if ($log->status !== LifecycleEmailLog::STATUS_SENT) {
+            return 'status_not_sent';
+        }
+
+        if (! $user) {
+            return 'user_missing';
+        }
+
+        if ($user->hasUnsubscribedFromLifecycleEmails() && ! $ignoreEligibility) {
+            return 'unsubscribed';
+        }
+
+        if (! $ignoreEligibility && ! $this->emailKeyMatchesCurrentState($user, $log->email_key)) {
+            return 'no_longer_eligible';
+        }
+
+        if (! $this->getActiveTemplate($log->email_key)) {
+            return 'template_inactive';
+        }
+
+        return 'ready';
+    }
+
+    public function retryLifecycleEmailLog(LifecycleEmailLog $originalLog, bool $ignoreEligibility = false): array
+    {
+        return DB::transaction(function () use ($originalLog, $ignoreEligibility): array {
+            $lockedLog = LifecycleEmailLog::query()
+                ->lockForUpdate()
+                ->find($originalLog->getKey());
+
+            if (! $lockedLog) {
+                return [
+                    'status' => 'missing',
+                    'retry_log_id' => null,
+                    'error_message' => 'Origineel lifecycle-log bestaat niet meer.',
+                ];
+            }
+
+            $user = User::query()->find($lockedLog->user_id);
+            $status = $this->retryStatusForLog($lockedLog, $user, $ignoreEligibility);
+
+            if ($status !== 'ready') {
+                return [
+                    'status' => $status,
+                    'retry_log_id' => null,
+                    'error_message' => null,
+                ];
+            }
+
+            $template = $this->getActiveTemplate($lockedLog->email_key);
+
+            if (! $template || ! $user) {
+                return [
+                    'status' => 'template_inactive',
+                    'retry_log_id' => null,
+                    'error_message' => 'Geen actieve lifecycle-template gevonden voor retry.',
+                ];
+            }
+
+            $retryLog = LifecycleEmailLog::query()->create([
+                'user_id' => $user->getKey(),
+                'email_key' => $this->makeRetryEmailKey($lockedLog),
+                'subject' => $template->subject,
+                'status' => LifecycleEmailLog::STATUS_QUEUED,
+            ]);
+
+            $resultStatus = LifecycleEmailLog::STATUS_SENT;
+            $errorMessage = null;
+
+            try {
+                $this->assertMailConfigurationIsUsable();
+
+                Mail::to($user->email)->send($this->makeMailable($user, $template));
+
+                $retryLog->forceFill([
+                    'subject' => $template->subject,
+                    'status' => LifecycleEmailLog::STATUS_SENT,
+                    'sent_at' => now(),
+                    'failed_at' => null,
+                    'error_message' => null,
+                ])->save();
+            } catch (Throwable $exception) {
+                $resultStatus = LifecycleEmailLog::STATUS_FAILED;
+                $message = trim($exception->getMessage());
+                $errorMessage = $message === ''
+                    ? 'Retry lifecycle-email verzenden mislukt zonder foutmelding vanuit de mailer.'
+                    : 'Retry lifecycle-email verzenden mislukt: ' . $message;
+
+                $retryLog->forceFill([
+                    'subject' => $template->subject,
+                    'status' => LifecycleEmailLog::STATUS_FAILED,
+                    'sent_at' => null,
+                    'failed_at' => now(),
+                    'error_message' => Str::limit($errorMessage, 65535, ''),
+                ])->save();
+            }
+
+            $lockedLog->forceFill([
+                'retried_at' => now(),
+                'retry_status' => $resultStatus,
+                'retry_log_id' => $retryLog->getKey(),
+                'retry_error_message' => $errorMessage ? Str::limit($errorMessage, 65535, '') : null,
+            ])->save();
+
+            return [
+                'status' => $resultStatus,
+                'retry_log_id' => $retryLog->getKey(),
+                'error_message' => $errorMessage,
+            ];
+        });
+    }
+
     private function resolveNoMaintenanceKey(User $user): ?string
     {
         $ageInDays = (int) $user->created_at?->startOfDay()->diffInDays(now()->startOfDay()) ?: 0;
@@ -290,12 +432,23 @@ class LifecycleEmailService
     {
         $emailKey = LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG;
 
-        if (! $this->getActiveTemplate($emailKey)) {
+        if (! $this->userQualifiesForAfterFirstMaintenanceEmail($user)) {
             return null;
         }
 
         if ($user->lifecycleEmailLogs()->where('email_key', $emailKey)->exists()) {
             return null;
+        }
+
+        return $emailKey;
+    }
+
+    private function userQualifiesForAfterFirstMaintenanceEmail(User $user): bool
+    {
+        $emailKey = LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG;
+
+        if (! $this->getActiveTemplate($emailKey)) {
+            return false;
         }
 
         $firstMaintenanceCreatedAt = MaintenanceLog::query()
@@ -304,12 +457,10 @@ class LifecycleEmailService
             ->first()?->created_at;
 
         if (! $firstMaintenanceCreatedAt) {
-            return null;
+            return false;
         }
 
-        return $firstMaintenanceCreatedAt <= now()->subDays(7)
-            ? $emailKey
-            : null;
+        return $firstMaintenanceCreatedAt <= now()->subDays(7);
     }
 
     private function userHasMaintenanceLogs(User $user): bool
@@ -398,7 +549,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => ! $this->userHasMaintenanceLogs($user),
-            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => $this->resolveAfterFirstMaintenanceKey($user) === $emailKey,
+            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => $this->userQualifiesForAfterFirstMaintenanceEmail($user),
             default => false,
         };
     }
