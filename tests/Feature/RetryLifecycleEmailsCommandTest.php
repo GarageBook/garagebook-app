@@ -255,6 +255,72 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(2, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_%')->count());
     }
 
+    public function test_dry_run_includes_logs_with_failed_retry_status_and_failed_retry_log_id(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        $failedRetryLog = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_previous_failed',
+            'subject' => 'Vorige retry',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'failed_at' => now()->subMinutes(20),
+            'error_message' => 'Class "Resend" not found',
+            'created_at' => now()->subMinutes(20),
+            'updated_at' => now()->subMinutes(20),
+        ]);
+
+        $originalLog->forceFill([
+            'retry_status' => LifecycleEmailLog::STATUS_FAILED,
+            'retry_log_id' => $failedRetryLog->id,
+            'retry_error_message' => 'Class "Resend" not found',
+            'retried_at' => null,
+        ])->save();
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+        ]);
+
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('Geselecteerde logs: 1', $output);
+        $this->assertStringContainsString('Eligible voor retry nu: 1', $output);
+        $this->assertStringContainsString((string) $originalLog->id, $output);
+    }
+
+    public function test_dry_run_excludes_logs_with_successful_retry_status(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        $successfulRetryLog = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_previous_sent',
+            'subject' => 'Vorige succesvolle retry',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subMinutes(20),
+            'created_at' => now()->subMinutes(20),
+            'updated_at' => now()->subMinutes(20),
+        ]);
+
+        $originalLog->forceFill([
+            'retry_status' => LifecycleEmailLog::STATUS_SENT,
+            'retry_log_id' => $successfulRetryLog->id,
+            'retry_error_message' => null,
+            'retried_at' => now()->subMinutes(20),
+        ])->save();
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+        ]);
+
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('Geselecteerde logs: 0', $output);
+        $this->assertStringNotContainsString('| ' . $originalLog->id . '               |', $output);
+    }
+
     public function test_duplicate_retry_is_prevented(): void
     {
         Mail::fake();

@@ -159,6 +159,11 @@ class RetryLifecycleEmailsCommand extends Command
             ->whereIn('email_key', $service->retryableEmailKeys())
             ->where('email_key', 'not like', 'test_%')
             ->whereNull('retried_at')
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereNull('retry_status')
+                    ->orWhere('retry_status', LifecycleEmailLog::STATUS_FAILED);
+            })
             ->whereRaw('COALESCE(sent_at, created_at) < ?', [$before->format('Y-m-d H:i:s')]);
     }
 
