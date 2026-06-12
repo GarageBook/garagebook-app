@@ -20,7 +20,7 @@ class RetryLifecycleEmailsCommand extends Command
 
     protected $description = 'Voert een eenmalige retry uit voor geselecteerde lifecycle-mails die historisch onterecht als sent zijn gelogd.';
 
-    public function handle(LifecycleEmailService $service): int
+    public function handle(LifecycleEmailService $service, \App\Support\LifecycleEmailRetryThrottle $throttle): int
     {
         $before = $this->parseBeforeOption();
 
@@ -112,12 +112,20 @@ class RetryLifecycleEmailsCommand extends Command
             'failed' => 0,
             'skipped' => 0,
         ];
+        $sendAttempts = 0;
 
         $this->retryBaseQuery($service, $before)
             ->orderBy('id')
-            ->chunkById(100, function ($logs) use ($service, $ignoreEligibility, &$processed): void {
+            ->chunkById(100, function ($logs) use ($service, $ignoreEligibility, $throttle, &$processed, &$sendAttempts): void {
                 foreach ($logs as $log) {
-                    $result = $service->retryLifecycleEmailLog($log, $ignoreEligibility);
+                    $result = $service->retryLifecycleEmailLog(
+                        $log,
+                        $ignoreEligibility,
+                        function () use ($throttle, &$sendAttempts): void {
+                            $throttle->pauseBeforeSend($sendAttempts);
+                            $sendAttempts++;
+                        },
+                    );
                     $status = $result['status'];
                     $errorMessage = $result['error_message'];
                     $retryLogId = $result['retry_log_id'];

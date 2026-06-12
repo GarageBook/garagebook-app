@@ -315,7 +315,7 @@ class LifecycleEmailService
         return 'ready';
     }
 
-    public function retryLifecycleEmailLog(LifecycleEmailLog $originalLog, bool $ignoreEligibility = false): array
+    public function retryLifecycleEmailLog(LifecycleEmailLog $originalLog, bool $ignoreEligibility = false, ?callable $beforeSend = null): array
     {
         $prepared = DB::transaction(function () use ($originalLog, $ignoreEligibility): array {
             $lockedLog = LifecycleEmailLog::query()
@@ -389,6 +389,8 @@ class LifecycleEmailService
         }
 
         try {
+            $beforeSend?->__invoke();
+
             $retryLog = $this->sendLifecycleMailForLog(
                 user: $user,
                 template: $template,

@@ -143,6 +143,38 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
     }
 
+    public function test_execute_throttles_retry_sends_to_four_per_second(): void
+    {
+        Mail::fake();
+
+        $sleepCalls = [];
+        $this->app->instance(\App\Support\LifecycleEmailRetryThrottle::class, new \App\Support\LifecycleEmailRetryThrottle(function (int $microseconds) use (&$sleepCalls): void {
+            $sleepCalls[] = $microseconds;
+        }));
+
+        $firstUser = $this->createLifecycleUser([
+            'email' => 'first-throttle@example.com',
+        ]);
+        $secondUser = $this->createLifecycleUser([
+            'email' => 'second-throttle@example.com',
+        ]);
+        $thirdUser = $this->createLifecycleUser([
+            'email' => 'third-throttle@example.com',
+        ]);
+
+        $this->createSentLog($firstUser, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+        $this->createSentLog($secondUser, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+        $this->createSentLog($thirdUser, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        Mail::assertSent(NoMaintenanceLogDay14Mail::class, 3);
+        $this->assertSame([250000, 250000], $sleepCalls);
+    }
+
     public function test_execute_with_resend_mailer_uses_global_sdk_class_without_redeclare(): void
     {
         $user = $this->createLifecycleUser();
