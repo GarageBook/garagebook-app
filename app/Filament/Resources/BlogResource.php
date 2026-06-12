@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class BlogResource extends Resource
 {
+    // Legacy duplicate resource. Active admin blog routes use App\Filament\Resources\Blogs\BlogResource.
+    // Keep in sync only deliberately until the duplicate can be removed safely.
     protected static ?string $model = Blog::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';

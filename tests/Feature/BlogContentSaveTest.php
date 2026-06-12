@@ -6,6 +6,7 @@ use App\Filament\Resources\Blogs\Pages\EditBlog;
 use App\Models\Blog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -104,5 +105,80 @@ HTML;
         $this->assertStringContainsString('<h2>Onderhoudslog in de praktijk</h2>', $blog->content);
         $this->assertStringContainsString('<p>Plan onderhoud en bewaar facturen per voertuig.</p>', $blog->content);
         $this->assertStringNotContainsString('"type":"doc"', $blog->content);
+    }
+
+    public function test_admin_can_save_stringified_tiptap_json_without_server_error_on_active_edit_blog_page(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $blog = Blog::query()->create([
+            'title' => 'JSON string blog',
+            'slug' => 'json-string-blog',
+            'excerpt' => 'JSON string payload test',
+            'content' => '<p>Startinhoud.</p>',
+            'published_at' => now(),
+        ]);
+
+        $stringifiedPayload = json_encode([
+            'type' => 'doc',
+            'content' => [
+                [
+                    'type' => 'paragraph',
+                    'content' => [
+                        ['type' => 'text', 'text' => 'Stringified payload.'],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->actingAs($admin);
+
+        Livewire::test(EditBlog::class, ['record' => $blog->getRouteKey()])
+            ->set('data.content', $stringifiedPayload)
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $blog->refresh();
+
+        $this->assertIsString($blog->content);
+        $this->assertStringContainsString('Stringified payload.', $blog->content);
+    }
+
+    public function test_malformed_tiptap_doc_payload_returns_validation_error_without_overwriting_content(): void
+    {
+        Log::spy();
+
+        $admin = User::factory()->admin()->create();
+
+        $blog = Blog::query()->create([
+            'title' => 'Malformed blog',
+            'slug' => 'malformed-blog',
+            'excerpt' => 'Malformed payload test',
+            'content' => '<p>Veilige bestaande inhoud.</p>',
+            'published_at' => now(),
+        ]);
+
+        $originalContent = $blog->content;
+
+        $this->actingAs($admin);
+
+        Livewire::test(EditBlog::class, ['record' => $blog->getRouteKey()])
+            ->set('data.content', [
+                'type' => 'doc',
+                'content' => 'unexpected-string-node-list',
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['content']);
+
+        $blog->refresh();
+
+        $this->assertSame($originalContent, $blog->content);
+
+        Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context): bool {
+            return $message === 'blog_edit_invalid_content'
+                && $context['page'] === EditBlog::class
+                && $context['resource'] === \App\Filament\Resources\Blogs\BlogResource::class
+                && ($context['content']['content_field_type'] ?? null) === 'string';
+        })->once();
     }
 }
