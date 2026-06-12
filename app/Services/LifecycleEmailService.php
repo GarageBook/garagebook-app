@@ -268,7 +268,7 @@ class LifecycleEmailService
 
     public function retryStatusForLog(LifecycleEmailLog $log, ?User $user, bool $ignoreEligibility = false): string
     {
-        if ($log->retried_at !== null || $log->retry_status === LifecycleEmailLog::STATUS_SENT) {
+        if ($log->retry_status === LifecycleEmailLog::STATUS_SENT) {
             return 'already_retried';
         }
 

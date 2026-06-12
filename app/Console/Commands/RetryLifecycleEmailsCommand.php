@@ -15,7 +15,8 @@ class RetryLifecycleEmailsCommand extends Command
     protected $signature = 'garagebook:retry-lifecycle-emails
         {--before= : Selecteer alleen sent lifecycle-logs van voor deze timestamp}
         {--execute : Verstuur de geselecteerde lifecycle-mails echt opnieuw}
-        {--ignore-eligibility : Verstuur ook naar users die nu unsubscribed of niet meer eligible zijn}';
+        {--ignore-eligibility : Verstuur ook naar users die nu unsubscribed of niet meer eligible zijn}
+        {--reset-failed-retries : Reset alleen mislukte retry-markeringen op originele lifecycle-logs zodat ze opnieuw eligible worden}';
 
     protected $description = 'Voert een eenmalige retry uit voor geselecteerde lifecycle-mails die historisch onterecht als sent zijn gelogd.';
 
@@ -29,6 +30,13 @@ class RetryLifecycleEmailsCommand extends Command
 
         $ignoreEligibility = (bool) $this->option('ignore-eligibility');
         $execute = (bool) $this->option('execute');
+        $resetFailedRetries = (bool) $this->option('reset-failed-retries');
+
+        if ($resetFailedRetries) {
+            $resetCount = $this->resetFailedRetries($service, $before);
+            $this->info('Gefaalde retry-markeringen gereset: ' . $resetCount);
+            $this->newLine();
+        }
 
         $selectedCount = $this->retryBaseQuery($service, $before)->count();
         $countsPerEmailKey = $this->retryBaseQuery($service, $before)
@@ -49,6 +57,7 @@ class RetryLifecycleEmailsCommand extends Command
         $this->line('Mode: ' . ($execute ? 'execute' : 'dry-run'));
         $this->line('Before: ' . $before->format('Y-m-d H:i:s'));
         $this->line('Ignore eligibility: ' . ($ignoreEligibility ? 'yes' : 'no'));
+        $this->line('Reset failed retries: ' . ($resetFailedRetries ? 'yes' : 'no'));
         $this->newLine();
         $this->info('Geselecteerde logs: ' . $selectedCount);
 
@@ -158,7 +167,6 @@ class RetryLifecycleEmailsCommand extends Command
             ->where('status', LifecycleEmailLog::STATUS_SENT)
             ->whereIn('email_key', $service->retryableEmailKeys())
             ->where('email_key', 'not like', 'test_%')
-            ->whereNull('retried_at')
             ->where(function (Builder $query): void {
                 $query
                     ->whereNull('retry_status')
@@ -192,5 +200,18 @@ class RetryLifecycleEmailsCommand extends Command
             });
 
         return $summary;
+    }
+
+    private function resetFailedRetries(LifecycleEmailService $service, Carbon $before): int
+    {
+        return LifecycleEmailLog::query()
+            ->where('status', LifecycleEmailLog::STATUS_SENT)
+            ->whereIn('email_key', $service->retryableEmailKeys())
+            ->where('email_key', 'not like', 'test_%')
+            ->where('retry_status', LifecycleEmailLog::STATUS_FAILED)
+            ->whereRaw('COALESCE(sent_at, created_at) < ?', [$before->format('Y-m-d H:i:s')])
+            ->update([
+                'retried_at' => null,
+            ]);
     }
 }

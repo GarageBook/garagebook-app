@@ -275,7 +275,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
             'retry_status' => LifecycleEmailLog::STATUS_FAILED,
             'retry_log_id' => $failedRetryLog->id,
             'retry_error_message' => 'Class "Resend" not found',
-            'retried_at' => null,
+            'retried_at' => now()->subMinutes(20),
         ])->save();
 
         Artisan::call('garagebook:retry-lifecycle-emails', [
@@ -319,6 +319,44 @@ class RetryLifecycleEmailsCommandTest extends TestCase
 
         $this->assertStringContainsString('Geselecteerde logs: 0', $output);
         $this->assertStringNotContainsString('| ' . $originalLog->id . '               |', $output);
+    }
+
+    public function test_reset_failed_retries_makes_failed_origins_eligible_again(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        $failedRetryLog = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_failed_reset',
+            'subject' => 'Gefaalde retry',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'failed_at' => now()->subMinutes(20),
+            'error_message' => 'Class "Resend" not found',
+            'created_at' => now()->subMinutes(20),
+            'updated_at' => now()->subMinutes(20),
+        ]);
+
+        $originalLog->forceFill([
+            'retry_status' => LifecycleEmailLog::STATUS_FAILED,
+            'retry_log_id' => $failedRetryLog->id,
+            'retry_error_message' => 'Class "Resend" not found',
+            'retried_at' => now()->subMinutes(20),
+        ])->save();
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--reset-failed-retries' => true,
+        ]);
+
+        $originalLog->refresh();
+        $output = Artisan::output();
+
+        $this->assertNull($originalLog->retried_at);
+        $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $originalLog->retry_status);
+        $this->assertSame($failedRetryLog->id, $originalLog->retry_log_id);
+        $this->assertStringContainsString('Gefaalde retry-markeringen gereset: 1', $output);
+        $this->assertStringContainsString('Geselecteerde logs: 1', $output);
     }
 
     public function test_duplicate_retry_is_prevented(): void
