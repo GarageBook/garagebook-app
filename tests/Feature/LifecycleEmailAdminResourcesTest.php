@@ -11,6 +11,7 @@ use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
@@ -54,7 +55,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->assertFalse($template->is_active);
     }
 
-    public function test_admin_can_send_template_test_mail_to_self(): void
+    public function test_admin_can_send_template_test_mail_to_self_and_write_sent_log(): void
     {
         Mail::fake();
 
@@ -72,6 +73,38 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             return $mail->hasTo($admin->email)
                 && str_contains($mail->renderedBody, 'Hoi Willem,');
         });
+
+        $log = LifecycleEmailLog::query()->latest('id')->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame($admin->id, $log->user_id);
+        $this->assertStringStartsWith('test_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 . '_', $log->email_key);
+        $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
+        $this->assertNotNull($log->sent_at);
+        $this->assertNull($log->failed_at);
+        $this->assertNull($log->error_message);
+    }
+
+    public function test_failed_testmail_writes_failed_lifecycle_log_with_error_message(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
+
+        Config::set('mail.default', null);
+
+        Livewire::actingAs($admin)
+            ->test(EditLifecycleEmailTemplate::class, ['record' => $template->getRouteKey()])
+            ->callAction('sendTestMail');
+
+        $log = LifecycleEmailLog::query()->latest('id')->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame($admin->id, $log->user_id);
+        $this->assertStringStartsWith('test_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 . '_', $log->email_key);
+        $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $log->status);
+        $this->assertNull($log->sent_at);
+        $this->assertNotNull($log->failed_at);
+        $this->assertStringContainsString('Mailconfig ontbreekt', (string) $log->error_message);
     }
 
     public function test_admin_can_open_lifecycle_email_logs_page_when_logs_table_is_missing(): void

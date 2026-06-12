@@ -14,8 +14,12 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class LifecycleEmailService
 {
@@ -107,6 +111,69 @@ class LifecycleEmailService
         };
     }
 
+    public function sendTestMail(User $user, LifecycleEmailTemplate $template): LifecycleEmailLog
+    {
+        Log::info('lifecycle_test_mail_start', [
+            'user_id' => $user->getKey(),
+            'template_email_key' => $template->email_key,
+            'email' => $user->email,
+        ]);
+
+        $log = $this->createTestLog($user, $template);
+
+        if (! $log->exists || blank($log->getKey())) {
+            Log::error('lifecycle_test_mail_log_missing_after_create', [
+                'user_id' => $user->getKey(),
+                'template_email_key' => $template->email_key,
+            ]);
+
+            throw new RuntimeException('Testmail loggen mislukt: geen logrecord-id ontvangen.');
+        }
+
+        try {
+            $this->assertMailConfigurationIsUsable();
+
+            Mail::to($user->email)->send($this->makeMailable($user, $template));
+
+            Log::info('lifecycle_test_mail_send_success', [
+                'log_id' => $log->getKey(),
+                'email_key' => $log->email_key,
+                'user_id' => $user->getKey(),
+            ]);
+
+            $log->forceFill([
+                'status' => LifecycleEmailLog::STATUS_SENT,
+                'sent_at' => now(),
+                'failed_at' => null,
+                'error_message' => null,
+            ])->save();
+
+            return $log->fresh() ?? $log;
+        } catch (Throwable $exception) {
+            $message = $this->formatTestMailErrorMessage($exception);
+
+            rescue(
+                fn () => $log->forceFill([
+                    'status' => LifecycleEmailLog::STATUS_FAILED,
+                    'sent_at' => null,
+                    'failed_at' => now(),
+                    'error_message' => Str::limit($message, 65535, ''),
+                ])->save(),
+                report: false,
+            );
+
+            Log::error('lifecycle_test_mail_exception', [
+                'log_id' => $log->getKey(),
+                'email_key' => $log->email_key,
+                'user_id' => $user->getKey(),
+                'message' => $message,
+                'exception_class' => $exception::class,
+            ]);
+
+            throw new RuntimeException($message, previous: $exception);
+        }
+    }
+
     public function buildPreviewData(User $user, LifecycleEmailTemplate $template): array
     {
         $renderedBody = $this->renderTemplateBody($user, $template);
@@ -187,6 +254,11 @@ class LifecycleEmailService
         ) ?? $template->body;
     }
 
+    public function makeTestEmailKey(string $templateEmailKey): string
+    {
+        return 'test_' . $templateEmailKey . '_' . now()->format('YmdHisv');
+    }
+
     private function resolveNoMaintenanceKey(User $user): ?string
     {
         $ageInDays = (int) $user->created_at?->startOfDay()->diffInDays(now()->startOfDay()) ?: 0;
@@ -259,6 +331,65 @@ class LifecycleEmailService
             ->before(' ')
             ->trim()
             ->toString() ?: null;
+    }
+
+    private function createTestLog(User $user, LifecycleEmailTemplate $template): LifecycleEmailLog
+    {
+        Log::info('lifecycle_test_mail_before_log_create', [
+            'user_id' => $user->getKey(),
+            'template_email_key' => $template->email_key,
+        ]);
+
+        try {
+            $log = LifecycleEmailLog::query()->create([
+                'user_id' => $user->getKey(),
+                'email_key' => $this->makeTestEmailKey($template->email_key),
+                'subject' => $template->subject,
+                'status' => LifecycleEmailLog::STATUS_QUEUED,
+            ]);
+        } catch (QueryException $exception) {
+            Log::error('lifecycle_test_mail_log_create_exception', [
+                'user_id' => $user->getKey(),
+                'template_email_key' => $template->email_key,
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw new RuntimeException('Testmail loggen mislukt voordat de mail kon worden verstuurd.', previous: $exception);
+        }
+
+        Log::info('lifecycle_test_mail_after_log_create', [
+            'log_id' => $log->getKey(),
+            'email_key' => $log->email_key,
+            'user_id' => $user->getKey(),
+        ]);
+
+        return $log;
+    }
+
+    private function assertMailConfigurationIsUsable(): void
+    {
+        $defaultMailer = config('mail.default');
+
+        if (blank($defaultMailer)) {
+            throw new RuntimeException('Mailconfig ontbreekt: mail.default is niet ingesteld.');
+        }
+
+        $transport = config("mail.mailers.{$defaultMailer}.transport");
+
+        if (blank($transport)) {
+            throw new RuntimeException("Mailconfig ontbreekt: mailer [{$defaultMailer}] heeft geen transport.");
+        }
+    }
+
+    private function formatTestMailErrorMessage(Throwable $exception): string
+    {
+        $message = trim($exception->getMessage());
+
+        if ($message === '') {
+            return 'Testmail verzenden mislukt zonder foutmelding vanuit de mailer.';
+        }
+
+        return 'Testmail verzenden mislukt: ' . $message;
     }
 
     private function emailKeyMatchesCurrentState(User $user, string $emailKey): bool

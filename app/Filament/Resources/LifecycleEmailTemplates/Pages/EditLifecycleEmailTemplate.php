@@ -10,7 +10,8 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class EditLifecycleEmailTemplate extends EditRecord
 {
@@ -38,12 +39,35 @@ class EditLifecycleEmailTemplate extends EditRecord
                     $previewUser = $this->previewUser();
                     $template = $this->previewTemplate();
 
-                    Mail::to($previewUser->email)->send($service->makeMailable($previewUser, $template));
+                    Log::info('lifecycle_test_mail_action_start', [
+                        'user_id' => $previewUser->getKey(),
+                        'template_email_key' => $template->email_key,
+                        'email' => $previewUser->email,
+                    ]);
+
+                    try {
+                        $log = $service->sendTestMail($previewUser, $template);
+                    } catch (Throwable $exception) {
+                        Log::error('lifecycle_test_mail_action_exception', [
+                            'user_id' => $previewUser->getKey(),
+                            'template_email_key' => $template->email_key,
+                            'message' => $exception->getMessage(),
+                            'exception_class' => $exception::class,
+                        ]);
+
+                        Notification::make()
+                            ->danger()
+                            ->title('Testmail mislukt')
+                            ->body($exception->getMessage())
+                            ->send();
+
+                        return;
+                    }
 
                     Notification::make()
                         ->success()
                         ->title('Testmail verzonden')
-                        ->body('Verzonden naar ' . $previewUser->email . '.')
+                        ->body('Verzonden naar ' . $previewUser->email . '. Log-ID: ' . $log->getKey() . '.')
                         ->send();
                 }),
         ];
