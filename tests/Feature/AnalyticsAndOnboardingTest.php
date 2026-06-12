@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Filament\Resources\Vehicles\VehicleResource;
-use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -173,11 +172,43 @@ class AnalyticsAndOnboardingTest extends TestCase
             'km_reading' => 32000,
         ]);
 
-        $this->actingAs($user);
+        $this->actingAs($user)
+            ->get('/admin')
+            ->assertOk()
+            ->assertDontSeeText('Maak je GarageBook compleet')
+            ->assertDontSeeText('3 van 3 stappen voltooid')
+            ->assertDontSeeText('100% ingericht')
+            ->assertDontSeeText('Aanbevolen volgende stap')
+            ->assertDontSeeText('Factuur of foto toevoegen');
+    }
 
-        $this->get('/admin')->assertOk();
+    public function test_widget_shows_regular_dashboard_ctas_when_user_is_activated(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Triumph',
+            'model' => 'Street Triple',
+            'current_km' => 21000,
+        ]);
 
-        $this->assertFalse(DashboardOnboardingWidget::canView());
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Grote beurt',
+            'maintenance_date' => '2026-05-04',
+            'km_reading' => 21000,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSeeText('Je GarageBook is actief')
+            ->assertSeeText('Voeg onderhoud toe')
+            ->assertSeeText('Voeg een rit toe')
+            ->assertSeeText('Voeg een document toe')
+            ->assertSeeText('Bekijk je voertuigpagina')
+            ->assertSeeText('Deel je openbare garage')
+            ->assertSeeText('Exporteer je historie');
     }
 
     public function test_other_users_data_does_not_affect_dashboard_onboarding_state(): void

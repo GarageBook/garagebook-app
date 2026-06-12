@@ -1,71 +1,40 @@
-@php
-    $vehicles = \App\Models\Vehicle::where('user_id', auth()->id())
-        ->latest()
-        ->take(6)
-        ->get();
-@endphp
-
-@php
-    $addMaintenanceAttributes = \App\Support\Analytics::clickTrackingAttributes('app_cta_clicked', [
-        'cta_name' => 'add_maintenance_log',
-        'location' => 'dashboard_actions_widget',
-        'user_state' => \App\Support\Analytics::userState(auth()->user()),
-    ]);
-@endphp
-
 <x-filament-widgets::widget>
     <x-filament::section>
         <div class="space-y-6">
-
             <div>
-                <h2 class="text-lg font-bold mb-4"><strong>{{ __('dashboard.actions_widget.heading') }}</strong></h2>
+                <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px;">
+                    <div style="max-width:42rem; min-width:0;">
+                        <h2 class="text-lg font-bold mb-3"><strong>Je GarageBook is actief</strong></h2>
+                        <p style="margin:0; color:#64748b; line-height:1.7;">
+                            Je onboarding is afgerond. Werk nu verder aan je historie met onderhoud, ritten, documenten en deelbare voertuiggegevens.
+                        </p>
+                    </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" style="margin:15px 0 0 0;">
-                    @foreach($vehicles as $vehicle)
-                        <div class="rounded-xl border border-gray-200 p-4 text-center">
-                            <div class="flex justify-center mb-3">
-                                @if($vehicle->photo)
-                                    <img
-                                        src="{{ \Illuminate\Support\Facades\Storage::url($vehicle->photo) }}"
-                                        alt="{{ $vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model }}"
-                                        style="width: 100%; max-width: 280px; height: auto; border-radius: 12px;"
-                                    >
-                                @else
-                                    <div style="width: 100%; max-width: 280px; aspect-ratio: 1 / 1; background: #f3f4f6; border-radius: 12px;"></div>
-                                @endif
-                            </div>
-
-                            <div class="font-semibold" style="margin:15px 0 0 0;font-style:italic; overflow-wrap:anywhere;">
+                    @if ($vehicle)
+                        <div style="padding:14px 16px; border-radius:16px; border:1px solid #e2e8f0; background:#f8fafc; min-width:220px;">
+                            <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#64748b;">Actief voertuig</div>
+                            <div style="margin-top:8px; font-size:18px; font-weight:700; color:#0f172a; overflow-wrap:anywhere;">
                                 {{ $vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model }}
                             </div>
                         </div>
-                    @endforeach
+                    @endif
                 </div>
             </div>
 
-            <div style="margin:30px 0 0 0;">
-                <div style="display:flex; flex-direction:row; flex-wrap:wrap; gap:15px; align-items:center;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:14px;">
+                @foreach ($actions as $action)
                     <a
-                        href="/admin/vehicles"
-                        class="fi-btn rounded-xl px-5 py-3"
-                        style="display:inline-flex; max-width:100%; white-space:normal; overflow-wrap:anywhere;"
-                    >
-                        {{ __('dashboard.actions_widget.manage_vehicles') }}
-                    </a>
-
-                    <a
-                        href="/admin/maintenance-logs/create"
-                        class="fi-btn rounded-xl px-5 py-3"
-                        @foreach ($addMaintenanceAttributes as $attribute => $value)
+                        href="{{ $action['url'] }}"
+                        class="fi-btn fi-btn-color-gray fi-btn-outlined rounded-xl px-5 py-4"
+                        @foreach ($action['attributes'] as $attribute => $value)
                             {{ $attribute }}="{{ $value }}"
                         @endforeach
-                        style="display:inline-flex; max-width:100%; white-space:normal; overflow-wrap:anywhere;"
+                        style="display:flex; align-items:center; justify-content:center; min-height:72px; text-align:center; white-space:normal; overflow-wrap:anywhere;"
                     >
-                        {{ __('dashboard.actions_widget.add_maintenance') }}
+                        {{ $action['label'] }}
                     </a>
-                </div>
+                @endforeach
             </div>
-
         </div>
     </x-filament::section>
 </x-filament-widgets::widget>

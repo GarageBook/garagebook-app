@@ -3,14 +3,15 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\CostBreakdownByVehicleChart;
-use App\Filament\Widgets\MyVehicles;
+use App\Filament\Widgets\CumulativeCostTrendChart;
+use App\Filament\Widgets\DashboardActions;
+use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Filament\Widgets\FuelConsumptionOverview;
 use App\Filament\Widgets\FuelConsumptionTrendChart;
 use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
-use App\Filament\Widgets\CumulativeCostTrendChart;
-use App\Filament\Widgets\DashboardOnboardingWidget;
+use App\Filament\Widgets\MyVehicles;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -45,6 +46,7 @@ class Dashboard extends BaseDashboard
     {
         $user = Filament::auth()->user();
         $hasFuelLogs = $user?->vehicles()->whereHas('fuelLogs')->exists();
+        $isActivated = $user && DashboardOnboardingWidget::resolveProgressForUser($user)['is_complete'];
 
         $secondaryWidgets = [
             Livewire::make(MaintenanceReminders::class),
@@ -65,8 +67,12 @@ class Dashboard extends BaseDashboard
             $chartWidgets[] = Livewire::make(FuelConsumptionTrendChart::class);
         }
 
+        $primaryWidget = $isActivated
+            ? Livewire::make(DashboardActions::class)
+            : Livewire::make(DashboardOnboardingWidget::class);
+
         return $schema->components([
-            Livewire::make(DashboardOnboardingWidget::class),
+            $primaryWidget,
             Grid::make([
                 'md' => 2,
             ])->schema([

@@ -414,14 +414,6 @@ class AnalyticsEventTrackingTest extends TestCase
                     'fuel_log_count' => 1,
                 ],
             ],
-            [
-                'name' => 'onboarding_widget_viewed',
-                'params' => [
-                    'next_step' => 'document',
-                    'completed_steps' => 3,
-                    'total_steps' => 3,
-                ],
-            ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
         $this->assertPayloadDoesNotContainKeys(
