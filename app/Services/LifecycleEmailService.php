@@ -142,9 +142,12 @@ class LifecycleEmailService
         }
 
         try {
-            $this->assertMailConfigurationIsUsable();
-
-            Mail::to($user->email)->send($this->makeMailable($user, $template));
+            $log = $this->sendLifecycleMailForLog(
+                user: $user,
+                template: $template,
+                log: $log,
+                failurePrefix: 'Testmail verzenden mislukt',
+            );
 
             Log::info('lifecycle_test_mail_send_success', [
                 'log_id' => $log->getKey(),
@@ -152,36 +155,17 @@ class LifecycleEmailService
                 'user_id' => $user->getKey(),
             ]);
 
-            $log->forceFill([
-                'status' => LifecycleEmailLog::STATUS_SENT,
-                'sent_at' => now(),
-                'failed_at' => null,
-                'error_message' => null,
-            ])->save();
-
-            return $log->fresh() ?? $log;
-        } catch (Throwable $exception) {
-            $message = $this->formatTestMailErrorMessage($exception);
-
-            rescue(
-                fn () => $log->forceFill([
-                    'status' => LifecycleEmailLog::STATUS_FAILED,
-                    'sent_at' => null,
-                    'failed_at' => now(),
-                    'error_message' => Str::limit($message, 65535, ''),
-                ])->save(),
-                report: false,
-            );
-
+            return $log;
+        } catch (RuntimeException $exception) {
             Log::error('lifecycle_test_mail_exception', [
                 'log_id' => $log->getKey(),
                 'email_key' => $log->email_key,
                 'user_id' => $user->getKey(),
-                'message' => $message,
+                'message' => $exception->getMessage(),
                 'exception_class' => $exception::class,
             ]);
 
-            throw new RuntimeException($message, previous: $exception);
+            throw $exception;
         }
     }
 
@@ -272,12 +256,19 @@ class LifecycleEmailService
 
     public function makeRetryEmailKey(LifecycleEmailLog $originalLog): string
     {
-        return 'retry_' . $originalLog->email_key . '_' . now()->format('YmdHis') . '_' . $originalLog->getKey();
+        return 'retry_'
+            . $originalLog->email_key
+            . '_'
+            . now()->format('YmdHisv')
+            . '_'
+            . $originalLog->getKey()
+            . '_'
+            . Str::lower((string) Str::ulid());
     }
 
     public function retryStatusForLog(LifecycleEmailLog $log, ?User $user, bool $ignoreEligibility = false): string
     {
-        if ($log->retried_at !== null || filled($log->retry_status) || filled($log->retry_log_id)) {
+        if ($log->retried_at !== null || $log->retry_status === LifecycleEmailLog::STATUS_SENT) {
             return 'already_retried';
         }
 
@@ -314,7 +305,7 @@ class LifecycleEmailService
 
     public function retryLifecycleEmailLog(LifecycleEmailLog $originalLog, bool $ignoreEligibility = false): array
     {
-        return DB::transaction(function () use ($originalLog, $ignoreEligibility): array {
+        $prepared = DB::transaction(function () use ($originalLog, $ignoreEligibility): array {
             $lockedLog = LifecycleEmailLog::query()
                 ->lockForUpdate()
                 ->find($originalLog->getKey());
@@ -355,50 +346,80 @@ class LifecycleEmailService
                 'status' => LifecycleEmailLog::STATUS_QUEUED,
             ]);
 
-            $resultStatus = LifecycleEmailLog::STATUS_SENT;
-            $errorMessage = null;
-
-            try {
-                $this->assertMailConfigurationIsUsable();
-
-                Mail::to($user->email)->send($this->makeMailable($user, $template));
-
-                $retryLog->forceFill([
-                    'subject' => $template->subject,
-                    'status' => LifecycleEmailLog::STATUS_SENT,
-                    'sent_at' => now(),
-                    'failed_at' => null,
-                    'error_message' => null,
-                ])->save();
-            } catch (Throwable $exception) {
-                $resultStatus = LifecycleEmailLog::STATUS_FAILED;
-                $message = trim($exception->getMessage());
-                $errorMessage = $message === ''
-                    ? 'Retry lifecycle-email verzenden mislukt zonder foutmelding vanuit de mailer.'
-                    : 'Retry lifecycle-email verzenden mislukt: ' . $message;
-
-                $retryLog->forceFill([
-                    'subject' => $template->subject,
-                    'status' => LifecycleEmailLog::STATUS_FAILED,
-                    'sent_at' => null,
-                    'failed_at' => now(),
-                    'error_message' => Str::limit($errorMessage, 65535, ''),
-                ])->save();
-            }
-
-            $lockedLog->forceFill([
-                'retried_at' => now(),
-                'retry_status' => $resultStatus,
-                'retry_log_id' => $retryLog->getKey(),
-                'retry_error_message' => $errorMessage ? Str::limit($errorMessage, 65535, '') : null,
-            ])->save();
-
             return [
-                'status' => $resultStatus,
+                'status' => 'ready',
+                'locked_log_id' => $lockedLog->getKey(),
                 'retry_log_id' => $retryLog->getKey(),
-                'error_message' => $errorMessage,
+                'user_id' => $user->getKey(),
+                'email_key' => $lockedLog->email_key,
             ];
         });
+
+        if ($prepared['status'] !== 'ready') {
+            return [
+                'status' => $prepared['status'],
+                'retry_log_id' => $prepared['retry_log_id'] ?? null,
+                'error_message' => $prepared['error_message'] ?? null,
+            ];
+        }
+
+        $lockedLog = LifecycleEmailLog::query()->findOrFail($prepared['locked_log_id']);
+        $retryLog = LifecycleEmailLog::query()->findOrFail($prepared['retry_log_id']);
+        $user = User::query()->find($prepared['user_id']);
+        $template = $this->getActiveTemplate($prepared['email_key']);
+
+        if (! $user || ! $template) {
+            return [
+                'status' => 'template_inactive',
+                'retry_log_id' => $retryLog->getKey(),
+                'error_message' => 'Geen actieve lifecycle-template gevonden voor retry.',
+            ];
+        }
+
+        try {
+            $retryLog = $this->sendLifecycleMailForLog(
+                user: $user,
+                template: $template,
+                log: $retryLog,
+                failurePrefix: 'Retry lifecycle-email verzenden mislukt',
+            );
+        } catch (RuntimeException $exception) {
+            $message = $exception->getMessage();
+
+            DB::transaction(function () use ($lockedLog, $retryLog, $message): void {
+                LifecycleEmailLog::query()
+                    ->whereKey($lockedLog->getKey())
+                    ->update([
+                        'retried_at' => null,
+                        'retry_status' => LifecycleEmailLog::STATUS_FAILED,
+                        'retry_log_id' => $retryLog->getKey(),
+                        'retry_error_message' => Str::limit($message, 65535, ''),
+                    ]);
+            });
+
+            return [
+                'status' => LifecycleEmailLog::STATUS_FAILED,
+                'retry_log_id' => $retryLog->getKey(),
+                'error_message' => $message,
+            ];
+        }
+
+        DB::transaction(function () use ($lockedLog, $retryLog): void {
+            LifecycleEmailLog::query()
+                ->whereKey($lockedLog->getKey())
+                ->update([
+                    'retried_at' => now(),
+                    'retry_status' => LifecycleEmailLog::STATUS_SENT,
+                    'retry_log_id' => $retryLog->getKey(),
+                    'retry_error_message' => null,
+                ]);
+        });
+
+        return [
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'retry_log_id' => $retryLog->getKey(),
+            'error_message' => null,
+        ];
     }
 
     private function resolveNoMaintenanceKey(User $user): ?string
@@ -517,6 +538,43 @@ class LifecycleEmailService
         return $log;
     }
 
+    private function sendLifecycleMailForLog(
+        User $user,
+        LifecycleEmailTemplate $template,
+        LifecycleEmailLog $log,
+        string $failurePrefix,
+    ): LifecycleEmailLog {
+        try {
+            $this->assertMailConfigurationIsUsable();
+            Mail::to($user->email)->send($this->makeMailable($user, $template));
+
+            $log->forceFill([
+                'subject' => $template->subject,
+                'status' => LifecycleEmailLog::STATUS_SENT,
+                'sent_at' => now(),
+                'failed_at' => null,
+                'error_message' => null,
+            ])->save();
+
+            return $log->fresh() ?? $log;
+        } catch (Throwable $exception) {
+            $message = $this->formatLifecycleMailErrorMessage($failurePrefix, $exception);
+
+            rescue(
+                fn () => $log->forceFill([
+                    'subject' => $template->subject,
+                    'status' => LifecycleEmailLog::STATUS_FAILED,
+                    'sent_at' => null,
+                    'failed_at' => now(),
+                    'error_message' => Str::limit($message, 65535, ''),
+                ])->save(),
+                report: false,
+            );
+
+            throw new RuntimeException($message, previous: $exception);
+        }
+    }
+
     private function assertMailConfigurationIsUsable(): void
     {
         $defaultMailer = config('mail.default');
@@ -532,15 +590,15 @@ class LifecycleEmailService
         }
     }
 
-    private function formatTestMailErrorMessage(Throwable $exception): string
+    private function formatLifecycleMailErrorMessage(string $failurePrefix, Throwable $exception): string
     {
         $message = trim($exception->getMessage());
 
         if ($message === '') {
-            return 'Testmail verzenden mislukt zonder foutmelding vanuit de mailer.';
+            return $failurePrefix . ' zonder foutmelding vanuit de mailer.';
         }
 
-        return 'Testmail verzenden mislukt: ' . $message;
+        return $failurePrefix . ': ' . $message;
     }
 
     private function emailKeyMatchesCurrentState(User $user, string $emailKey): bool

@@ -10,8 +10,10 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -117,6 +119,29 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(1, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_%')->count());
     }
 
+    public function test_execute_retry_uses_current_laravel_mail_stack(): void
+    {
+        Config::set('mail.default', 'array');
+
+        /** @var ArrayTransport $transport */
+        $transport = app('mail.manager')->mailer('array')->getSymfonyTransport();
+        $transport->flush();
+
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        $originalLog->refresh();
+
+        $this->assertSame(1, $transport->messages()->count());
+        $this->assertNotNull($originalLog->retried_at);
+        $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
+    }
+
     public function test_test_logs_are_skipped(): void
     {
         Mail::fake();
@@ -189,6 +214,45 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $originalLog->refresh();
         $this->assertNull($originalLog->retried_at);
         $this->assertNull($originalLog->retry_log_id);
+    }
+
+    public function test_failed_retries_remain_rerunnable(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        Config::set('mail.default', null);
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        $originalLog->refresh();
+
+        $this->assertNull($originalLog->retried_at);
+        $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $originalLog->retry_status);
+        $this->assertNotNull($originalLog->retry_log_id);
+        $this->assertStringContainsString('Mailconfig ontbreekt', (string) $originalLog->retry_error_message);
+
+        Config::set('mail.default', 'array');
+
+        /** @var ArrayTransport $transport */
+        $transport = app('mail.manager')->mailer('array')->getSymfonyTransport();
+        $transport->flush();
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        $originalLog->refresh();
+
+        $this->assertNotNull($originalLog->retried_at);
+        $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
+        $this->assertNull($originalLog->retry_error_message);
+        $this->assertSame(1, $transport->messages()->count());
+        $this->assertSame(2, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_%')->count());
     }
 
     public function test_duplicate_retry_is_prevented(): void
