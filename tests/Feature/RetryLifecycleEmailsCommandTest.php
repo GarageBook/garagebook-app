@@ -143,6 +143,42 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
     }
 
+    public function test_execute_with_resend_mailer_uses_global_sdk_class_without_redeclare(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        Config::set('mail.default', 'resend');
+        Config::set('services.resend.key', 'test-key');
+
+        $realMailManager = Mail::getFacadeRoot();
+        Mail::swap(new class
+        {
+            public function to(string $email): object
+            {
+                return new class
+                {
+                    public function send(object $mailable): void
+                    {
+                        throw new \RuntimeException('Simulated resend transport failure');
+                    }
+                };
+            }
+        });
+
+        Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        Mail::swap($realMailManager);
+        $originalLog->refresh();
+
+        $this->assertNull($originalLog->retried_at);
+        $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $originalLog->retry_status);
+        $this->assertStringContainsString('Simulated resend transport failure', (string) $originalLog->retry_error_message);
+    }
+
     public function test_execute_stops_before_creating_retry_logs_when_mailer_preflight_fails(): void
     {
         $user = $this->createLifecycleUser();

@@ -273,7 +273,7 @@ class LifecycleEmailService
         $defaultMailer = (string) config('mail.default');
         $transport = (string) config("mail.mailers.{$defaultMailer}.transport");
 
-        if ($transport === 'resend' && ! class_exists(\Resend\Resend::class)) {
+        if ($transport === 'resend' && ! class_exists('Resend', false)) {
             throw new RuntimeException('Mailconfig resend is actief maar resend/resend-php ontbreekt. Draai composer install of composer require resend/resend-php.');
         }
     }
