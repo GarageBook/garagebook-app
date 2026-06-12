@@ -8,6 +8,7 @@ use App\Models\LifecycleEmailTemplate;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\LifecycleEmailService;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Transport\ArrayTransport;
@@ -142,6 +143,32 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
     }
 
+    public function test_execute_stops_before_creating_retry_logs_when_mailer_preflight_fails(): void
+    {
+        $user = $this->createLifecycleUser();
+        $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
+
+        $service = \Mockery::mock(LifecycleEmailService::class)->makePartial();
+        $service->shouldReceive('assertMailDeliveryStackReady')
+            ->once()
+            ->andThrow(new \RuntimeException('Mailconfig resend is actief maar resend/resend-php ontbreekt. Draai composer install of composer require resend/resend-php.'));
+        $this->app->instance(LifecycleEmailService::class, $service);
+
+        $exitCode = Artisan::call('garagebook:retry-lifecycle-emails', [
+            '--before' => '2026-06-12 11:45:00',
+            '--execute' => true,
+        ]);
+
+        $originalLog->refresh();
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('resend/resend-php ontbreekt', Artisan::output());
+        $this->assertSame(0, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_%')->count());
+        $this->assertNull($originalLog->retried_at);
+        $this->assertNull($originalLog->retry_status);
+        $this->assertNull($originalLog->retry_log_id);
+    }
+
     public function test_test_logs_are_skipped(): void
     {
         Mail::fake();
@@ -221,7 +248,21 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $user = $this->createLifecycleUser();
         $originalLog = $this->createSentLog($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14, now()->subHour());
 
-        Config::set('mail.default', null);
+        Config::set('mail.default', 'array');
+        $realMailManager = Mail::getFacadeRoot();
+        Mail::swap(new class
+        {
+            public function to(string $email): object
+            {
+                return new class
+                {
+                    public function send(object $mailable): void
+                    {
+                        throw new \RuntimeException('Simulated transport failure');
+                    }
+                };
+            }
+        });
 
         Artisan::call('garagebook:retry-lifecycle-emails', [
             '--before' => '2026-06-12 11:45:00',
@@ -233,9 +274,9 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertNull($originalLog->retried_at);
         $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $originalLog->retry_status);
         $this->assertNotNull($originalLog->retry_log_id);
-        $this->assertStringContainsString('Mailconfig ontbreekt', (string) $originalLog->retry_error_message);
+        $this->assertStringContainsString('Simulated transport failure', (string) $originalLog->retry_error_message);
 
-        Config::set('mail.default', 'array');
+        Mail::swap($realMailManager);
 
         /** @var ArrayTransport $transport */
         $transport = app('mail.manager')->mailer('array')->getSymfonyTransport();

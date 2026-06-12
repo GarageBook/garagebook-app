@@ -32,6 +32,16 @@ class RetryLifecycleEmailsCommand extends Command
         $execute = (bool) $this->option('execute');
         $resetFailedRetries = (bool) $this->option('reset-failed-retries');
 
+        if ($execute) {
+            try {
+                $service->assertMailDeliveryStackReady();
+            } catch (\RuntimeException $exception) {
+                $this->error($exception->getMessage());
+
+                return self::FAILURE;
+            }
+        }
+
         if ($resetFailedRetries) {
             $resetCount = $this->resetFailedRetries($service, $before);
             $this->info('Gefaalde retry-markeringen gereset: ' . $resetCount);

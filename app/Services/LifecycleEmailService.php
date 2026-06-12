@@ -266,6 +266,18 @@ class LifecycleEmailService
             . Str::lower((string) Str::ulid());
     }
 
+    public function assertMailDeliveryStackReady(): void
+    {
+        $this->assertMailConfigurationIsUsable();
+
+        $defaultMailer = (string) config('mail.default');
+        $transport = (string) config("mail.mailers.{$defaultMailer}.transport");
+
+        if ($transport === 'resend' && ! class_exists(\Resend\Resend::class)) {
+            throw new RuntimeException('Mailconfig resend is actief maar resend/resend-php ontbreekt. Draai composer install of composer require resend/resend-php.');
+        }
+    }
+
     public function retryStatusForLog(LifecycleEmailLog $log, ?User $user, bool $ignoreEligibility = false): string
     {
         if ($log->retry_status === LifecycleEmailLog::STATUS_SENT) {
@@ -545,7 +557,7 @@ class LifecycleEmailService
         string $failurePrefix,
     ): LifecycleEmailLog {
         try {
-            $this->assertMailConfigurationIsUsable();
+            $this->assertMailDeliveryStackReady();
             Mail::to($user->email)->send($this->makeMailable($user, $template));
 
             $log->forceFill([
