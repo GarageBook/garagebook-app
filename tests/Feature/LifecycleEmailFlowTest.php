@@ -48,6 +48,54 @@ class LifecycleEmailFlowTest extends TestCase
         );
     }
 
+    public function test_lifecycle_body_uses_first_name_when_available(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Willem van Veelen',
+        ]);
+
+        $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
+
+        $renderedBody = app(LifecycleEmailService::class)->renderTemplateBody($user, $template);
+
+        $this->assertStringContainsString('Hoi Willem,', $renderedBody);
+    }
+
+    public function test_lifecycle_body_falls_back_to_neutral_greeting_without_first_name(): void
+    {
+        $user = User::factory()->create([
+            'name' => '',
+        ]);
+
+        $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
+
+        $renderedBody = app(LifecycleEmailService::class)->renderTemplateBody($user, $template);
+
+        $this->assertStringContainsString('Hoi,', $renderedBody);
+        $this->assertStringNotContainsString('Hoi ,', $renderedBody);
+    }
+
+    public function test_cta_destination_uses_first_vehicle_create_maintenance_route_and_falls_back_to_dashboard(): void
+    {
+        $service = app(LifecycleEmailService::class);
+
+        $userWithVehicle = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $userWithVehicle->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+        ]);
+
+        $userWithoutVehicle = User::factory()->create();
+
+        $this->assertSame(
+            \App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
+            $service->resolveCtaDestination($userWithVehicle, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3),
+        );
+
+        $this->assertSame('/admin', $service->resolveCtaDestination($userWithoutVehicle, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3));
+    }
+
     public function test_day_14_mail_is_not_queued_twice(): void
     {
         Bus::fake();
@@ -217,11 +265,12 @@ class LifecycleEmailFlowTest extends TestCase
         $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14)->firstOrFail();
         $template->update([
             'subject' => 'Aangepast onderwerp',
-            'body' => 'Aangepaste body',
+            'body' => 'Hoi {{ first_name }},\n\nAangepaste body',
             'cta_text' => 'Aangepaste CTA',
         ]);
 
         $user = User::factory()->create([
+            'name' => 'Aprilia Rijder',
             'created_at' => now()->subDays(14),
         ]);
 
@@ -244,10 +293,11 @@ class LifecycleEmailFlowTest extends TestCase
             'emailKey' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
         ])->handle(app(LifecycleEmailService::class), app(\App\Support\AnalyticsEventTracker::class));
 
-        Mail::assertSent(NoMaintenanceLogDay14Mail::class, function (NoMaintenanceLogDay14Mail $mail) use ($template, $user): bool {
+        Mail::assertSent(NoMaintenanceLogDay14Mail::class, function (NoMaintenanceLogDay14Mail $mail) use ($user): bool {
             return $mail->template->subject === 'Aangepast onderwerp'
-                && $mail->template->body === 'Aangepaste body'
                 && $mail->template->cta_text === 'Aangepaste CTA'
+                && str_contains($mail->renderedBody, 'Hoi Aprilia,')
+                && str_contains($mail->renderedBody, 'Aangepaste body')
                 && $mail->user->is($user);
         });
 
@@ -257,7 +307,6 @@ class LifecycleEmailFlowTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
         $this->assertNotNull($log->sent_at);
     }
-
 
     public function test_lifecycle_email_logs_prevent_duplicate_reservations(): void
     {

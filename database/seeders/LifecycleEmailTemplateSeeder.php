@@ -12,36 +12,48 @@ class LifecycleEmailTemplateSeeder extends Seeder
         $templates = [
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
-                'name' => 'Geen onderhoudslog na 3 dagen',
+                'name' => 'Geen onderhoudslog - dag 3',
                 'subject' => 'Je voertuig staat al klaar in GarageBook',
                 'body' => <<<'BODY'
-Je voertuig staat al in GarageBook. De volgende stap is simpel: voeg je eerste onderhoudsregistratie toe.
+Hoi {{ first_name }},
 
-Zelfs een enkele registratie maakt je onderhoudsgeschiedenis direct bruikbaarder en waardevoller.
+Je hebt je voertuig al toegevoegd aan GarageBook. Mooi begin.
+
+De volgende stap is simpel: voeg je laatste onderhoudsbeurt toe. Dat hoeft niet perfect of compleet te zijn. Een oliebeurt, bandenwissel, kettingonderhoud, reparatie of factuur is al genoeg om je onderhoudshistorie op gang te brengen.
+
+Zo bouw je stap voor stap een overzichtelijk dossier op dat later waardevol kan zijn voor jezelf en bij verkoop.
 BODY,
                 'cta_text' => 'Voeg onderhoud toe',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
-                'name' => 'Geen onderhoudslog na 14 dagen',
+                'name' => 'Geen onderhoudslog - dag 14',
                 'subject' => 'Hoe compleet is jouw onderhoudsgeschiedenis?',
                 'body' => <<<'BODY'
-Je voertuig staat erin, maar zonder onderhoudsregistraties blijft je dossier onvolledig.
+Hoi {{ first_name }},
 
-Voeg je laatste beurt, reparatie of bandenwissel toe en begin met een historie waar je later echt iets aan hebt.
+Onderhoud is makkelijk te vergeten. Bonnetjes verdwijnen, kilometerstanden raken verspreid en na een tijdje weet je niet meer precies wat wanneer is gedaan.
+
+Met GarageBook hoef je niet alles in een keer compleet te maken. Begin gewoon met je meest recente onderhoudsbeurt. Een registratie is genoeg om structuur aan te brengen.
+
+Voeg vandaag je eerste onderhoud toe en bouw je voertuiggeschiedenis vanaf daar verder op.
 BODY,
                 'cta_text' => 'Start je onderhoudshistorie',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
-                'name' => 'Geen onderhoudslog na 30 dagen',
+                'name' => 'Geen onderhoudslog - dag 30',
                 'subject' => 'Een voertuig zonder historie vertelt maar de helft van het verhaal',
                 'body' => <<<'BODY'
-Je voertuig staat in GarageBook, maar de echte waarde zit in de onderhoudsgeschiedenis.
+Hoi {{ first_name }},
 
-Leg je eerste onderhoud vast en bouw aan een dossier dat overzicht, vertrouwen en context geeft.
+Je voertuig staat in GarageBook, maar zonder onderhoudsregels blijft je historie nog leeg.
+
+Juist onderhoud vertelt het verhaal van een voertuig: wat is gedaan, wanneer, bij welke kilometerstand en met welke onderdelen of facturen.
+
+Je hoeft niet terug tot dag een. Begin met de laatste beurt die je nog weet. Dan heb je vanaf nu een centrale plek voor alles wat je later niet kwijt wilt raken.
 BODY,
                 'cta_text' => 'Voeg je eerste onderhoud toe',
                 'is_active' => true,
@@ -51,9 +63,13 @@ BODY,
                 'name' => 'Na eerste onderhoudslog',
                 'subject' => 'Je onderhoudshistorie groeit',
                 'body' => <<<'BODY'
-Je eerste onderhoud staat erin. Dat is het begin van een dossier dat met elke registratie waardevoller wordt.
+Hoi {{ first_name }},
 
-Vul je historie verder aan met eerdere of recente onderhoudsmomenten zodat je overzicht compleet blijft.
+Mooi, je eerste onderhoudsregel staat in GarageBook.
+
+Daarmee is je voertuiggeschiedenis begonnen. Je kunt hem nu verder aanvullen met eerdere beurten, facturen, foto's of reparaties die je nog hebt liggen.
+
+Elke toevoeging maakt je dossier completer en waardevoller.
 BODY,
                 'cta_text' => 'Onderhoud aanvullen',
                 'is_active' => true,
@@ -61,7 +77,7 @@ BODY,
         ];
 
         foreach ($templates as $template) {
-            LifecycleEmailTemplate::query()->updateOrCreate(
+            LifecycleEmailTemplate::query()->firstOrCreate(
                 ['email_key' => $template['email_key']],
                 $template,
             );

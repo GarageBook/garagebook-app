@@ -6,11 +6,11 @@ use App\Filament\Resources\LifecycleEmailTemplates\Pages\EditLifecycleEmailTempl
 use App\Filament\Resources\LifecycleEmailTemplates\Pages\ListLifecycleEmailTemplates;
 use App\Models\LifecycleEmailTemplate;
 use BackedEnum;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Actions\EditAction;
 use Filament\Tables;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -76,7 +76,7 @@ class LifecycleEmailTemplateResource extends Resource
                 ->label('Body')
                 ->rows(16)
                 ->required()
-                ->helperText('Markdown wordt ondersteund in lifecycle-mails.'),
+                ->helperText('Markdown wordt ondersteund. Gebruik {{ first_name }} voor een optionele voornaam; zonder voornaam wordt automatisch "Hoi," getoond. De unsubscribe-link wordt altijd onderaan toegevoegd.'),
             Forms\Components\TextInput::make('cta_text')
                 ->label('CTA-tekst')
                 ->required()

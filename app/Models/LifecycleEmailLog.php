@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class LifecycleEmailLog extends Model
 {
@@ -30,6 +31,27 @@ class LifecycleEmailLog extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withDefault([
+            'name' => 'Onbekende gebruiker',
+            'email' => '-',
+        ]);
+    }
+
+    public function userDisplayName(): string
+    {
+        if (! SchemaFacade::hasTable('users')) {
+            return 'Onbekende gebruiker';
+        }
+
+        return (string) ($this->user?->name ?: 'Onbekende gebruiker');
+    }
+
+    public function userDisplayEmail(): string
+    {
+        if (! SchemaFacade::hasTable('users')) {
+            return '-';
+        }
+
+        return (string) ($this->user?->email ?: '-');
     }
 }

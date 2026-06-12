@@ -9,6 +9,7 @@ use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
+use App\Filament\Widgets\LifecycleEmailStatsWidget;
 use App\Support\AnalyticsEventTracker;
 use App\Support\Growth\GrowthDashboardData;
 use Filament\Actions\Action;
@@ -32,31 +33,27 @@ class GrowthDashboard extends Page
                     app(AnalyticsEventTracker::class)->queueExportClicked('growth');
 
                     return response()->streamDownload(function () {
-                        echo "\xEF\xBB\xBF"; // UTF-8 BOM
+                        echo "\xEF\xBB\xBF";
                         $handle = fopen('php://output', 'w');
                         fputcsv($handle, ['section', 'key', 'value', 'date']);
 
                         $data = app(GrowthDashboardData::class);
 
-                        // 1. KPI Overview
                         $kpis = $data->kpiOverview();
                         foreach ($kpis['cards'] as $card) {
-                            fputcsv($handle, ['kpi_overview', $card['label'], $card['value'] . ($card['suffix'] ?? ''), $card['meta'] ?? '']);
+                            fputcsv($handle, ['kpi_overview', $card['label'], $card['value'] . ($card['suffix'] ?? null), $card['meta'] ?? '']);
                         }
 
-                        // 2. Acquisition Performance
                         $acquisition = $data->acquisitionPerformance();
                         foreach ($acquisition['rows'] as $row) {
                             fputcsv($handle, ['acquisition_performance', "{$row['source']} / {$row['medium']} / {$row['campaign']}", "Registrations: {$row['registrations']}", $row['latest_activity']]);
                         }
 
-                        // 3. Partner Performance
                         $partners = $data->partnerPerformance();
                         foreach ($partners['rows'] as $row) {
                             fputcsv($handle, ['partner_performance', $row['partner'], "Registrations: {$row['registrations']}", $row['latest_registration']]);
                         }
 
-                        // 4. SEO Intelligence
                         $seo = $data->seoIntelligence();
                         foreach ($seo['top_queries_by_clicks'] as $row) {
                             fputcsv($handle, ['seo_intelligence_queries', $row['label'], "Clicks: {$row['clicks']}, Impressions: {$row['impressions']}, CTR: {$row['ctr']}%, Pos: {$row['position']}", '']);
@@ -65,13 +62,11 @@ class GrowthDashboard extends Page
                             fputcsv($handle, ['seo_intelligence_pages', $row['label'], "Clicks: {$row['clicks']}, Impressions: {$row['impressions']}, CTR: {$row['ctr']}%, Pos: {$row['position']}", '']);
                         }
 
-                        // 5. Landing Page Conversion
                         $landing = $data->landingPageConversion();
                         foreach ($landing['rows'] as $row) {
                             fputcsv($handle, ['landing_page_conversion', $row['landing_page'], "Visits: {$row['visits']}, Registrations: {$row['registrations']}, Conv: {$row['conversion_rate']}%, Top Source: {$row['top_source']}", $row['latest_registration']]);
                         }
 
-                        // 6. Activation Funnel
                         $funnel = $data->activationFunnel();
                         foreach ($funnel['funnel'] as $row) {
                             fputcsv($handle, ['activation_funnel', $row['step'], "Count: {$row['count']}, Percentage: {$row['percentage']}%", '']);
@@ -124,6 +119,7 @@ class GrowthDashboard extends Page
     {
         return [
             GrowthKpiOverviewWidget::class,
+            LifecycleEmailStatsWidget::class,
             GrowthAcquisitionPerformanceWidget::class,
             GrowthPartnerPerformanceWidget::class,
             GrowthSeoIntelligenceWidget::class,

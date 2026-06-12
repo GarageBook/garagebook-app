@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\Filament\Resources\LifecycleEmailLogs\LifecycleEmailLogResource;
 use App\Filament\Resources\LifecycleEmailTemplates\LifecycleEmailTemplateResource;
 use App\Filament\Resources\LifecycleEmailTemplates\Pages\EditLifecycleEmailTemplate;
+use App\Mail\NoMaintenanceLogDay3Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -51,6 +54,126 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->assertFalse($template->is_active);
     }
 
+    public function test_admin_can_send_template_test_mail_to_self(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create([
+            'name' => 'Willem Admin',
+        ]);
+
+        $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
+
+        Livewire::actingAs($admin)
+            ->test(EditLifecycleEmailTemplate::class, ['record' => $template->getRouteKey()])
+            ->callAction('sendTestMail');
+
+        Mail::assertSent(NoMaintenanceLogDay3Mail::class, function (NoMaintenanceLogDay3Mail $mail) use ($admin): bool {
+            return $mail->hasTo($admin->email)
+                && str_contains($mail->renderedBody, 'Hoi Willem,');
+        });
+    }
+
+    public function test_admin_can_open_lifecycle_email_logs_page_when_logs_table_is_missing(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        Schema::dropIfExists('lifecycle_email_logs');
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-logs')
+            ->assertOk()
+            ->assertSeeText('Lifecycle e-maillogs zijn nog niet beschikbaar');
+    }
+
+    public function test_admin_can_open_lifecycle_email_logs_index_page_with_empty_table(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-logs')
+            ->assertOk()
+            ->assertSeeText('Lifecycle e-maillogs');
+    }
+
+    public function test_admin_can_open_lifecycle_email_logs_index_page_with_existing_log(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create([
+            'name' => 'Rijder Test',
+            'email' => 'rijder@example.com',
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Onderwerp lifecycle',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-logs')
+            ->assertOk()
+            ->assertSeeText('Rijder Test')
+            ->assertSeeText('rijder@example.com')
+            ->assertSeeText('Onderwerp lifecycle');
+    }
+
+    public function test_lifecycle_email_log_user_display_falls_back_when_users_table_is_missing(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Tijdelijke gebruiker',
+            'email' => 'tijdelijk@example.com',
+        ]);
+
+        $log = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Verweesde log',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'error_message' => 'Gebruiker ontbreekt',
+        ]);
+
+        Schema::dropIfExists('users');
+
+        $this->assertSame('Onbekende gebruiker', $log->userDisplayName());
+        $this->assertSame('-', $log->userDisplayEmail());
+    }
+
+    public function test_navigation_badge_does_not_crash_when_logs_table_is_missing(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        Schema::dropIfExists('lifecycle_email_logs');
+
+        $this->assertNull(LifecycleEmailLogResource::getNavigationBadge());
+    }
+
+    public function test_filters_search_and_sort_do_not_crash_for_existing_logs(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create([
+            'name' => 'Zoeker Test',
+            'email' => 'zoeker@example.com',
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Zoekbare lifecycle log',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-logs?search=Zoekbare&sort=sent_at&filters[status][value]=sent')
+            ->assertOk()
+            ->assertSeeText('Zoeker Test')
+            ->assertSeeText('Zoekbare lifecycle log');
+    }
+
     public function test_lifecycle_email_log_resource_is_read_only(): void
     {
         $admin = User::factory()->admin()->create();
@@ -73,7 +196,6 @@ class LifecycleEmailAdminResourcesTest extends TestCase
     public function test_lifecycle_resources_are_admin_only(): void
     {
         $user = User::factory()->create();
-        $template = LifecycleEmailTemplate::query()->firstOrFail();
         $log = LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
             'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
@@ -95,7 +217,6 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->get('/admin/lifecycle-email-templates')->assertForbidden();
         $this->get('/admin/lifecycle-email-logs')->assertForbidden();
     }
-
 
     public function test_admin_can_open_lifecycle_template_index_page(): void
     {

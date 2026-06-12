@@ -6,6 +6,7 @@ use App\Filament\Resources\LifecycleEmailLogs\Pages\ListLifecycleEmailLogs;
 use App\Filament\Resources\LifecycleEmailLogs\Pages\ViewLifecycleEmailLog;
 use App\Models\LifecycleEmailLog;
 use BackedEnum;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -14,6 +15,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema as SchemaFacade;
 use UnitEnum;
 
 class LifecycleEmailLogResource extends Resource
@@ -32,6 +34,16 @@ class LifecycleEmailLogResource extends Resource
 
     protected static ?int $navigationSort = 211;
 
+    public static function hasBackingTable(): bool
+    {
+        return SchemaFacade::hasTable('lifecycle_email_logs');
+    }
+
+    public static function hasUsersTable(): bool
+    {
+        return SchemaFacade::hasTable('users');
+    }
+
     public static function canViewAny(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
@@ -40,6 +52,15 @@ class LifecycleEmailLogResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        if (! static::hasBackingTable()) {
+            return null;
+        }
+
+        return (string) static::getModel()::query()->count();
     }
 
     public static function canCreate(): bool
@@ -65,14 +86,20 @@ class LifecycleEmailLogResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('user')->latest('created_at'))
+            ->modifyQueryUsing(function (Builder $query): Builder {
+                if (static::hasUsersTable()) {
+                    $query->with('user');
+                }
+
+                return $query->latest('created_at');
+            })
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                Tables\Columns\TextColumn::make('user_display_name')
                     ->label('Gebruiker')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('user.email')
+                    ->state(fn (LifecycleEmailLog $record): string => $record->userDisplayName()),
+                Tables\Columns\TextColumn::make('user_display_email')
                     ->label('E-mailadres')
-                    ->searchable(),
+                    ->state(fn (LifecycleEmailLog $record): string => $record->userDisplayEmail()),
                 Tables\Columns\TextColumn::make('email_key')
                     ->label('E-mail key')
                     ->searchable(),
@@ -104,11 +131,6 @@ class LifecycleEmailLogResource extends Resource
                     ->placeholder('-'),
             ])
             ->filters([
-                SelectFilter::make('user_id')
-                    ->label('Gebruiker')
-                    ->relationship('user', 'email')
-                    ->searchable()
-                    ->preload(),
                 SelectFilter::make('email_key')
                     ->label('E-mail key')
                     ->options([
@@ -126,9 +148,11 @@ class LifecycleEmailLogResource extends Resource
                     ]),
             ])
             ->recordActions([
-                Tables\Actions\ViewAction::make(),
+                ViewAction::make(),
             ])
-            ->toolbarActions([]);
+            ->toolbarActions([])
+            ->emptyStateHeading('Nog geen lifecycle e-maillogs beschikbaar.')
+            ->emptyStateDescription('Deze pagina blijft beschikbaar, ook als de logs-tabel nog leeg is of pas na een deploy gevuld wordt.');
     }
 
     public static function infolist(Schema $schema): Schema

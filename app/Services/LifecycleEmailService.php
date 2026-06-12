@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class LifecycleEmailService
 {
@@ -84,7 +85,7 @@ class LifecycleEmailService
             return false;
         }
 
-        if ($user->lifecycleEmailLogs()->where('email_key', $emailKey)->where('status', \App\Models\LifecycleEmailLog::STATUS_SENT)->exists()) {
+        if ($user->lifecycleEmailLogs()->where('email_key', $emailKey)->where('status', LifecycleEmailLog::STATUS_SENT)->exists()) {
             return false;
         }
 
@@ -95,14 +96,30 @@ class LifecycleEmailService
     {
         $ctaUrl = $this->trackedCtaUrl($user, $template->email_key);
         $unsubscribeUrl = $this->unsubscribeUrl($user);
+        $renderedBody = $this->renderTemplateBody($user, $template);
 
         return match ($template->email_key) {
-            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => new NoMaintenanceLogDay3Mail($user, $template, $ctaUrl, $unsubscribeUrl),
-            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => new NoMaintenanceLogDay14Mail($user, $template, $ctaUrl, $unsubscribeUrl),
-            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => new NoMaintenanceLogDay30Mail($user, $template, $ctaUrl, $unsubscribeUrl),
-            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => new AfterFirstMaintenanceLogMail($user, $template, $ctaUrl, $unsubscribeUrl),
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => new NoMaintenanceLogDay3Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => new NoMaintenanceLogDay14Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => new NoMaintenanceLogDay30Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
+            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => new AfterFirstMaintenanceLogMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             default => throw new \InvalidArgumentException('Unknown lifecycle email key [' . $template->email_key . '].'),
         };
+    }
+
+    public function buildPreviewData(User $user, LifecycleEmailTemplate $template): array
+    {
+        $renderedBody = $this->renderTemplateBody($user, $template);
+
+        return [
+            'previewUser' => $user,
+            'template' => $template,
+            'bodyHtml' => Str::markdown($renderedBody),
+            'ctaDestination' => $this->resolveCtaDestination($user, $template->email_key),
+            'ctaUrl' => $this->trackedCtaUrl($user, $template->email_key),
+            'unsubscribeUrl' => $this->unsubscribeUrl($user),
+            'usesGreetingFallback' => $this->resolveFirstName($user) === null,
+        ];
     }
 
     public function trackedCtaUrl(User $user, string $emailKey): string
@@ -157,6 +174,17 @@ class LifecycleEmailService
     public function firstVehicle(User $user): ?Vehicle
     {
         return $user->vehicles()->orderBy('id')->first();
+    }
+
+    public function renderTemplateBody(?User $user, LifecycleEmailTemplate $template): string
+    {
+        $firstName = $this->resolveFirstName($user);
+
+        return preg_replace(
+            '/Hoi\s+,/u',
+            'Hoi,',
+            str_replace('{{ first_name }}', $firstName ?? '', $template->body),
+        ) ?? $template->body;
     }
 
     private function resolveNoMaintenanceKey(User $user): ?string
@@ -217,6 +245,20 @@ class LifecycleEmailService
         return MaintenanceLog::query()
             ->whereHas('vehicle', fn ($query) => $query->where('user_id', $user->getKey()))
             ->exists();
+    }
+
+    private function resolveFirstName(?User $user): ?string
+    {
+        $name = trim((string) ($user?->name ?? ''));
+
+        if ($name === '') {
+            return null;
+        }
+
+        return Str::of($name)
+            ->before(' ')
+            ->trim()
+            ->toString() ?: null;
     }
 
     private function emailKeyMatchesCurrentState(User $user, string $emailKey): bool

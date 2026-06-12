@@ -18,6 +18,7 @@ abstract class LifecycleEmailMailable extends Mailable
         public LifecycleEmailTemplate $template,
         public string $ctaUrl,
         public string $unsubscribeUrl,
+        public string $renderedBody,
     ) {
     }
 
