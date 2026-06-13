@@ -875,8 +875,9 @@ p, span, div, li, a, input, textarea, button {
 
 .gb-footer-columns {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 70px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 48px;
+    align-items: start;
 }
 
 .gb-footer-links {
