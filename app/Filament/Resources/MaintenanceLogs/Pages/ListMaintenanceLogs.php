@@ -2,12 +2,10 @@
 
 namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
+use App\Filament\Resources\Concerns\HasPublicVehicleShareActions;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
-use App\Services\PublicGarageService;
-use App\Support\Analytics;
-use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +13,8 @@ use Livewire\Attributes\Url;
 
 class ListMaintenanceLogs extends ListRecords
 {
+    use HasPublicVehicleShareActions;
+
     protected static string $resource = MaintenanceLogResource::class;
 
     #[Url(as: 'vehicle_id')]
@@ -65,45 +65,7 @@ class ListMaintenanceLogs extends ListRecords
             return [];
         }
 
-        $shareUrl = app(PublicGarageService::class)->publicUrl($vehicle);
-
-        $pdfUrl = url('/maintenance/pdf?vehicle_id=' . $vehicle->id);
-
-        return [
-            Action::make('openSharePage')
-                ->label(__('maintenance.actions.open_external_page'))
-                ->url($shareUrl)
-                ->openUrlInNewTab()
-                ->extraAttributes(Analytics::clickTrackingAttributes('public_share_created', [
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                    'source' => 'share',
-                ]))
-                ->color('warning')
-                ->outlined(),
-
-            Action::make('copyUrl')
-                ->label(__('maintenance.actions.copy_url'))
-                ->extraAttributes([
-                    'onclick' => "navigator.clipboard.writeText('{$shareUrl}')",
-                    ...Analytics::clickTrackingAttributes('public_share_created', [
-                        'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                        'source' => 'share',
-                    ]),
-                ])
-                ->color('warning')
-                ->outlined(),
-
-            Action::make('exportPdf')
-                ->label(__('maintenance.actions.export_pdf'))
-                ->url($pdfUrl)
-                ->openUrlInNewTab()
-                ->extraAttributes(Analytics::clickTrackingAttributes('public_share_created', [
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                    'source' => 'export',
-                ]))
-                ->color('warning')
-                ->outlined(),
-        ];
+        return $this->getPublicVehicleShareActions($vehicle);
     }
 
     protected function getTableQuery(): Builder
