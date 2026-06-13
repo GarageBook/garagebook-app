@@ -87,9 +87,14 @@ class MaintenanceLogForm
                     ->previewable(true)
                     ->columnSpanFull(),
 
+                Forms\Components\Toggle::make('hide_photos_on_public_page')
+                    ->label(__('maintenance.public_sharing.hide_photos_label'))
+                    ->helperText(__('maintenance.public_sharing.hide_photos_help'))
+                    ->default(false),
+
                 Forms\Components\Toggle::make('share_attachments_publicly')
-                    ->label('Bijlagen tonen op deelbare pagina')
-                    ->helperText("Schakel dit alleen in als foto's, facturen, pdf's of video's van deze onderhoudslog zichtbaar mogen zijn via de publieke deelbare voertuigpagina.")
+                    ->label(__('maintenance.public_sharing.share_other_attachments_label'))
+                    ->helperText(__('maintenance.public_sharing.share_other_attachments_help'))
                     ->default(false),
 
                 Forms\Components\Textarea::make('notes')

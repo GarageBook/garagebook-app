@@ -199,23 +199,34 @@ class PublicGarageService
                 ->filter(fn ($path) => is_string($path) && filled($path))
                 ->values();
 
-            $publicAttachments = $log->share_attachments_publicly
-                ? $attachments
+            $imageAttachments = $attachments
+                ->filter(fn (string $path): bool => MediaPath::isImage($path))
+                ->values();
+
+            $otherAttachments = $attachments
+                ->reject(fn (string $path): bool => MediaPath::isImage($path))
+                ->values();
+
+            $publicImageAttachments = $log->hide_photos_on_public_page
+                ? []
+                : $imageAttachments
+                    ->map(fn (string $path): ?array => $this->publicAttachmentImage($path, $vehicle))
+                    ->filter()
+                    ->values()
+                    ->all();
+
+            $publicOtherAttachments = $log->share_attachments_publicly
+                ? $otherAttachments
                     ->map(fn (string $path): ?array => $this->publicAttachmentImage($path, $vehicle))
                     ->filter()
                     ->values()
                     ->all()
                 : [];
 
-            $publicImageAttachments = array_values(array_filter(
-                $publicAttachments,
-                fn (array $attachment): bool => ($attachment['kind'] ?? null) === 'image'
-            ));
+            $publicAttachments = [...$publicImageAttachments, ...$publicOtherAttachments];
 
-            $publicOtherAttachments = array_values(array_filter(
-                $publicAttachments,
-                fn (array $attachment): bool => ($attachment['kind'] ?? null) !== 'image'
-            ));
+            $hasHiddenImages = $imageAttachments->isNotEmpty() && $log->hide_photos_on_public_page;
+            $hasHiddenOtherAttachments = $otherAttachments->isNotEmpty() && ! $log->share_attachments_publicly;
 
             return [
                 'date_label' => $log->maintenance_date?->format('d-m-Y'),
@@ -230,11 +241,11 @@ class PublicGarageService
                 'has_km_reading' => $log->km_reading > 0,
                 'has_cost' => $log->cost !== null,
                 'has_public_attachments' => $publicAttachments !== [],
-                'has_private_attachments' => ! $log->share_attachments_publicly && $attachments->isNotEmpty(),
+                'has_private_attachments' => $hasHiddenImages || $hasHiddenOtherAttachments,
                 'evidence_labels' => array_values(array_filter([
                     $log->km_reading > 0 ? 'Kilometerstand vastgelegd' : null,
                     $publicAttachments !== [] ? 'Bijlagen zichtbaar' : null,
-                    ! $log->share_attachments_publicly && $attachments->isNotEmpty() ? 'Aanvullend bewijs privé bewaard' : null,
+                    $hasHiddenImages || $hasHiddenOtherAttachments ? 'Aanvullend bewijs privé bewaard' : null,
                     $vehicle->share_costs_publicly && $log->cost !== null ? 'Kosten transparant gedeeld' : null,
                 ])),
                 'public_attachments' => $publicAttachments,

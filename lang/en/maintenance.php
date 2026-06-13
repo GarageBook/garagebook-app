@@ -54,6 +54,12 @@ return [
         'active_vehicle' => 'Active vehicle',
         'no_vehicles' => 'No vehicles available',
     ],
+    'public_sharing' => [
+        'hide_photos_label' => 'Hide photos on public vehicle page',
+        'hide_photos_help' => 'Maintenance photos are visible on the public vehicle page by default. Only enable this when you intentionally want to hide photos from this maintenance log.',
+        'share_other_attachments_label' => 'Show other attachments on public vehicle page',
+        'share_other_attachments_help' => 'Leave this off if PDFs, invoices, documents or videos should remain private. Those other attachments only become public when you explicitly enable this.',
+    ],
     'media_gallery' => [
         'file_fallback' => 'File',
         'open' => 'Open',

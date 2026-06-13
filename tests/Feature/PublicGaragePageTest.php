@@ -220,9 +220,14 @@ class PublicGaragePageTest extends TestCase
         $response->assertDontSee('123,45');
     }
 
-    public function test_attachments_are_hidden_by_default_on_public_page(): void
+    public function test_maintenance_photos_are_visible_by_default_on_public_page(): void
     {
+        Storage::fake('public');
+
         $user = User::factory()->create();
+
+        UploadedFile::fake()->image('foto.jpg')->storeAs('maintenance-attachments', 'foto.jpg', 'public');
+        UploadedFile::fake()->create('factuur.pdf', 100, 'application/pdf')->storeAs('maintenance-attachments', 'factuur.pdf', 'public');
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -247,8 +252,8 @@ class PublicGaragePageTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Eigenaar bepaalt wat openbaar is');
-        $response->assertDontSee('maintenance-attachments/foto.jpg');
-        $response->assertDontSee('maintenance-attachments/factuur.pdf');
+        $response->assertSee('storage/maintenance-attachments/foto.jpg', false);
+        $response->assertDontSee('storage/maintenance-attachments/factuur.pdf', false);
     }
 
     public function test_public_garage_sitemap_contains_only_indexable_public_vehicles(): void
@@ -524,7 +529,7 @@ class PublicGaragePageTest extends TestCase
         $response->assertDontSee('storage/maintenance-attachments/visible.jpg', false);
     }
 
-    public function test_public_page_hides_maintenance_image_when_attachment_sharing_disabled(): void
+    public function test_public_page_hides_maintenance_photo_when_photo_visibility_is_disabled_via_array_path(): void
     {
         Storage::fake('public');
 
@@ -545,6 +550,7 @@ class PublicGaragePageTest extends TestCase
             'description' => 'Filter vervangen',
             'km_reading' => 23456,
             'maintenance_date' => '2026-05-12',
+            'hide_photos_on_public_page' => true,
             'attachments' => [
                 ['path' => 'maintenance-attachments/private.jpg'],
             ],
@@ -555,4 +561,73 @@ class PublicGaragePageTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('storage/maintenance-attachments/private.jpg', false);
     }
+
+
+    public function test_public_page_hides_maintenance_photo_when_photo_visibility_is_disabled(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        UploadedFile::fake()->image('hidden-photo.jpg')->storeAs('maintenance-attachments', 'hidden-photo.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $owner->id,
+            'brand' => 'Triumph',
+            'model' => 'Street Triple',
+            'year' => 2023,
+            'is_public' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Controle uitgevoerd',
+            'km_reading' => 3456,
+            'maintenance_date' => '2026-05-13',
+            'hide_photos_on_public_page' => true,
+            'attachments' => [
+                'maintenance-attachments/hidden-photo.jpg',
+            ],
+        ]);
+
+        $this->get('/garage/' . $vehicle->public_slug)
+            ->assertOk()
+            ->assertDontSee('storage/maintenance-attachments/hidden-photo.jpg', false);
+    }
+
+    public function test_non_image_attachments_remain_private_by_default_even_when_photo_is_visible(): void
+    {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        UploadedFile::fake()->image('visible-photo.jpg')->storeAs('maintenance-attachments', 'visible-photo.jpg', 'public');
+        UploadedFile::fake()->create('private-invoice.pdf', 100, 'application/pdf')->storeAs('maintenance-attachments', 'private-invoice.pdf', 'public');
+        UploadedFile::fake()->create('walkaround.mp4', 100, 'video/mp4')->storeAs('maintenance-attachments', 'walkaround.mp4', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $owner->id,
+            'brand' => 'Kawasaki',
+            'model' => 'Z900',
+            'year' => 2022,
+            'is_public' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Onderhoud afgerond',
+            'km_reading' => 9876,
+            'maintenance_date' => '2026-05-14',
+            'attachments' => [
+                'maintenance-attachments/visible-photo.jpg',
+                'maintenance-attachments/private-invoice.pdf',
+                'maintenance-attachments/walkaround.mp4',
+            ],
+        ]);
+
+        $this->get('/garage/' . $vehicle->public_slug)
+            ->assertOk()
+            ->assertSee('storage/maintenance-attachments/visible-photo.jpg', false)
+            ->assertDontSee('storage/maintenance-attachments/private-invoice.pdf', false)
+            ->assertDontSee('storage/maintenance-attachments/walkaround.mp4', false);
+    }
+
 }

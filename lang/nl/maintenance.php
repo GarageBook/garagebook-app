@@ -56,6 +56,12 @@ return [
         'active_vehicle' => 'Actief voertuig',
         'no_vehicles' => 'Geen voertuigen beschikbaar',
     ],
+    'public_sharing' => [
+        'hide_photos_label' => 'Foto's verbergen op publieke voertuigpagina',
+        'hide_photos_help' => 'Onderhoudsfoto's zijn standaard zichtbaar op de publieke voertuigpagina. Zet dit alleen aan als je foto's van deze onderhoudslog bewust wilt verbergen.',
+        'share_other_attachments_label' => 'Overige bijlagen tonen op publieke voertuigpagina',
+        'share_other_attachments_help' => 'Laat dit uit als pdf's, facturen, documenten of video's privé moeten blijven. Alleen wanneer je dit inschakelt worden die overige bijlagen publiek zichtbaar.',
+    ],
     'media_gallery' => [
         'file_fallback' => 'Bestand',
         'open' => 'Open',
