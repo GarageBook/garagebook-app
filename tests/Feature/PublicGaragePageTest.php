@@ -53,6 +53,98 @@ class PublicGaragePageTest extends TestCase
         $response->assertDontSee('"item": "' . url('/garage') . '"', false);
     }
 
+    public function test_public_page_renders_vehicle_photo_in_16_by_9_hero_container(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('hero-bike.jpg')->storeAs('vehicle-photos', 'hero-bike.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'Tuono 1000R',
+            'year' => 2006,
+            'is_public' => true,
+            'photo' => 'vehicle-photos/hero-bike.jpg',
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSee('data-public-vehicle-hero="true"', false);
+        $response->assertSee('aspect-ratio:16 / 9;', false);
+        $response->assertSee('object-fit:contain;', false);
+        $response->assertSee('storage/vehicle-photos/hero-bike.jpg', false);
+    }
+
+    public function test_public_page_shows_carousel_controls_for_multiple_vehicle_photos(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('hero-bike-1.jpg')->storeAs('vehicle-photos', 'hero-bike-1.jpg', 'public');
+        UploadedFile::fake()->image('hero-bike-2.jpg')->storeAs('vehicle-photos', 'hero-bike-2.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+            'year' => 2020,
+            'is_public' => true,
+            'photo' => 'vehicle-photos/hero-bike-1.jpg',
+            'photos' => ['vehicle-photos/hero-bike-2.jpg'],
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSee('data-public-vehicle-hero-prev="true"', false);
+        $response->assertSee('data-public-vehicle-hero-next="true"', false);
+    }
+
+    public function test_public_page_shows_existing_fallback_when_no_vehicle_photo_is_available(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Moto Guzzi',
+            'model' => 'V7 Stone',
+            'year' => 2022,
+            'is_public' => true,
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSeeText("Nog geen publieke voertuigfoto's zichtbaar");
+        $response->assertDontSee('data-public-vehicle-hero="true"', false);
+    }
+
+    public function test_public_page_hides_carousel_controls_for_single_vehicle_photo(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('single-hero-bike.jpg')->storeAs('vehicle-photos', 'single-hero-bike.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+            'year' => 2004,
+            'is_public' => true,
+            'photo' => 'vehicle-photos/single-hero-bike.jpg',
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertDontSee('data-public-vehicle-hero-prev="true"', false);
+        $response->assertDontSee('data-public-vehicle-hero-next="true"', false);
+    }
+
     public function test_public_page_shows_proof_indicators_when_costs_and_public_images_are_shared(): void
     {
         Storage::fake('public');

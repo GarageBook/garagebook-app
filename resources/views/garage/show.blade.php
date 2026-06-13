@@ -108,16 +108,63 @@
                 </div>
             </div>
 
-            @if($vehiclePhotos !== [])
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:16px;">
-                    @foreach($vehiclePhotos as $photo)
-                        <img
-                            src="{{ $photo['thumbnail_url'] }}"
-                            alt="{{ $vehicleName }}"
-                            style="width:100%; height:240px; object-fit:cover; border-radius:24px; background:#f3f4f6;"
-                        >
-                    @endforeach
-                </div>
+            @if(count($vehiclePhotos) > 0)
+                <section
+                    x-data="{ currentIndex: 0, total: {{ count($vehiclePhotos) }} }"
+                    style="display:grid; gap:12px;"
+                >
+                    <div
+                        data-public-vehicle-hero="true"
+                        style="position:relative; aspect-ratio:16 / 9; width:100%; border-radius:28px; overflow:hidden; background:radial-gradient(circle at top, #334155 0%, #111827 58%, #020617 100%); border:1px solid rgba(148, 163, 184, 0.22); box-shadow:0 24px 60px rgba(15, 23, 42, 0.18);"
+                    >
+                        @foreach($vehiclePhotos as $photoIndex => $photo)
+                            @if($photoIndex === 0)
+                                <img
+                                    x-show="currentIndex === {{ $photoIndex }}"
+                                    src="{{ $photo['url'] }}"
+                                    alt="{{ $vehicleName }}"
+                                    loading="eager"
+                                    decoding="async"
+                                    style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; padding:clamp(14px, 3vw, 24px);"
+                                >
+                            @else
+                                <img
+                                    x-show="currentIndex === {{ $photoIndex }}"
+                                    x-cloak
+                                    src="{{ $photo['url'] }}"
+                                    alt="{{ $vehicleName }}"
+                                    loading="lazy"
+                                    decoding="async"
+                                    style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; padding:clamp(14px, 3vw, 24px);"
+                                >
+                            @endif
+                        @endforeach
+
+                        @if(count($vehiclePhotos) > 1)
+                            <button
+                                type="button"
+                                data-public-vehicle-hero-prev="true"
+                                @click="currentIndex = (currentIndex - 1 + total) % total"
+                                aria-label="Vorige voertuigfoto"
+                                style="position:absolute; left:16px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:none; border-radius:999px; background:rgba(15, 23, 42, 0.72); color:#fff; font-size:28px; line-height:1; cursor:pointer; z-index:2; box-shadow:0 10px 24px rgba(15, 23, 42, 0.2);"
+                            >‹</button>
+
+                            <button
+                                type="button"
+                                data-public-vehicle-hero-next="true"
+                                @click="currentIndex = (currentIndex + 1) % total"
+                                aria-label="Volgende voertuigfoto"
+                                style="position:absolute; right:16px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:none; border-radius:999px; background:rgba(15, 23, 42, 0.72); color:#fff; font-size:28px; line-height:1; cursor:pointer; z-index:2; box-shadow:0 10px 24px rgba(15, 23, 42, 0.2);"
+                            >›</button>
+
+                            <div
+                                style="position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:inline-flex; align-items:center; gap:10px; padding:8px 12px; border-radius:999px; background:rgba(15, 23, 42, 0.68); color:#fff; font-size:13px; font-weight:600; z-index:2;"
+                            >
+                                <span x-text="`${currentIndex + 1} / ${total}`"></span>
+                            </div>
+                        @endif
+                    </div>
+                </section>
             @else
                 <section style="padding:22px; border-radius:24px; background:#f9fafb; border:1px dashed #d1d5db; color:#374151;">
                     <h2 style="margin:0 0 8px; font-size:22px; color:#111827;">Nog geen publieke voertuigfoto's zichtbaar</h2>
