@@ -103,6 +103,91 @@ class PublicGaragePageTest extends TestCase
         $response->assertSee('data-public-vehicle-hero-next="true"', false);
     }
 
+    public function test_public_vehicle_photos_merges_primary_photo_and_photo_array_without_losing_valid_unique_images(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('highlander-1.jpg')->storeAs('vehicle-photos', 'highlander-1.jpg', 'public');
+        UploadedFile::fake()->image('highlander-2.jpg')->storeAs('vehicle-photos', 'highlander-2.jpg', 'public');
+        UploadedFile::fake()->image('highlander-3.jpg')->storeAs('vehicle-photos', 'highlander-3.jpg', 'public');
+        UploadedFile::fake()->create('manual.pdf', 32, 'application/pdf')->storeAs('vehicle-photos', 'manual.pdf', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Toyota',
+            'model' => 'Highlander Hybrid',
+            'year' => 2008,
+            'is_public' => true,
+            'photo' => '/vehicle-photos/highlander-1.jpg',
+            'photos' => [
+                'vehicle-photos/highlander-1.jpg',
+                '',
+                'vehicle-photos/manual.pdf',
+                '/vehicle-photos/highlander-2.jpg',
+                'vehicle-photos/highlander-3.jpg',
+            ],
+        ]);
+
+        $photos = app(PublicGarageService::class)->publicVehiclePhotos($vehicle);
+
+        $this->assertCount(3, $photos);
+        $this->assertSame([
+            'vehicle-photos/highlander-1.jpg',
+            'vehicle-photos/highlander-2.jpg',
+            'vehicle-photos/highlander-3.jpg',
+        ], array_column($photos, 'path'));
+    }
+
+    public function test_public_page_renders_all_vehicle_hero_photos_in_order_and_exposes_navigation_data(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('highlander-1.jpg')->storeAs('vehicle-photos', 'highlander-1.jpg', 'public');
+        UploadedFile::fake()->image('highlander-2.jpg')->storeAs('vehicle-photos', 'highlander-2.jpg', 'public');
+        UploadedFile::fake()->image('highlander-3.jpg')->storeAs('vehicle-photos', 'highlander-3.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Toyota',
+            'model' => 'Highlander Hybrid',
+            'year' => 2008,
+            'is_public' => true,
+            'photo' => 'vehicle-photos/highlander-1.jpg',
+            'photos' => [
+                'vehicle-photos/highlander-1.jpg',
+                'vehicle-photos/highlander-2.jpg',
+                'vehicle-photos/highlander-3.jpg',
+            ],
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Controle uitgevoerd',
+            'km_reading' => 184200,
+            'maintenance_date' => '2026-05-01',
+        ]);
+
+        $photoUrls = [
+            asset('storage/vehicle-photos/highlander-1.jpg'),
+            asset('storage/vehicle-photos/highlander-2.jpg'),
+            asset('storage/vehicle-photos/highlander-3.jpg'),
+        ];
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+
+        $response->assertOk();
+        $response->assertSee('data-public-vehicle-hero-total="3"', false);
+        $response->assertSee('data-public-vehicle-hero-photos=', false);
+        $response->assertSeeInOrder($photoUrls, false);
+        $response->assertSee('data-public-vehicle-slide="0"', false);
+        $response->assertSee('data-public-vehicle-slide-initial="true"', false);
+        $response->assertSee('data-public-vehicle-hero-counter="true">1 / 3<', false);
+        $response->assertSee('data-public-vehicle-hero-prev="true"', false);
+        $response->assertSee('data-public-vehicle-hero-next="true"', false);
+    }
+
     public function test_public_page_shows_existing_fallback_when_no_vehicle_photo_is_available(): void
     {
         $user = User::factory()->create();
@@ -141,8 +226,8 @@ class PublicGaragePageTest extends TestCase
         $response = $this->get('/garage/' . $vehicle->public_slug);
 
         $response->assertOk();
-        $response->assertDontSee('data-public-vehicle-hero-prev="true"', false);
-        $response->assertDontSee('data-public-vehicle-hero-next="true"', false);
+        $response->assertDontSee('aria-label="Vorige voertuigfoto"', false);
+        $response->assertDontSee('aria-label="Volgende voertuigfoto"', false);
     }
 
     public function test_public_page_shows_proof_indicators_when_costs_and_public_images_are_shared(): void

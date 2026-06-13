@@ -110,7 +110,9 @@
 
             @if(count($vehiclePhotos) > 0)
                 <section
-                    x-data="{ currentIndex: 0, total: {{ count($vehiclePhotos) }} }"
+                    data-public-vehicle-hero-carousel="true"
+                    data-public-vehicle-hero-total="{{ count($vehiclePhotos) }}"
+                    data-public-vehicle-hero-photos='@json(array_column($vehiclePhotos, "url"))'
                     style="display:grid; gap:12px;"
                 >
                     <div
@@ -118,33 +120,25 @@
                         style="position:relative; aspect-ratio:16 / 9; width:100%; border-radius:28px; overflow:hidden; background:radial-gradient(circle at top, #334155 0%, #111827 58%, #020617 100%); border:1px solid rgba(148, 163, 184, 0.22); box-shadow:0 24px 60px rgba(15, 23, 42, 0.18);"
                     >
                         @foreach($vehiclePhotos as $photoIndex => $photo)
-                            @if($photoIndex === 0)
-                                <img
-                                    x-show="currentIndex === {{ $photoIndex }}"
-                                    src="{{ $photo['url'] }}"
-                                    alt="{{ $vehicleName }}"
-                                    loading="eager"
-                                    decoding="async"
-                                    style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; padding:clamp(14px, 3vw, 24px);"
-                                >
-                            @else
-                                <img
-                                    x-show="currentIndex === {{ $photoIndex }}"
-                                    x-cloak
-                                    src="{{ $photo['url'] }}"
-                                    alt="{{ $vehicleName }}"
-                                    loading="lazy"
-                                    decoding="async"
-                                    style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; padding:clamp(14px, 3vw, 24px);"
-                                >
-                            @endif
+                            <img
+                                data-public-vehicle-slide="{{ $photoIndex }}"
+                                @if($photoIndex === 0)
+                                    data-public-vehicle-slide-initial="true"
+                                @else
+                                    hidden
+                                @endif
+                                src="{{ $photo['url'] }}"
+                                alt="{{ $vehicleName }}"
+                                loading="{{ $photoIndex === 0 ? 'eager' : 'lazy' }}"
+                                decoding="async"
+                                style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; padding:clamp(14px, 3vw, 24px);"
+                            >
                         @endforeach
 
                         @if(count($vehiclePhotos) > 1)
                             <button
                                 type="button"
                                 data-public-vehicle-hero-prev="true"
-                                @click="currentIndex = (currentIndex - 1 + total) % total"
                                 aria-label="Vorige voertuigfoto"
                                 style="position:absolute; left:16px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:none; border-radius:999px; background:rgba(15, 23, 42, 0.72); color:#fff; font-size:28px; line-height:1; cursor:pointer; z-index:2; box-shadow:0 10px 24px rgba(15, 23, 42, 0.2);"
                             >‹</button>
@@ -152,7 +146,6 @@
                             <button
                                 type="button"
                                 data-public-vehicle-hero-next="true"
-                                @click="currentIndex = (currentIndex + 1) % total"
                                 aria-label="Volgende voertuigfoto"
                                 style="position:absolute; right:16px; top:50%; transform:translateY(-50%); width:44px; height:44px; border:none; border-radius:999px; background:rgba(15, 23, 42, 0.72); color:#fff; font-size:28px; line-height:1; cursor:pointer; z-index:2; box-shadow:0 10px 24px rgba(15, 23, 42, 0.2);"
                             >›</button>
@@ -160,7 +153,7 @@
                             <div
                                 style="position:absolute; left:50%; bottom:16px; transform:translateX(-50%); display:inline-flex; align-items:center; gap:10px; padding:8px 12px; border-radius:999px; background:rgba(15, 23, 42, 0.68); color:#fff; font-size:13px; font-weight:600; z-index:2;"
                             >
-                                <span x-text="`${currentIndex + 1} / ${total}`"></span>
+                                <span data-public-vehicle-hero-counter="true">1 / {{ count($vehiclePhotos) }}</span>
                             </div>
                         @endif
                     </div>
@@ -388,6 +381,52 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const heroCarousels = Array.from(document.querySelectorAll('[data-public-vehicle-hero-carousel="true"]'));
+
+        heroCarousels.forEach((carousel) => {
+            const slides = Array.from(carousel.querySelectorAll('[data-public-vehicle-slide]'));
+            const previousButton = carousel.querySelector('[data-public-vehicle-hero-prev="true"]');
+            const nextButton = carousel.querySelector('[data-public-vehicle-hero-next="true"]');
+            const counter = carousel.querySelector('[data-public-vehicle-hero-counter="true"]');
+            const total = Number.parseInt(carousel.dataset.publicVehicleHeroTotal || `${slides.length}`, 10);
+
+            if (slides.length === 0) {
+                return;
+            }
+
+            let currentIndex = slides.findIndex((slide) => slide.hasAttribute('data-public-vehicle-slide-initial'));
+
+            if (currentIndex < 0 || currentIndex >= slides.length) {
+                currentIndex = 0;
+            }
+
+            const renderHero = () => {
+                slides.forEach((slide, index) => {
+                    slide.hidden = index !== currentIndex;
+                });
+
+                if (counter) {
+                    counter.textContent = `${currentIndex + 1} / ${total}`;
+                }
+            };
+
+            renderHero();
+
+            if (slides.length <= 1 || !previousButton || !nextButton) {
+                return;
+            }
+
+            previousButton.addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+                renderHero();
+            });
+
+            nextButton.addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % slides.length;
+                renderHero();
+            });
+        });
+
         const triggers = Array.from(document.querySelectorAll('[data-gallery-open]'));
         if (!triggers.length) return;
 
