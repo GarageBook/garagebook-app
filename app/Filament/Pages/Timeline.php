@@ -29,16 +29,6 @@ class Timeline extends Page
     #[Url(as: 'vehicle_id')]
     public ?int $activeVehicleId = null;
 
-    public static function getNavigationBadge(): ?string
-    {
-        return __('dashboard.timeline_badge');
-    }
-
-    public static function getNavigationBadgeColor(): string | array | null
-    {
-        return 'info';
-    }
-
     public function mount(): void
     {
         $this->activeVehicleId = $this->resolveActiveVehicleId($this->activeVehicleId);

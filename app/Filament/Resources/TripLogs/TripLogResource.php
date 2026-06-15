@@ -68,9 +68,4 @@ class TripLogResource extends Resource
     {
         return __('trips.plural_model_label');
     }
-
-    public static function getNavigationBadge(): ?string
-    {
-        return 'beta!';
-    }
 }

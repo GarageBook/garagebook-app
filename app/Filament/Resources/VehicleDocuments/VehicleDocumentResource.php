@@ -23,16 +23,6 @@ class VehicleDocumentResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    public static function getNavigationBadge(): ?string
-    {
-        return __('documents.navigation_badge');
-    }
-
-    public static function getNavigationBadgeColor(): string | array | null
-    {
-        return 'info';
-    }
-
     public static function form(Schema $schema): Schema
     {
         return VehicleDocumentForm::configure($schema);
