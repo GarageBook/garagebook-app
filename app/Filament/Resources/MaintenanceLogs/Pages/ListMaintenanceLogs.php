@@ -4,8 +4,8 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\Concerns\HasPublicVehicleShareActions;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
-use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
+use App\Support\MaintenanceLogVehicleResolver;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -101,26 +101,6 @@ class ListMaintenanceLogs extends ListRecords
 
     protected function resolveActiveVehicleId(?int $vehicleId): ?int
     {
-        $vehicles = $this->getUserVehicles();
-
-        if ($vehicles->isEmpty()) {
-            return null;
-        }
-
-        if ($vehicleId && $vehicles->contains('id', $vehicleId)) {
-            return $vehicleId;
-        }
-
-        $latestMaintenanceVehicleId = MaintenanceLog::query()
-            ->whereIn('vehicle_id', $vehicles->pluck('id'))
-            ->orderByDesc('maintenance_date')
-            ->orderByDesc('id')
-            ->value('vehicle_id');
-
-        if ($latestMaintenanceVehicleId && $vehicles->contains('id', $latestMaintenanceVehicleId)) {
-            return $latestMaintenanceVehicleId;
-        }
-
-        return $vehicles->first()->id;
+        return app(MaintenanceLogVehicleResolver::class)->resolveForUser(auth()->user(), $vehicleId);
     }
 }

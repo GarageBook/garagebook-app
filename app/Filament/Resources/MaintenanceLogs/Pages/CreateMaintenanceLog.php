@@ -4,8 +4,9 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Jobs\OptimizeMaintenanceLogMedia;
-use App\Support\AnalyticsEventTracker;
 use App\Services\DistanceUnitService;
+use App\Support\AnalyticsEventTracker;
+use App\Support\MaintenanceLogVehicleResolver;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateMaintenanceLog extends CreateRecord
@@ -14,6 +15,13 @@ class CreateMaintenanceLog extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        if (blank($data['vehicle_id'] ?? null)) {
+            $data['vehicle_id'] = app(MaintenanceLogVehicleResolver::class)->resolveForUser(
+                auth()->user(),
+                request()->integer('vehicle_id') ?: null,
+            );
+        }
+
         $service = app(DistanceUnitService::class);
         $unit = $service->persistVehicleUnit(
             isset($data['vehicle_id']) ? (int) $data['vehicle_id'] : null,
@@ -40,6 +48,11 @@ class CreateMaintenanceLog extends CreateRecord
         }
 
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return MaintenanceLogResource::getUrl('index');
     }
 
     public function getHeading(): string

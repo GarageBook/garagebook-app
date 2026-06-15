@@ -4,6 +4,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Schemas;
 
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
+use App\Support\MaintenanceLogVehicleResolver;
 use Filament\Forms;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -31,6 +32,10 @@ class MaintenanceLogForm
                     )
                     ->searchable()
                     ->required()
+                    ->default(fn (): ?int => app(MaintenanceLogVehicleResolver::class)->resolveForUser(
+                        auth()->user(),
+                        request()->integer('vehicle_id') ?: null,
+                    ))
                     ->live()
                     ->afterStateUpdated(fn (Set $set, ?string $state) => $set(
                         'distance_unit',
@@ -40,7 +45,12 @@ class MaintenanceLogForm
                 Forms\Components\Select::make('distance_unit')
                     ->label(__('maintenance.fields.distance_unit'))
                     ->options(app(DistanceUnitService::class)->getSupportedUnits())
-                    ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(request()->integer('vehicle_id') ?: null))
+                    ->default(fn (): string => app(DistanceUnitService::class)->resolveForVehicleId(
+                        app(MaintenanceLogVehicleResolver::class)->resolveForUser(
+                            auth()->user(),
+                            request()->integer('vehicle_id') ?: null,
+                        )
+                    ))
                     ->required()
                     ->selectablePlaceholder(false)
                     ->helperText(__('maintenance.fields.distance_unit_help')),
