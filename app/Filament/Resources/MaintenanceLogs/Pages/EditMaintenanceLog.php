@@ -48,6 +48,11 @@ class EditMaintenanceLog extends EditRecord
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
     }
 
+    protected function getRedirectUrl(): string
+    {
+        return MaintenanceLogResource::getUrl('index');
+    }
+
     protected function getHeaderActions(): array
     {
         return [
