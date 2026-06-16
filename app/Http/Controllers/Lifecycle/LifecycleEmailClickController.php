@@ -11,6 +11,7 @@ class LifecycleEmailClickController
 {
     public function __invoke(User $user, string $emailKey, LifecycleEmailService $service): RedirectResponse
     {
+        $service->markLifecycleEmailClicked($user, $emailKey);
         app(AnalyticsEventTracker::class)->queueLifecycleEmailClicked($emailKey);
 
         return redirect()->to($service->resolveCtaDestination($user, $emailKey));

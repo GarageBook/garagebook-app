@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\LifecycleEmailLogs\LifecycleEmailLogResource;
+use App\Filament\Resources\LifecycleEmailLogs\Pages\ListLifecycleEmailLogs;
 use App\Filament\Resources\LifecycleEmailTemplates\LifecycleEmailTemplateResource;
 use App\Filament\Resources\LifecycleEmailTemplates\Pages\EditLifecycleEmailTemplate;
 use App\Mail\NoMaintenanceLogDay3Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
+use App\Services\LifecycleEmailLogExportService;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -153,6 +155,50 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             ->assertSeeText('Onderwerp lifecycle');
     }
 
+    public function test_admin_can_export_lifecycle_email_logs_from_filament(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        Livewire::actingAs($admin)
+            ->test(ListLifecycleEmailLogs::class)
+            ->callAction('export')
+            ->assertFileDownloaded('lifecycle-email-logs-' . now()->format('Y-m-d') . '.csv');
+    }
+
+    public function test_lifecycle_email_log_csv_export_contains_expected_columns_and_values(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'CSV Gebruiker',
+            'email' => 'csv@example.com',
+            'last_login_at' => '2026-06-01 09:30:00',
+        ]);
+
+        $log = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_VEHICLE_ADDED,
+            'subject' => 'CSV onderwerp',
+            'status' => LifecycleEmailLog::STATUS_SKIPPED,
+            'reason_skipped' => 'unsubscribed',
+            'error_message' => null,
+            'vehicles_count' => 0,
+            'maintenance_logs_count' => 0,
+            'documents_count' => 0,
+            'last_login_at' => '2026-06-01 09:30:00',
+            'clicked_at' => '2026-06-05 12:00:00',
+            'skipped_at' => '2026-06-05 12:00:00',
+        ]);
+
+        $csv = app(LifecycleEmailLogExportService::class)->toCsv(
+            LifecycleEmailLog::query()->with('user')->whereKey($log->getKey())
+        );
+
+        $this->assertStringContainsString('id,created_at,sent_at,user_id,user_name,user_email,email_key,status,reason_skipped,error_message,vehicles_count,maintenance_logs_count,documents_count,last_login_at,clicked_at,completed_goal_at', $csv);
+        $this->assertStringContainsString('CSV Gebruiker', $csv);
+        $this->assertStringContainsString('csv@example.com', $csv);
+        $this->assertStringContainsString(LifecycleEmailTemplate::NO_VEHICLE_ADDED, $csv);
+        $this->assertStringContainsString('unsubscribed', $csv);
+    }
+
     public function test_lifecycle_email_log_user_display_falls_back_when_users_table_is_missing(): void
     {
         $user = User::factory()->create([
@@ -258,6 +304,6 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/lifecycle-email-templates')
             ->assertOk()
-            ->assertSeeText('Lifecycle E-mailtemplates');
+            ->assertSeeText('Lifecycle e-mails');
     }
 }

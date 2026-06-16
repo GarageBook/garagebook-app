@@ -4,8 +4,8 @@ namespace App\Jobs;
 
 use App\Models\LifecycleEmailLog;
 use App\Models\User;
-use App\Support\AnalyticsEventTracker;
 use App\Services\LifecycleEmailService;
+use App\Support\AnalyticsEventTracker;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -26,26 +26,45 @@ class SendLifecycleEmailJob implements ShouldQueue
     {
         $user = User::query()->find($this->userId);
 
-        if (! $user || $user->hasUnsubscribedFromLifecycleEmails()) {
+        if (! $user) {
             return;
         }
 
         $template = $service->getActiveTemplate($this->emailKey);
-
-        if (! $template || ! $service->canStillReceive($user, $this->emailKey)) {
-            return;
-        }
-
         $log = LifecycleEmailLog::query()->firstOrCreate(
             [
                 'user_id' => $user->getKey(),
                 'email_key' => $this->emailKey,
             ],
             [
-                'subject' => $template->subject,
+                'subject' => $template?->subject ?? $this->emailKey,
                 'status' => LifecycleEmailLog::STATUS_QUEUED,
             ],
         );
+
+        if (in_array($log->status, [LifecycleEmailLog::STATUS_SENT, LifecycleEmailLog::STATUS_FAILED], true)) {
+            return;
+        }
+
+        if ($user->hasUnsubscribedFromLifecycleEmails()) {
+            $service->markLifecycleEmailSkipped($user, $this->emailKey, 'unsubscribed');
+
+            return;
+        }
+
+        if (! $template) {
+            $service->markLifecycleEmailSkipped($user, $this->emailKey, 'template_inactive');
+
+            return;
+        }
+
+        $reason = $service->resolveSkipReason($user, $this->emailKey);
+
+        if ($reason !== null) {
+            $service->markLifecycleEmailSkipped($user, $this->emailKey, $reason);
+
+            return;
+        }
 
         Mail::to($user->email)->send($service->makeMailable($user, $template));
 
@@ -54,6 +73,8 @@ class SendLifecycleEmailJob implements ShouldQueue
             'status' => LifecycleEmailLog::STATUS_SENT,
             'sent_at' => now(),
             'failed_at' => null,
+            'skipped_at' => null,
+            'reason_skipped' => null,
             'error_message' => null,
         ])->save();
 

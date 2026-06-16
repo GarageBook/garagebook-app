@@ -17,10 +17,12 @@ class LifecycleEmailTemplateSeederTest extends TestCase
         $this->seed(LifecycleEmailTemplateSeeder::class);
 
         $expected = [
+            LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            LifecycleEmailTemplate::INACTIVE_USER_RETURN,
         ];
 
         $actual = LifecycleEmailTemplate::query()->pluck('email_key')->all();
@@ -30,7 +32,7 @@ class LifecycleEmailTemplateSeederTest extends TestCase
         $this->assertSame($expected, $actual);
     }
 
-    public function test_seeder_does_not_overwrite_existing_customized_templates(): void
+    public function test_seeder_updates_existing_customized_templates(): void
     {
         LifecycleEmailTemplate::query()->create([
             'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
@@ -45,11 +47,11 @@ class LifecycleEmailTemplateSeederTest extends TestCase
 
         $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
 
-        $this->assertSame('Eigen naam', $template->name);
-        $this->assertSame('Eigen onderwerp', $template->subject);
-        $this->assertSame('Eigen body', $template->body);
-        $this->assertSame('Eigen CTA', $template->cta_text);
-        $this->assertFalse($template->is_active);
+        $this->assertSame('Geen onderhoudslog - dag 3', $template->name);
+        $this->assertSame('Je eerste onderhoudsnotitie staat klaar', $template->subject);
+        $this->assertStringContainsString('Je voertuig staat al in GarageBook', $template->body);
+        $this->assertSame('Eerste onderhoud toevoegen', $template->cta_text);
+        $this->assertTrue($template->is_active);
     }
 
     public function test_users_table_has_lifecycle_unsubscribe_column(): void

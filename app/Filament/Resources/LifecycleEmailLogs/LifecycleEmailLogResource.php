@@ -111,9 +111,38 @@ class LifecycleEmailLogResource extends Resource
                     ->label('Status')
                     ->colors([
                         'gray' => LifecycleEmailLog::STATUS_QUEUED,
+                        'warning' => LifecycleEmailLog::STATUS_SKIPPED,
                         'success' => LifecycleEmailLog::STATUS_SENT,
                         'danger' => LifecycleEmailLog::STATUS_FAILED,
                     ]),
+                Tables\Columns\TextColumn::make('reason_skipped')
+                    ->label('Waarom geskipt')
+                    ->limit(60)
+                    ->wrap()
+                    ->placeholder('-')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('vehicles_count')
+                    ->label('Voertuigen')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('maintenance_logs_count')
+                    ->label('Onderhoudslogs')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('documents_count')
+                    ->label('Documenten')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->label('Laatste login')
+                    ->dateTime('d-m-Y H:i')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('clicked_at')
+                    ->label('Klik op CTA')
+                    ->dateTime('d-m-Y H:i')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('sent_at')
                     ->label('Verzonden op')
                     ->dateTime('d-m-Y H:i')
@@ -128,16 +157,19 @@ class LifecycleEmailLogResource extends Resource
                     ->label('Foutmelding')
                     ->limit(80)
                     ->wrap()
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('email_key')
                     ->label('E-mail key')
                     ->options([
+                        'no_vehicle_added' => 'no_vehicle_added',
                         'no_maintenance_log_day_3' => 'no_maintenance_log_day_3',
                         'no_maintenance_log_day_14' => 'no_maintenance_log_day_14',
                         'no_maintenance_log_day_30' => 'no_maintenance_log_day_30',
                         'after_first_maintenance_log' => 'after_first_maintenance_log',
+                        'inactive_user_return' => 'inactive_user_return',
                     ]),
                 SelectFilter::make('status')
                     ->label('Status')
@@ -145,6 +177,7 @@ class LifecycleEmailLogResource extends Resource
                         LifecycleEmailLog::STATUS_QUEUED => LifecycleEmailLog::STATUS_QUEUED,
                         LifecycleEmailLog::STATUS_SENT => LifecycleEmailLog::STATUS_SENT,
                         LifecycleEmailLog::STATUS_FAILED => LifecycleEmailLog::STATUS_FAILED,
+                        LifecycleEmailLog::STATUS_SKIPPED => LifecycleEmailLog::STATUS_SKIPPED,
                     ]),
             ])
             ->recordActions([

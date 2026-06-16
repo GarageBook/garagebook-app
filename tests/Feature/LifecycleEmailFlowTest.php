@@ -10,12 +10,12 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\LifecycleEmailService;
+use App\Support\AnalyticsEventTracker;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class LifecycleEmailFlowTest extends TestCase
@@ -29,7 +29,28 @@ class LifecycleEmailFlowTest extends TestCase
         $this->seed(LifecycleEmailTemplateSeeder::class);
     }
 
-    public function test_day_3_mail_is_selected_for_user_with_vehicle_and_without_maintenance(): void
+    public function test_user_without_vehicle_gets_no_vehicle_added_lifecycle_key(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $this->assertSame(
+            LifecycleEmailTemplate::NO_VEHICLE_ADDED,
+            app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
+        );
+
+        Artisan::call('garagebook:send-lifecycle-emails');
+
+        Bus::assertDispatched(SendLifecycleEmailJob::class, function (SendLifecycleEmailJob $job) use ($user): bool {
+            return $job->userId === $user->id
+                && $job->emailKey === LifecycleEmailTemplate::NO_VEHICLE_ADDED;
+        });
+    }
+
+    public function test_user_with_vehicle_but_without_maintenance_gets_no_maintenance_key(): void
     {
         $user = User::factory()->create([
             'created_at' => now()->subDays(3),
@@ -44,6 +65,37 @@ class LifecycleEmailFlowTest extends TestCase
 
         $this->assertSame(
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
+        );
+    }
+
+    public function test_user_with_vehicle_and_maintenance_does_not_get_a_no_maintenance_mail(): void
+    {
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(20),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tracer 9',
+            'current_km' => 12000,
+        ]);
+
+        $maintenanceLog = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Oliebeurt',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        $maintenanceLog->forceFill([
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
+        ])->saveQuietly();
+
+        $this->assertSame(
+            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
             app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
         );
     }
@@ -75,7 +127,7 @@ class LifecycleEmailFlowTest extends TestCase
         $this->assertStringNotContainsString('Hoi ,', $renderedBody);
     }
 
-    public function test_cta_destination_uses_first_vehicle_create_maintenance_route_and_falls_back_to_dashboard(): void
+    public function test_cta_destination_uses_vehicle_create_history_and_dashboard_routes(): void
     {
         $service = app(LifecycleEmailService::class);
 
@@ -89,11 +141,21 @@ class LifecycleEmailFlowTest extends TestCase
         $userWithoutVehicle = User::factory()->create();
 
         $this->assertSame(
+            \App\Filament\Resources\Vehicles\VehicleResource::getUrl('create'),
+            $service->resolveCtaDestination($userWithoutVehicle, LifecycleEmailTemplate::NO_VEHICLE_ADDED),
+        );
+
+        $this->assertSame(
             \App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
             $service->resolveCtaDestination($userWithVehicle, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3),
         );
 
-        $this->assertSame('/admin', $service->resolveCtaDestination($userWithoutVehicle, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3));
+        $this->assertSame(
+            \App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource::getUrl('index', ['vehicle_id' => $vehicle->id]),
+            $service->resolveCtaDestination($userWithVehicle, LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG),
+        );
+
+        $this->assertSame('/admin', $service->resolveCtaDestination($userWithVehicle, LifecycleEmailTemplate::INACTIVE_USER_RETURN));
     }
 
     public function test_day_14_mail_is_not_queued_twice(): void
@@ -187,7 +249,44 @@ class LifecycleEmailFlowTest extends TestCase
             'sent_at' => now(),
         ]);
 
-        $this->assertNull($service->resolveEligibleEmailKey($user));
+        $this->assertNull($service->reserveLogFor($user, LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG));
+    }
+
+    public function test_skipped_lifecycle_log_is_written_when_user_unsubscribes_before_send(): void
+    {
+        $service = app(LifecycleEmailService::class);
+        $tracker = app(AnalyticsEventTracker::class);
+
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(14),
+            'lifecycle_emails_unsubscribed_at' => now(),
+        ]);
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'KTM',
+            'model' => '890 Adventure',
+            'current_km' => 9000,
+        ]);
+
+        $log = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            'subject' => 'Onderwerp',
+            'status' => LifecycleEmailLog::STATUS_QUEUED,
+        ]);
+
+        app(SendLifecycleEmailJob::class, [
+            'userId' => $user->id,
+            'emailKey' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+        ])->handle($service, $tracker);
+
+        $log->refresh();
+
+        $this->assertSame(LifecycleEmailLog::STATUS_SKIPPED, $log->status);
+        $this->assertSame('unsubscribed', $log->reason_skipped);
+        $this->assertNotNull($log->skipped_at);
+        $this->assertNull($log->sent_at);
     }
 
     public function test_inactive_template_is_not_sent(): void
@@ -291,7 +390,7 @@ class LifecycleEmailFlowTest extends TestCase
         app(SendLifecycleEmailJob::class, [
             'userId' => $user->id,
             'emailKey' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
-        ])->handle(app(LifecycleEmailService::class), app(\App\Support\AnalyticsEventTracker::class));
+        ])->handle(app(LifecycleEmailService::class), app(AnalyticsEventTracker::class));
 
         Mail::assertSent(NoMaintenanceLogDay14Mail::class, function (NoMaintenanceLogDay14Mail $mail) use ($user): bool {
             return $mail->template->subject === 'Aangepast onderwerp'
@@ -335,7 +434,7 @@ class LifecycleEmailFlowTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $url = URL::temporarySignedRoute('lifecycle-emails.unsubscribe', now()->addHour(), ['user' => $user->id]);
+        $url = \URL::temporarySignedRoute('lifecycle-emails.unsubscribe', now()->addHour(), ['user' => $user->id]);
 
         $this->get($url)
             ->assertOk()

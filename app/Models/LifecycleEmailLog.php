@@ -14,6 +14,8 @@ class LifecycleEmailLog extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_SKIPPED = 'skipped';
+
     protected $fillable = [
         'user_id',
         'email_key',
@@ -21,7 +23,14 @@ class LifecycleEmailLog extends Model
         'status',
         'sent_at',
         'failed_at',
+        'skipped_at',
         'error_message',
+        'reason_skipped',
+        'vehicles_count',
+        'maintenance_logs_count',
+        'documents_count',
+        'last_login_at',
+        'clicked_at',
         'retried_at',
         'retry_status',
         'retry_log_id',
@@ -29,9 +38,15 @@ class LifecycleEmailLog extends Model
     ];
 
     protected $casts = [
-        'sent_at' => 'datetime',
+        'clicked_at' => 'datetime',
+        'documents_count' => 'integer',
         'failed_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'maintenance_logs_count' => 'integer',
         'retried_at' => 'datetime',
+        'sent_at' => 'datetime',
+        'skipped_at' => 'datetime',
+        'vehicles_count' => 'integer',
     ];
 
     public function user(): BelongsTo
