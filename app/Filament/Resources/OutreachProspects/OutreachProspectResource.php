@@ -5,12 +5,17 @@ namespace App\Filament\Resources\OutreachProspects;
 use App\Filament\Resources\OutreachProspects\Pages\CreateOutreachProspect;
 use App\Filament\Resources\OutreachProspects\Pages\EditOutreachProspect;
 use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
+use App\Filament\Resources\OutreachProspects\Pages\ViewOutreachProspect;
 use App\Models\OutreachProspect;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -18,6 +23,7 @@ use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -93,9 +99,60 @@ class OutreachProspectResource extends Resource
                 ->disabled()
                 ->dehydrated(false)
                 ->placeholder('Wordt automatisch gegenereerd'),
+            TextInput::make('demo_url')
+                ->label('Demo-link')
+                ->readOnly()
+                ->dehydrated(false)
+                ->afterStateHydrated(fn (TextInput $component, ?OutreachProspect $record) => $component->state($record?->demoUrl()))
+                ->copyable()
+                ->hint('Volledige URL, selecteerbaar en kopieerbaar.'),
             Textarea::make('notes')
                 ->label('Notities')
                 ->rows(5),
+        ]);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->components([
+            TextEntry::make('campaign.name')
+                ->label('Campagne'),
+            TextEntry::make('company_name')
+                ->label('Bedrijfsnaam'),
+            TextEntry::make('contact_name')
+                ->label('Contactpersoon')
+                ->placeholder('-'),
+            TextEntry::make('email')
+                ->label('E-mail')
+                ->placeholder('-'),
+            TextEntry::make('website')
+                ->label('Website')
+                ->placeholder('-'),
+            TextEntry::make('city')
+                ->label('Plaats')
+                ->placeholder('-'),
+            TextEntry::make('demo_url')
+                ->label('Demo-link')
+                ->state(fn (OutreachProspect $record) => $record->demoUrl())
+                ->copyable()
+                ->copyMessage('Demo-link gekopieerd'),
+            TextEntry::make('clicked_at')
+                ->label('Geklikt')
+                ->dateTime('d-m-Y H:i')
+                ->placeholder('Nog niet'),
+            TextEntry::make('first_login_at')
+                ->label('Eerste login')
+                ->dateTime('d-m-Y H:i')
+                ->placeholder('Nog niet'),
+            TextEntry::make('last_login_at')
+                ->label('Laatste login')
+                ->dateTime('d-m-Y H:i')
+                ->placeholder('Nog niet'),
+            TextEntry::make('login_count')
+                ->label('Logins'),
+            TextEntry::make('notes')
+                ->label('Notities')
+                ->placeholder('-'),
         ]);
     }
 
@@ -140,12 +197,6 @@ class OutreachProspectResource extends Resource
                     ->label('Logins')
                     ->badge()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('demo_url')
-                    ->label('Demo-link')
-                    ->state(fn (OutreachProspect $record) => $record->demoUrl())
-                    ->copyable()
-                    ->copyMessage('Demo-link gekopieerd')
-                    ->limit(40),
             ])
             ->filters([
                 SelectFilter::make('click_status')
@@ -179,9 +230,50 @@ class OutreachProspectResource extends Resource
                     ->relationship('campaign', 'name'),
             ])
             ->recordActions([
+                ViewAction::make(),
                 EditAction::make(),
+                Action::make('copyDemoLink')
+                    ->label('Kopieer demo-link')
+                    ->action(fn (OutreachProspect $record) => null)
+                    ->extraAttributes(fn (OutreachProspect $record) => [
+                        'onclick' => self::copyDemoLinkJs($record->demoUrl()),
+                    ]),
+                Action::make('openDemo')
+                    ->label('Open demo')
+                    ->url(fn (OutreachProspect $record) => $record->demoUrl())
+                    ->openUrlInNewTab(),
             ])
-            ->toolbarActions([]);
+            ->toolbarActions([
+                BulkAction::make('exportSelected')
+                    ->label('Export geselecteerde CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function (Collection $records) {
+                        return response()->streamDownload(function () use ($records): void {
+                            echo "\xEF\xBB\xBF";
+                            $handle = fopen('php://output', 'w');
+                            fputcsv($handle, ['company_name', 'city', 'email', 'website', 'demo_url', 'clicked_at', 'first_login_at', 'last_login_at', 'login_count']);
+
+                            foreach ($records as $record) {
+                                /** @var OutreachProspect $record */
+                                fputcsv($handle, [
+                                    $record->company_name,
+                                    $record->city,
+                                    $record->email,
+                                    $record->website,
+                                    $record->demoUrl(),
+                                    $record->clicked_at?->format('Y-m-d H:i:s'),
+                                    $record->first_login_at?->format('Y-m-d H:i:s'),
+                                    $record->last_login_at?->format('Y-m-d H:i:s'),
+                                    $record->login_count,
+                                ]);
+                            }
+
+                            fclose($handle);
+                        }, 'outreach-prospects-selected-' . now()->format('Y-m-d') . '.csv', [
+                            'Content-Type' => 'text/csv; charset=UTF-8',
+                        ]);
+                    }),
+            ]);
     }
 
     public static function getPages(): array
@@ -189,7 +281,15 @@ class OutreachProspectResource extends Resource
         return [
             'index' => ListOutreachProspects::route('/'),
             'create' => CreateOutreachProspect::route('/create'),
+            'view' => ViewOutreachProspect::route('/{record}'),
             'edit' => EditOutreachProspect::route('/{record}/edit'),
         ];
+    }
+
+    public static function copyDemoLinkJs(string $url): string
+    {
+        $url = addslashes($url);
+
+        return "navigator.clipboard.writeText('{$url}'); new FilamentNotification().title('Demo-link gekopieerd').success().send();";
     }
 }

@@ -4,10 +4,10 @@ namespace App\Filament\Resources\OutreachProspects\Pages;
 
 use App\Filament\Resources\OutreachProspects\OutreachProspectResource;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
-use Filament\Resources\Pages\EditRecord;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
 
-class EditOutreachProspect extends EditRecord
+class ViewOutreachProspect extends ViewRecord
 {
     protected static string $resource = OutreachProspectResource::class;
 
@@ -24,7 +24,7 @@ class EditOutreachProspect extends EditRecord
                 ->label('Open demo')
                 ->url($this->getRecord()->demoUrl())
                 ->openUrlInNewTab(),
-            DeleteAction::make(),
+            EditAction::make(),
         ];
     }
 }
