@@ -272,6 +272,9 @@ class OutreachProspectResource extends Resource
                 Filter::make('emailed')
                     ->label('Gemaild')
                     ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_SENT))),
+                Filter::make('failed_mail')
+                    ->label('Mislukt')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_FAILED))),
                 Filter::make('missing_email')
                     ->label('Geen e-mailadres')
                     ->query(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', '')),
