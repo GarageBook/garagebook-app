@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'lifecycle_emails_unsubscribed_at'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'first_login_at', 'last_login_at', 'first_booklet_downloaded_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'lifecycle_emails_unsubscribed_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -67,6 +67,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'airtable_synced_at' => 'datetime',
             'email_verified_at' => 'datetime',
+            'first_booklet_downloaded_at' => 'datetime',
             'first_login_at' => 'datetime',
             'is_admin' => 'boolean',
             'last_login_at' => 'datetime',

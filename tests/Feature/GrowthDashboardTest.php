@@ -10,6 +10,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
@@ -65,7 +66,7 @@ class GrowthDashboardTest extends TestCase
     public function test_growth_dashboard_shows_registration_kpis_with_existing_users(): void
     {
         $admin = User::factory()->admin()->create([
-            'created_at' => now()->subDays(60),
+            'created_at' => now()->subDays(3),
         ]);
 
         AnalyticsDailySummary::query()->create([
@@ -102,79 +103,101 @@ class GrowthDashboardTest extends TestCase
             ->assertSeeText('Growth Latest');
     }
 
-    public function test_growth_funnel_counts_users_with_vehicles_and_maintenance_logs_correctly(): void
+    public function test_growth_funnel_counts_activation_and_retention_stats_correctly(): void
     {
-        $admin = User::factory()->admin()->create();
+        Carbon::setTestNow('2026-06-17 10:00:00');
 
-        $userWithEverything = User::factory()->create([
-            'first_login_at' => now()->subDays(20),
-            'last_login_at' => now()->subDays(5),
-        ]);
-        $vehicleOne = Vehicle::query()->create([
-            'user_id' => $userWithEverything->id,
-            'brand' => 'Honda',
-            'model' => 'CB500',
-        ]);
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicleOne->id,
-            'description' => 'Service 1',
-            'maintenance_date' => today(),
-            'km_reading' => 1000,
-        ]);
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicleOne->id,
-            'description' => 'Service 2',
-            'maintenance_date' => today(),
-            'km_reading' => 1001,
-        ]);
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicleOne->id,
-            'description' => 'Service 3',
-            'maintenance_date' => today(),
-            'km_reading' => 1002,
-        ]);
-        VehicleDocument::query()->create([
-            'vehicle_id' => $vehicleOne->id,
-            'title' => 'Invoice',
-            'document_type' => 'invoice',
-            'file_path' => 'docs/invoice.pdf',
-            'original_filename' => 'invoice.pdf',
-        ]);
-        FuelLog::query()->create([
-            'vehicle_id' => $vehicleOne->id,
-            'fuel_date' => today(),
-            'odometer_km' => 1000,
-            'distance_km' => 120,
-            'fuel_liters' => 7.5,
-        ]);
+        try {
+            $admin = User::factory()->admin()->create([
+                'created_at' => now()->subDays(60),
+            ]);
 
-        $userWithVehicleAndLog = User::factory()->create();
-        $vehicleTwo = Vehicle::query()->create([
-            'user_id' => $userWithVehicleAndLog->id,
-            'brand' => 'Yamaha',
-            'model' => 'MT-07',
-        ]);
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicleTwo->id,
-            'description' => 'Single service',
-            'maintenance_date' => today(),
-            'km_reading' => 1500,
-        ]);
+            $userWithEverything = User::factory()->create([
+                'created_at' => now()->subDays(5),
+                'first_login_at' => now()->subDays(20),
+                'last_login_at' => now()->subDays(5),
+                'first_booklet_downloaded_at' => now()->subDays(2),
+            ]);
+            $vehicleOne = Vehicle::query()->create([
+                'user_id' => $userWithEverything->id,
+                'brand' => 'Honda',
+                'model' => 'CB500',
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicleOne->id,
+                'description' => 'Service 1',
+                'maintenance_date' => today(),
+                'km_reading' => 1000,
+                'reminder_enabled' => true,
+                'interval_months' => 12,
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicleOne->id,
+                'description' => 'Service 2',
+                'maintenance_date' => today(),
+                'km_reading' => 1001,
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicleOne->id,
+                'description' => 'Service 3',
+                'maintenance_date' => today(),
+                'km_reading' => 1002,
+            ]);
+            VehicleDocument::query()->create([
+                'vehicle_id' => $vehicleOne->id,
+                'title' => 'Invoice',
+                'document_type' => 'invoice',
+                'file_path' => 'docs/invoice.pdf',
+                'original_filename' => 'invoice.pdf',
+            ]);
+            FuelLog::query()->create([
+                'vehicle_id' => $vehicleOne->id,
+                'fuel_date' => today(),
+                'odometer_km' => 1000,
+                'distance_km' => 120,
+                'fuel_liters' => 7.5,
+            ]);
 
-        User::factory()->create();
+            $userWithVehicleAndLog = User::factory()->create([
+                'created_at' => now()->subDays(20),
+                'last_login_at' => now()->subDays(2),
+            ]);
+            $vehicleTwo = Vehicle::query()->create([
+                'user_id' => $userWithVehicleAndLog->id,
+                'brand' => 'Yamaha',
+                'model' => 'MT-07',
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicleTwo->id,
+                'description' => 'Single service',
+                'maintenance_date' => today(),
+                'km_reading' => 1500,
+            ]);
 
-        $this->actingAs($admin);
+            User::factory()->create([
+                'created_at' => now()->subDays(2),
+                'last_login_at' => now()->subDays(40),
+            ]);
 
-        Livewire::test(GrowthProductActivationFunnelWidget::class)
-            ->assertSeeText('Totaal users')
-            ->assertSeeText('4')
-            ->assertSeeText('Users met minimaal 1 voertuig')
-            ->assertSeeText('2')
-            ->assertSeeText('Users met minimaal 3 maintenance logs')
-            ->assertSeeText('1')
-            ->assertSeeText('Users met minimaal 1 document/upload')
-            ->assertSeeText('Users met fuel entries')
-            ->assertSeeText('Teruggekomen na 7 dagen');
+            $this->actingAs($admin);
+
+            Livewire::test(GrowthProductActivationFunnelWidget::class)
+                ->assertSeeText('Registraties 7 dagen')
+                ->assertSeeText('3')
+                ->assertSeeText('Registraties 30 dagen')
+                ->assertSeeText('4')
+                ->assertSeeText('Reminder actief')
+                ->assertSeeText('1')
+                ->assertSeeText('Boekje gedownload')
+                ->assertSeeText('Kernconversies')
+                ->assertSeeText('Registratie → voertuig')
+                ->assertSeeText('Voertuig → eerste onderhoudslog')
+                ->assertSeeText('Eerste onderhoudslog → reminder actief')
+                ->assertSeeText('Eerste onderhoudslog → onderhoudsboekje download')
+                ->assertSeeText('50,0%');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_growth_funnel_counts_maintenance_logs_across_multiple_vehicles_for_one_user(): void

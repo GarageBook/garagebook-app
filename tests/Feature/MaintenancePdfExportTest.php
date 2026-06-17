@@ -38,7 +38,7 @@ class MaintenancePdfExportTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->get('/maintenance/pdf?vehicle_id=' . $vehicle->id);
+            ->get('/maintenance/pdf?vehicle_id='.$vehicle->id);
 
         $response->assertOk();
         $response->assertHeader('content-type', 'application/pdf');
@@ -82,12 +82,48 @@ class MaintenancePdfExportTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->get('/maintenance/pdf?vehicle_id=' . $secondVehicle->id);
+            ->get('/maintenance/pdf?vehicle_id='.$secondVehicle->id);
 
         $response->assertOk();
         $response->assertHeader(
             'content-disposition',
             'attachment; filename=tourfiets-onderhoud.pdf'
         );
+    }
+
+    public function test_pdf_export_marks_first_booklet_download_idempotently(): void
+    {
+        $user = User::factory()->create([
+            'first_booklet_downloaded_at' => null,
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie vervangen',
+            'km_reading' => 12345,
+            'maintenance_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/maintenance/pdf?vehicle_id='.$vehicle->id)
+            ->assertOk();
+
+        $firstTimestamp = $user->fresh()->first_booklet_downloaded_at;
+
+        $this->assertNotNull($firstTimestamp);
+
+        $this->travel(5)->minutes();
+
+        $this->actingAs($user)
+            ->get('/maintenance/pdf?vehicle_id='.$vehicle->id)
+            ->assertOk();
+
+        $this->assertTrue($firstTimestamp->equalTo($user->fresh()->first_booklet_downloaded_at));
     }
 }

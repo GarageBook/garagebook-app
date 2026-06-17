@@ -1,16 +1,16 @@
 <?php
 
-use App\Models\MaintenanceLog;
-use App\Models\Page;
-use App\Models\Vehicle;
-use App\Models\Blog;
-use App\Http\Controllers\PublicGarageController;
+use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
+use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\Public\StartRedirectController;
+use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
 use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleDocumentController;
-use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
-use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
+use App\Models\Blog;
+use App\Models\MaintenanceLog;
+use App\Models\Page;
+use App\Models\Vehicle;
 use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
@@ -26,7 +26,6 @@ Route::get('/', function () {
 
 Route::get('/start', StartRedirectController::class);
 
-
 Route::get('/lifecycle-emails/click/{user}/{emailKey}', LifecycleEmailClickController::class)
     ->middleware('signed')
     ->name('lifecycle-emails.click');
@@ -34,7 +33,6 @@ Route::get('/lifecycle-emails/click/{user}/{emailKey}', LifecycleEmailClickContr
 Route::get('/lifecycle-emails/unsubscribe/{user}', LifecycleEmailUnsubscribeController::class)
     ->middleware('signed')
     ->name('lifecycle-emails.unsubscribe');
-
 
 Route::get('/website', function () {
     return redirect('/', 301);
@@ -64,11 +62,17 @@ Route::get('/maintenance/pdf', function () {
         ->latest('maintenance_date')
         ->get();
 
+    if (auth()->check() && auth()->user()?->first_booklet_downloaded_at === null) {
+        auth()->user()->forceFill([
+            'first_booklet_downloaded_at' => now(),
+        ])->save();
+    }
+
     $pdf = Pdf::loadView('maintenance-share', compact('logs', 'vehicle'));
 
     return $pdf->download(
-        Str::slug($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model)
-        . '-onderhoud.pdf'
+        Str::slug($vehicle->nickname ?: $vehicle->brand.' '.$vehicle->model)
+        .'-onderhoud.pdf'
     );
 });
 

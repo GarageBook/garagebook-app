@@ -1,11 +1,12 @@
 @php
     $activationCards = [
-        ['label' => 'Totaal users', 'legacy_label' => 'Totaal users', 'value' => $stats['total_users']],
+        ['label' => 'Registraties 7 dagen', 'value' => $stats['registrations_last_7_days']],
+        ['label' => 'Registraties 30 dagen', 'value' => $stats['registrations_last_30_days']],
         ['label' => '≥1 voertuig', 'legacy_label' => 'Users met minimaal 1 voertuig', 'value' => $stats['users_with_vehicle']],
         ['label' => '≥1 onderhoudslog', 'legacy_label' => 'Users met minimaal 1 maintenance log', 'value' => $stats['users_with_maintenance']],
         ['label' => '≥3 logs', 'legacy_label' => 'Users met minimaal 3 maintenance logs', 'value' => $stats['users_with_three_maintenance']],
-        ['label' => 'Document/upload', 'legacy_label' => 'Users met minimaal 1 document/upload', 'value' => $stats['users_with_documents']],
-        ['label' => 'Fuel entries', 'legacy_label' => 'Users met fuel entries', 'value' => $stats['users_with_fuel_entries']],
+        ['label' => 'Reminder actief', 'value' => $stats['users_with_active_reminder']],
+        ['label' => 'Boekje gedownload', 'value' => $stats['users_with_booklet_download']],
         ['label' => 'Actief 7 dagen', 'legacy_label' => 'Teruggekomen na 7 dagen', 'value' => $stats['active_last_7_days']],
         ['label' => 'Actief 30 dagen', 'legacy_label' => 'Teruggekomen na 30 dagen', 'value' => $stats['active_last_30_days']],
     ];
@@ -21,7 +22,7 @@
                     </span>
                     <div class="min-w-0">
                         <h3 class="text-base font-semibold text-slate-950">Funnel / activatie</h3>
-                        <p class="mt-1 text-sm text-slate-500">Productactivatie op basis van gebruikers-, voertuigen-, onderhouds-, document- en fueldata uit de database.</p>
+                        <p class="mt-1 text-sm text-slate-500">Activatie en retentie op basis van gebruikers-, voertuigen-, onderhouds-, reminder- en onderhoudsboekje-data uit de database.</p>
                     </div>
                 </div>
 
@@ -44,6 +45,29 @@
                         </p>
                     </article>
                 @endforeach
+            </div>
+
+            <div class="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm">
+                <div class="mb-4">
+                    <h4 class="text-sm font-semibold text-slate-900">Kernconversies</h4>
+                    <p class="mt-1 text-sm text-slate-500">Compact overzicht van de belangrijkste activatie- en retentiestappen.</p>
+                </div>
+
+                <div class="grid gap-3 lg:grid-cols-2">
+                    @foreach ($conversions as $conversion)
+                        <div class="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+                            <div class="text-sm font-semibold text-slate-900">{{ $conversion['label'] }}</div>
+                            <div class="mt-2 flex items-end justify-between gap-4">
+                                <div class="text-xs text-slate-500">
+                                    {{ $conversion['to'] === null ? 'niet beschikbaar' : number_format($conversion['to'], 0, ',', '.') }} van {{ $conversion['from'] === null ? 'niet beschikbaar' : number_format($conversion['from'], 0, ',', '.') }} users
+                                </div>
+                                <div class="text-lg font-semibold text-slate-950 tabular-nums">
+                                    {{ $conversion['percentage'] === null ? 'niet beschikbaar' : number_format($conversion['percentage'], 1, ',', '.') . '%' }}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
 
             <div class="rounded-[1.75rem] border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 p-5 shadow-sm">
