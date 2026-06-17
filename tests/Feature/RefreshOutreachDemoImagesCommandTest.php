@@ -14,7 +14,7 @@ class RefreshOutreachDemoImagesCommandTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_command_attaches_images_to_existing_outreach_demo_vehicle_without_photos(): void
+    public function test_force_command_overwrites_existing_outreach_demo_vehicle_images_and_sets_final_count(): void
     {
         Storage::fake('public');
 
@@ -34,6 +34,8 @@ class RefreshOutreachDemoImagesCommandTest extends TestCase
             'is_public' => true,
             'share_costs_publicly' => true,
             'share_attachments_publicly' => true,
+            'photo' => 'outreach-demos/prospect-1/demo-motor.svg',
+            'photos' => ['vehicle-photos/legacy-demo.jpg'],
         ]);
 
         $sourceDirectory = sys_get_temp_dir() . '/refresh-outreach-demo-images-' . Str::random(8);
@@ -41,8 +43,15 @@ class RefreshOutreachDemoImagesCommandTest extends TestCase
         File::put($sourceDirectory . '/01-bike.jpg', 'demo-jpg');
         File::put($sourceDirectory . '/02-bike.webp', 'demo-webp');
 
+        if (is_dir(public_path('storage')) || is_link(public_path('storage'))) {
+            @unlink(public_path('storage'));
+        }
+
+        symlink(storage_path('app/public'), public_path('storage'));
+
         $this->artisan('garagebook:refresh-outreach-demo-images', [
             '--path' => $sourceDirectory,
+            '--force' => true,
         ])->assertSuccessful();
 
         $vehicle->refresh();
@@ -51,6 +60,7 @@ class RefreshOutreachDemoImagesCommandTest extends TestCase
         $this->assertSame([
             'vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-02-02-bike.webp',
         ], $vehicle->photos);
+        $this->assertCount(2, array_filter([$vehicle->photo, ...($vehicle->photos ?? [])]));
         Storage::disk('public')->assertExists($vehicle->photo);
         Storage::disk('public')->assertExists($vehicle->photos[0]);
 

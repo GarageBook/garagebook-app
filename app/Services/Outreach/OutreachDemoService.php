@@ -12,6 +12,7 @@ use App\Models\VehicleDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -85,12 +86,13 @@ class OutreachDemoService
     }
 
     /**
-     * @return array{source_path:string, source_found:bool, found_count:int, imported_count:int, source_filenames:list<string>, imported_paths:list<string>}
+     * @return array{source_path:string, source_found:bool, found_count:int, imported_count:int, final_image_count:int, source_filenames:list<string>, imported_paths:list<string>, final_paths:list<string>}
      */
-    public function refreshVehicleDemoImages(Vehicle $vehicle, ?string $sourceDirectory = null): array
+    public function refreshVehicleDemoImages(Vehicle $vehicle, ?string $sourceDirectory = null, bool $force = false): array
     {
         $sourceDirectory = $this->resolveImageSourceDirectory($sourceDirectory);
         $sourceFound = $sourceDirectory !== '' && is_dir($sourceDirectory);
+        $existingPaths = $this->currentVehicleImagePaths($vehicle);
 
         if (! $sourceFound) {
             $result = [
@@ -98,11 +100,13 @@ class OutreachDemoService
                 'source_found' => false,
                 'found_count' => 0,
                 'imported_count' => 0,
+                'final_image_count' => $existingPaths->count(),
                 'source_filenames' => [],
                 'imported_paths' => [],
+                'final_paths' => $existingPaths->all(),
             ];
 
-            $this->logImageImport($vehicle, $result);
+            $this->logImageImport($vehicle, $result, $force);
 
             return $result;
         }
@@ -112,9 +116,49 @@ class OutreachDemoService
             ->sortBy(fn (\SplFileInfo $file): string => strtolower($file->getFilename()))
             ->values();
 
-        $sourceFilenames = $files
-            ->map(fn (\SplFileInfo $file): string => $file->getFilename())
-            ->all();
+        $sourceFilenames = $files->map(fn (\SplFileInfo $file): string => $file->getFilename())->all();
+        $targetPaths = $files->map(fn (\SplFileInfo $file, int $index): string => $this->demoVehicleImageTargetPath($vehicle, $file, $index))->all();
+
+        foreach ($files as $index => $file) {
+            $targetPath = $targetPaths[$index];
+
+            if ($force || ! Storage::disk('public')->exists($targetPath)) {
+                Storage::disk('public')->put($targetPath, File::get($file->getPathname()));
+            }
+        }
+
+        if ($force && $targetPaths !== []) {
+            foreach ($existingPaths as $existingPath) {
+                if (! $this->isManagedDemoImagePath($vehicle, $existingPath) || in_array($existingPath, $targetPaths, true)) {
+                    continue;
+                }
+
+                Storage::disk('public')->delete($existingPath);
+            }
+
+            $vehicle->forceFill([
+                'photo' => $targetPaths[0] ?? null,
+                'photos' => array_values(array_slice($targetPaths, 1)),
+            ])->save();
+
+            $vehicle->refresh();
+
+            $finalPaths = $this->currentVehicleImagePaths($vehicle);
+            $result = [
+                'source_path' => $sourceDirectory,
+                'source_found' => true,
+                'found_count' => count($sourceFilenames),
+                'imported_count' => count($targetPaths),
+                'final_image_count' => $finalPaths->count(),
+                'source_filenames' => $sourceFilenames,
+                'imported_paths' => $targetPaths,
+                'final_paths' => $finalPaths->all(),
+            ];
+
+            $this->logImageImport($vehicle, $result, $force);
+
+            return $result;
+        }
 
         $existingPrimary = is_string($vehicle->photo) && filled($vehicle->photo)
             ? ltrim($vehicle->photo, '/')
@@ -123,20 +167,14 @@ class OutreachDemoService
             ->filter(fn (mixed $path): bool => is_string($path) && filled($path))
             ->map(fn (string $path): string => ltrim($path, '/'))
             ->values();
-        $existingPaths = collect([$existingPrimary, ...$existingGallery])->filter()->values();
+        $knownPaths = collect([$existingPrimary, ...$existingGallery])->filter()->values();
 
         $importedPaths = [];
         $newPrimary = $existingPrimary;
         $newGallery = $existingGallery->all();
 
-        foreach ($files as $index => $file) {
-            $targetPath = $this->demoVehicleImageTargetPath($vehicle, $file, $index);
-
-            if (! Storage::disk('public')->exists($targetPath)) {
-                Storage::disk('public')->put($targetPath, File::get($file->getPathname()));
-            }
-
-            if ($existingPaths->contains($targetPath)) {
+        foreach ($targetPaths as $targetPath) {
+            if ($knownPaths->contains($targetPath)) {
                 continue;
             }
 
@@ -146,7 +184,7 @@ class OutreachDemoService
                 $newGallery[] = $targetPath;
             }
 
-            $existingPaths->push($targetPath);
+            $knownPaths->push($targetPath);
             $importedPaths[] = $targetPath;
         }
 
@@ -157,16 +195,21 @@ class OutreachDemoService
             ])->save();
         }
 
+        $vehicle->refresh();
+        $finalPaths = $this->currentVehicleImagePaths($vehicle);
+
         $result = [
             'source_path' => $sourceDirectory,
             'source_found' => true,
             'found_count' => count($sourceFilenames),
             'imported_count' => count($importedPaths),
+            'final_image_count' => $finalPaths->count(),
             'source_filenames' => $sourceFilenames,
             'imported_paths' => $importedPaths,
+            'final_paths' => $finalPaths->all(),
         ];
 
-        $this->logImageImport($vehicle, $result);
+        $this->logImageImport($vehicle, $result, $force);
 
         return $result;
     }
@@ -263,6 +306,7 @@ class OutreachDemoService
             'user_id' => $user->id,
             'vehicle_id' => $vehicle->id,
             'imported_count' => $importResult['imported_count'],
+            'final_image_count' => $importResult['final_image_count'],
         ]);
 
         return $vehicle;
@@ -301,9 +345,7 @@ class OutreachDemoService
 
     private function resolveImageSourceDirectory(?string $sourceDirectory = null): string
     {
-        $resolved = trim((string) ($sourceDirectory ?: config('services.outreach_demo.image_source_path', '/temp/3')));
-
-        return $resolved;
+        return trim((string) ($sourceDirectory ?: config('services.outreach_demo.image_source_path', '/temp/3')));
     }
 
     private function demoVehicleImageTargetPath(Vehicle $vehicle, \SplFileInfo $file, int $index): string
@@ -325,20 +367,43 @@ class OutreachDemoService
         );
     }
 
+    private function isManagedDemoImagePath(Vehicle $vehicle, string $path): bool
+    {
+        return str_starts_with($path, 'vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-');
+    }
+
     /**
-     * @param  array{source_path:string, source_found:bool, found_count:int, imported_count:int, source_filenames:list<string>, imported_paths:list<string>}  $result
+     * @return Collection<int, string>
      */
-    private function logImageImport(Vehicle $vehicle, array $result): void
+    private function currentVehicleImagePaths(Vehicle $vehicle): Collection
+    {
+        return collect([
+            $vehicle->photo,
+            ...Arr::wrap($vehicle->photos),
+        ])
+            ->filter(fn (mixed $path): bool => is_string($path) && filled($path))
+            ->map(fn (string $path): string => ltrim($path, '/'))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * @param  array{source_path:string, source_found:bool, found_count:int, imported_count:int, final_image_count:int, source_filenames:list<string>, imported_paths:list<string>, final_paths:list<string>}  $result
+     */
+    private function logImageImport(Vehicle $vehicle, array $result, bool $force): void
     {
         Log::info('Outreach demo image import processed', [
             'user_id' => $vehicle->user_id,
             'vehicle_id' => $vehicle->id,
+            'force' => $force,
             'source_path' => $result['source_path'],
             'source_found' => $result['source_found'],
             'found_image_count' => $result['found_count'],
             'imported_count' => $result['imported_count'],
+            'final_image_count' => $result['final_image_count'],
             'source_filenames' => $result['source_filenames'],
             'imported_paths' => $result['imported_paths'],
+            'final_paths' => $result['final_paths'],
         ]);
     }
 }
