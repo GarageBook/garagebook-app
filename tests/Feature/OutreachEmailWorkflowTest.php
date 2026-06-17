@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Resources\OutreachCampaigns\Pages\EditOutreachCampaign;
 use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
 use App\Mail\OutreachCampaignMail;
+use Illuminate\Mail\Mailables\Address;
 use App\Models\OutreachCampaign;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
@@ -62,16 +63,30 @@ class OutreachEmailWorkflowTest extends TestCase
             ->callAction('sendTestMail');
 
         Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($prospect): bool {
+            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
+
             return $mail->hasTo('willemvanveelen@icloud.com')
                 && ! $mail->hasTo((string) $prospect->email)
                 && $mail->subjectLine === '[TEST] Demo voor Moto Arnhem'
                 && str_contains($mail->bodyText, 'Beste Pieter,')
-                && str_contains($mail->bodyText, $prospect->demoUrl());
+                && str_contains($mail->bodyText, $prospect->demoUrl())
+                && $replyTo instanceof Address
+                && $replyTo->address === 'social@garagebook.nl';
         });
 
         Mail::assertNotSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($prospect): bool {
             return $mail->hasTo((string) $prospect->email);
         });
+
+        $realMail = app(OutreachEmailService::class)->makeMailForProspect($campaign, $prospect, false);
+        $testMail = app(OutreachEmailService::class)->makeMailForProspect($campaign, $prospect, true);
+        $replyTo = collect($realMail->envelope()->replyTo ?? [])->first();
+
+        $this->assertSame($realMail->bodyText, $testMail->bodyText);
+        $this->assertSame('[TEST] ' . $realMail->subjectLine, $testMail->subjectLine);
+        $this->assertInstanceOf(Address::class, $replyTo);
+        $this->assertSame('social@garagebook.nl', $replyTo->address);
+        $this->assertSame('GarageBook Social', $replyTo->name);
     }
 
     public function test_test_and_real_mail_use_same_rendered_body(): void
@@ -131,10 +146,20 @@ class OutreachEmailWorkflowTest extends TestCase
 
         Mail::assertSent(OutreachCampaignMail::class, 2);
         Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($selectedA): bool {
-            return $mail->hasTo('a@example.com') && str_contains($mail->bodyText, $selectedA->demoUrl());
+            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
+
+            return $mail->hasTo('a@example.com')
+                && str_contains($mail->bodyText, $selectedA->demoUrl())
+                && $replyTo instanceof Address
+                && $replyTo->address === 'social@garagebook.nl';
         });
         Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($selectedB): bool {
-            return $mail->hasTo('b@example.com') && str_contains($mail->bodyText, $selectedB->demoUrl());
+            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
+
+            return $mail->hasTo('b@example.com')
+                && str_contains($mail->bodyText, $selectedB->demoUrl())
+                && $replyTo instanceof Address
+                && $replyTo->address === 'social@garagebook.nl';
         });
         Mail::assertNotSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail): bool {
             return $mail->hasTo('c@example.com');
@@ -149,6 +174,32 @@ class OutreachEmailWorkflowTest extends TestCase
         $log = OutreachEmailLog::query()->where('outreach_prospect_id', $selectedA->id)->latest('id')->firstOrFail();
         $this->assertStringContainsString($selectedA->demoUrl(), $log->body_snapshot);
         $this->assertNotNull($log->sent_at);
+    }
+
+    public function test_real_mail_uses_prospect_email_and_reply_to_social_address(): void
+    {
+        Mail::fake();
+
+        $campaign = OutreachCampaign::factory()->create([
+            'email_subject' => 'Demo voor {{company_name}}',
+            'email_body' => 'Bekijk {{demo_url}}',
+        ]);
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Utrecht',
+            'email' => 'utrecht@example.com',
+        ]);
+
+        app(OutreachEmailService::class)->queueBulkSend(collect([$prospect->load('campaign')]));
+
+        Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($prospect): bool {
+            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
+
+            return $mail->hasTo((string) $prospect->email)
+                && ! $mail->hasTo('willemvanveelen@icloud.com')
+                && $replyTo instanceof Address
+                && $replyTo->address === 'social@garagebook.nl';
+        });
     }
 
     public function test_bulk_send_skips_missing_email_and_prevents_duplicate_send(): void

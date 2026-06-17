@@ -5,6 +5,7 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
@@ -19,7 +20,10 @@ class OutreachCampaignMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->subjectLine);
+        return new Envelope(
+            subject: $this->subjectLine,
+            replyTo: [new Address('social@garagebook.nl', 'GarageBook Social')],
+        );
     }
 
     public function content(): Content
