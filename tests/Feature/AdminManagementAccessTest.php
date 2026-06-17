@@ -51,6 +51,10 @@ class AdminManagementAccessTest extends TestCase
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
             '/admin/localization-overview',
+            '/admin/outreach-campaigns',
+            '/admin/outreach-campaigns/create',
+            '/admin/outreach-prospects',
+            '/admin/outreach-prospects/create',
         ];
 
         foreach ($urls as $url) {
@@ -90,6 +94,10 @@ class AdminManagementAccessTest extends TestCase
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
             '/admin/localization-overview',
+            '/admin/outreach-campaigns',
+            '/admin/outreach-campaigns/create',
+            '/admin/outreach-prospects',
+            '/admin/outreach-prospects/create',
         ];
 
         foreach ($urls as $url) {
@@ -103,7 +111,9 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
-            ->assertSee('/admin/localization-overview', false);
+            ->assertSee('/admin/localization-overview', false)
+            ->assertSee('/admin/outreach-campaigns', false)
+            ->assertSee('/admin/outreach-prospects', false);
     }
 
     public function test_admin_email_match_is_case_insensitive_and_does_not_depend_on_is_admin_flag(): void
@@ -127,7 +137,9 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
-            ->assertSee('/admin/localization-overview', false);
+            ->assertSee('/admin/localization-overview', false)
+            ->assertSee('/admin/outreach-campaigns', false)
+            ->assertSee('/admin/outreach-prospects', false);
     }
 
     public function test_admin_only_user_management_widgets_are_hidden_for_regular_users_and_visible_for_admins(): void
@@ -167,7 +179,9 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
-            ->assertDontSee('/admin/localization-overview', false);
+            ->assertDontSee('/admin/localization-overview', false)
+            ->assertDontSee('/admin/outreach-campaigns', false)
+            ->assertDontSee('/admin/outreach-prospects', false);
 
         $this->actingAs($legacyFlagUser);
         $this->assertFalse(UserActivationStats::canView());
@@ -181,6 +195,8 @@ class AdminManagementAccessTest extends TestCase
         $this->get('/admin/analytics-dashboard')->assertForbidden();
         $this->get('/admin/growth-dashboard')->assertForbidden();
         $this->get('/admin/localization-overview')->assertForbidden();
+        $this->get('/admin/outreach-campaigns')->assertForbidden();
+        $this->get('/admin/outreach-prospects')->assertForbidden();
     }
 
     public function test_regular_user_keeps_access_to_normal_garagebook_functionality_and_sees_no_management_links(): void
@@ -206,7 +222,9 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
-            ->assertDontSee('/admin/localization-overview', false);
+            ->assertDontSee('/admin/localization-overview', false)
+            ->assertDontSee('/admin/outreach-campaigns', false)
+            ->assertDontSee('/admin/outreach-prospects', false);
 
         $this->actingAs($user)
             ->get('/admin/vehicles')

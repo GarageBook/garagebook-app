@@ -27,7 +27,7 @@ class ListUsers extends ListRecords
                     app(AnalyticsEventTracker::class)->queueExportClicked('users');
 
                     return response()->streamDownload(function () {
-                        echo "\xEF\xBB\xBF"; // UTF-8 BOM
+                        echo "\xEF\xBB\xBF";
                         $handle = fopen('php://output', 'w');
 
                         fputcsv($handle, [
@@ -37,6 +37,7 @@ class ListUsers extends ListRecords
                             'created_at',
                             'updated_at',
                             'is_admin',
+                            'is_outreach_demo',
                         ]);
 
                         User::query()->orderBy('id')->chunk(100, function ($users) use ($handle) {
@@ -48,6 +49,7 @@ class ListUsers extends ListRecords
                                     $user->created_at?->format('Y-m-d H:i:s'),
                                     $user->updated_at?->format('Y-m-d H:i:s'),
                                     $user->is_admin ? 'Yes' : 'No',
+                                    $user->is_outreach_demo ? 'Yes' : 'No',
                                 ]);
                             }
                         });

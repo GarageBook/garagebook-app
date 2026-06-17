@@ -6,7 +6,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class UsersTable
@@ -23,6 +25,10 @@ class UsersTable
                 TextColumn::make('email')
                     ->label('E-mail')
                     ->searchable(),
+
+                IconColumn::make('is_outreach_demo')
+                    ->label('Outreach demo')
+                    ->boolean(),
 
                 TextColumn::make('vehicles_count')
                     ->label('Voertuigen')
@@ -46,7 +52,8 @@ class UsersTable
                     ->sortable(),
             ])
             ->filters([
-                //
+                TernaryFilter::make('is_outreach_demo')
+                    ->label('Outreach demo-user'),
             ])
             ->recordActions([
                 ViewAction::make(),

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
+use App\Http\Controllers\OutreachDemoLoginController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicGarageController;
@@ -25,6 +26,9 @@ Route::get('/', function () {
 });
 
 Route::get('/start', StartRedirectController::class);
+
+Route::get('/demo/garage/{token}', OutreachDemoLoginController::class)
+    ->name('outreach.demo.login');
 
 Route::get('/lifecycle-emails/click/{user}/{emailKey}', LifecycleEmailClickController::class)
     ->middleware('signed')
