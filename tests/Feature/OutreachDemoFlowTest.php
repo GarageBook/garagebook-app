@@ -55,8 +55,8 @@ class OutreachDemoFlowTest extends TestCase
 
         $vehicle = $prospect->refresh()->user->vehicles()->firstOrFail();
 
-        $this->assertSame('vehicle-photos/outreach-demo-' . $prospect->id . '-01.jpg', $vehicle->photo);
-        $this->assertSame(['vehicle-photos/outreach-demo-' . $prospect->id . '-02.png'], $vehicle->photos);
+        $this->assertSame('vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-01-01-bike.jpg', $vehicle->photo);
+        $this->assertSame(['vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-02-02-bike.png'], $vehicle->photos);
         Storage::disk('public')->assertExists($vehicle->photo);
         Storage::disk('public')->assertExists($vehicle->photos[0]);
 

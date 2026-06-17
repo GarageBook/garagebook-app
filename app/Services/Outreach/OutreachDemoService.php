@@ -11,6 +11,7 @@ use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -83,6 +84,93 @@ class OutreachDemoService
         return redirect()->to(VehicleResource::getUrl('view', ['record' => $vehicle]));
     }
 
+    /**
+     * @return array{source_path:string, source_found:bool, found_count:int, imported_count:int, source_filenames:list<string>, imported_paths:list<string>}
+     */
+    public function refreshVehicleDemoImages(Vehicle $vehicle, ?string $sourceDirectory = null): array
+    {
+        $sourceDirectory = $this->resolveImageSourceDirectory($sourceDirectory);
+        $sourceFound = $sourceDirectory !== '' && is_dir($sourceDirectory);
+
+        if (! $sourceFound) {
+            $result = [
+                'source_path' => $sourceDirectory,
+                'source_found' => false,
+                'found_count' => 0,
+                'imported_count' => 0,
+                'source_filenames' => [],
+                'imported_paths' => [],
+            ];
+
+            $this->logImageImport($vehicle, $result);
+
+            return $result;
+        }
+
+        $files = collect(File::files($sourceDirectory))
+            ->filter(fn (\SplFileInfo $file): bool => in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'webp'], true))
+            ->sortBy(fn (\SplFileInfo $file): string => strtolower($file->getFilename()))
+            ->values();
+
+        $sourceFilenames = $files
+            ->map(fn (\SplFileInfo $file): string => $file->getFilename())
+            ->all();
+
+        $existingPrimary = is_string($vehicle->photo) && filled($vehicle->photo)
+            ? ltrim($vehicle->photo, '/')
+            : null;
+        $existingGallery = collect(Arr::wrap($vehicle->photos))
+            ->filter(fn (mixed $path): bool => is_string($path) && filled($path))
+            ->map(fn (string $path): string => ltrim($path, '/'))
+            ->values();
+        $existingPaths = collect([$existingPrimary, ...$existingGallery])->filter()->values();
+
+        $importedPaths = [];
+        $newPrimary = $existingPrimary;
+        $newGallery = $existingGallery->all();
+
+        foreach ($files as $index => $file) {
+            $targetPath = $this->demoVehicleImageTargetPath($vehicle, $file, $index);
+
+            if (! Storage::disk('public')->exists($targetPath)) {
+                Storage::disk('public')->put($targetPath, File::get($file->getPathname()));
+            }
+
+            if ($existingPaths->contains($targetPath)) {
+                continue;
+            }
+
+            if ($newPrimary === null) {
+                $newPrimary = $targetPath;
+            } elseif (! in_array($targetPath, $newGallery, true)) {
+                $newGallery[] = $targetPath;
+            }
+
+            $existingPaths->push($targetPath);
+            $importedPaths[] = $targetPath;
+        }
+
+        if ($newPrimary !== $existingPrimary || $newGallery !== $existingGallery->all()) {
+            $vehicle->forceFill([
+                'photo' => $newPrimary,
+                'photos' => array_values($newGallery),
+            ])->save();
+        }
+
+        $result = [
+            'source_path' => $sourceDirectory,
+            'source_found' => true,
+            'found_count' => count($sourceFilenames),
+            'imported_count' => count($importedPaths),
+            'source_filenames' => $sourceFilenames,
+            'imported_paths' => $importedPaths,
+        ];
+
+        $this->logImageImport($vehicle, $result);
+
+        return $result;
+    }
+
     private function createDemoUser(OutreachProspect $prospect): User
     {
         return User::query()->create([
@@ -100,9 +188,6 @@ class OutreachDemoService
     {
         $directory = 'outreach-demos/prospect-' . $prospect->id;
         $reportPath = $directory . '/onderhoudsrapport.txt';
-        $vehiclePhotoPaths = $this->importDemoVehicleImages($prospect);
-        $primaryPhotoPath = $vehiclePhotoPaths[0] ?? null;
-        $galleryPhotoPaths = array_slice($vehiclePhotoPaths, 1);
 
         Storage::disk('local')->put($reportPath, $this->demoDocumentText($prospect->company_name));
 
@@ -119,9 +204,11 @@ class OutreachDemoService
             'share_costs_publicly' => true,
             'share_attachments_publicly' => true,
             'notes' => 'Voorbeeldaccount voor outreach naar ' . $prospect->company_name . '.',
-            'photo' => $primaryPhotoPath,
-            'photos' => $galleryPhotoPaths,
         ]);
+
+        $importResult = $this->refreshVehicleDemoImages($vehicle);
+        $vehicle->refresh();
+        $primaryPhotoPath = $vehicle->photo;
 
         $maintenanceLogs = [
             [
@@ -171,53 +258,14 @@ class OutreachDemoService
             'notes' => 'Voorbeeldbewijsstuk voor de demo-flow.',
         ]);
 
-        return $vehicle;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function importDemoVehicleImages(OutreachProspect $prospect): array
-    {
-        $sourceDirectory = (string) config('services.outreach_demo.image_source_path', '/temp/3');
-
-        if ($sourceDirectory === '' || ! is_dir($sourceDirectory)) {
-            Log::info('Outreach demo image import skipped', [
-                'prospect_id' => $prospect->id,
-                'source_path' => $sourceDirectory,
-                'imported_count' => 0,
-                'reason' => 'missing_directory',
-            ]);
-
-            return [];
-        }
-
-        $paths = collect(File::files($sourceDirectory))
-            ->filter(fn (\SplFileInfo $file): bool => in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'webp'], true))
-            ->sortBy(fn (\SplFileInfo $file): string => strtolower($file->getFilename()))
-            ->values()
-            ->map(function (\SplFileInfo $file, int $index) use ($prospect): string {
-                $extension = strtolower($file->getExtension());
-                $targetPath = sprintf(
-                    'vehicle-photos/outreach-demo-%d-%02d.%s',
-                    $prospect->id,
-                    $index + 1,
-                    $extension,
-                );
-
-                Storage::disk('public')->put($targetPath, File::get($file->getPathname()));
-
-                return $targetPath;
-            })
-            ->all();
-
-        Log::info('Outreach demo images imported', [
+        Log::info('Outreach demo vehicle seeded', [
             'prospect_id' => $prospect->id,
-            'source_path' => $sourceDirectory,
-            'imported_count' => count($paths),
+            'user_id' => $user->id,
+            'vehicle_id' => $vehicle->id,
+            'imported_count' => $importResult['imported_count'],
         ]);
 
-        return $paths;
+        return $vehicle;
     }
 
     private function recordEvent(OutreachProspect $prospect, string $eventType, Request $request): OutreachEvent
@@ -248,6 +296,49 @@ class OutreachDemoService
             'Onderdeel: Voorjaarsservice Yamaha MT-07',
             'Werkzaamheden: olie, filters, kettingspanning, remcontrole',
             'Doel: laten zien hoe garages onderhoud, bewijs en een publieke voertuigpagina kunnen delen.',
+        ]);
+    }
+
+    private function resolveImageSourceDirectory(?string $sourceDirectory = null): string
+    {
+        $resolved = trim((string) ($sourceDirectory ?: config('services.outreach_demo.image_source_path', '/temp/3')));
+
+        return $resolved;
+    }
+
+    private function demoVehicleImageTargetPath(Vehicle $vehicle, \SplFileInfo $file, int $index): string
+    {
+        $extension = strtolower($file->getExtension());
+        $filename = pathinfo($file->getFilename(), PATHINFO_FILENAME);
+        $slug = Str::slug($filename);
+
+        if ($slug === '') {
+            $slug = 'image';
+        }
+
+        return sprintf(
+            'vehicle-photos/outreach-demo-vehicle-%d-%02d-%s.%s',
+            $vehicle->id,
+            $index + 1,
+            $slug,
+            $extension,
+        );
+    }
+
+    /**
+     * @param  array{source_path:string, source_found:bool, found_count:int, imported_count:int, source_filenames:list<string>, imported_paths:list<string>}  $result
+     */
+    private function logImageImport(Vehicle $vehicle, array $result): void
+    {
+        Log::info('Outreach demo image import processed', [
+            'user_id' => $vehicle->user_id,
+            'vehicle_id' => $vehicle->id,
+            'source_path' => $result['source_path'],
+            'source_found' => $result['source_found'],
+            'found_image_count' => $result['found_count'],
+            'imported_count' => $result['imported_count'],
+            'source_filenames' => $result['source_filenames'],
+            'imported_paths' => $result['imported_paths'],
         ]);
     }
 }
