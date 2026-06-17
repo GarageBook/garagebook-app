@@ -63,9 +63,14 @@ class OutreachEmailWorkflowTest extends TestCase
 
         Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($prospect): bool {
             return $mail->hasTo('willemvanveelen@icloud.com')
+                && ! $mail->hasTo((string) $prospect->email)
                 && $mail->subjectLine === '[TEST] Demo voor Moto Arnhem'
                 && str_contains($mail->bodyText, 'Beste Pieter,')
                 && str_contains($mail->bodyText, $prospect->demoUrl());
+        });
+
+        Mail::assertNotSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($prospect): bool {
+            return $mail->hasTo((string) $prospect->email);
         });
     }
 

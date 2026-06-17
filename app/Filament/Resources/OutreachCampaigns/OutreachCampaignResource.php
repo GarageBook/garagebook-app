@@ -114,6 +114,7 @@ class OutreachCampaignResource extends Resource
                 Action::make('sendTestMail')
                     ->label('Verstuur testmail')
                     ->requiresConfirmation()
+                    ->modalDescription('Testmail wordt verzonden naar: willemvanveelen@icloud.com')
                     ->action(function (OutreachCampaign $record, OutreachEmailService $service): void {
                         $prospect = $record->prospects()->orderBy('id')->first();
 

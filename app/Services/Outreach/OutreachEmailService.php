@@ -8,10 +8,13 @@ use App\Models\OutreachCampaign;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class OutreachEmailService
 {
+    public const TEST_RECIPIENT = 'willemvanveelen@icloud.com';
+
     public function defaultSubject(): string
     {
         return 'Digitaal onderhoudsboekje voor motoren';
@@ -72,7 +75,19 @@ class OutreachEmailService
     {
         $rendered = $this->renderForProspect($campaign, $prospect, true);
 
-        Mail::to('willemvanveelen@icloud.com')->send(
+        $recipient = self::TEST_RECIPIENT;
+
+        if ($recipient !== self::TEST_RECIPIENT) {
+            Log::error('outreach_test_mail_invalid_recipient', [
+                'recipient' => $recipient,
+                'campaign_id' => $campaign->id,
+                'prospect_id' => $prospect->id,
+            ]);
+
+            throw new \RuntimeException('Testmail-recipient moet exact willemvanveelen@icloud.com zijn.');
+        }
+
+        Mail::to($recipient)->send(
             new OutreachCampaignMail($rendered['subject'], $rendered['body'])
         );
     }

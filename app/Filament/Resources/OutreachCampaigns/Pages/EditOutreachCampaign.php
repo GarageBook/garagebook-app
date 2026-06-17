@@ -19,6 +19,7 @@ class EditOutreachCampaign extends EditRecord
             Action::make('sendTestMail')
                 ->label('Verstuur testmail')
                 ->requiresConfirmation()
+                ->modalDescription('Testmail wordt verzonden naar: willemvanveelen@icloud.com')
                 ->action(function (OutreachEmailService $service): void {
                     $prospect = $this->getRecord()->prospects()->orderBy('id')->first();
 
