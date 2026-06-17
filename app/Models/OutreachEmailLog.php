@@ -21,11 +21,13 @@ class OutreachEmailLog extends Model
         'subject',
         'body_snapshot',
         'status',
+        'queued_at',
         'sent_at',
         'error',
     ];
 
     protected $casts = [
+        'queued_at' => 'datetime',
         'sent_at' => 'datetime',
     ];
 

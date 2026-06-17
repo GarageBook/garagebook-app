@@ -122,7 +122,10 @@ class OutreachEmailService
             if (OutreachEmailLog::query()
                 ->where('outreach_campaign_id', $campaign->id)
                 ->where('outreach_prospect_id', $prospect->id)
-                ->where('status', OutreachEmailLog::STATUS_SENT)
+                ->where(function ($query): void {
+                    $query->where('status', OutreachEmailLog::STATUS_SENT)
+                        ->orWhereNotNull('queued_at');
+                })
                 ->exists()) {
                 $this->createSkippedLog($prospect, $campaign, 'already_sent');
                 $skipped++;

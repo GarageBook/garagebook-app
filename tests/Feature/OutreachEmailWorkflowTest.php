@@ -4,14 +4,17 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\OutreachCampaigns\Pages\EditOutreachCampaign;
 use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
+use App\Jobs\SendOutreachEmailJob;
 use App\Mail\OutreachCampaignMail;
-use Illuminate\Mail\Mailables\Address;
 use App\Models\OutreachCampaign;
+use Illuminate\Mail\Mailables\Address;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Services\Outreach\OutreachEmailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -115,7 +118,7 @@ class OutreachEmailWorkflowTest extends TestCase
 
     public function test_bulk_send_service_sends_only_selected_prospects_and_stores_body_snapshot(): void
     {
-        Mail::fake();
+        Bus::fake();
 
         $campaign = OutreachCampaign::factory()->create([
             'email_subject' => 'Demo voor {{company_name}}',
@@ -144,36 +147,19 @@ class OutreachEmailWorkflowTest extends TestCase
 
         $this->assertSame(['queued' => 2, 'skipped' => 0], $result);
 
-        Mail::assertSent(OutreachCampaignMail::class, 2);
-        Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($selectedA): bool {
-            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
-
-            return $mail->hasTo('a@example.com')
-                && str_contains($mail->bodyText, $selectedA->demoUrl())
-                && $replyTo instanceof Address
-                && $replyTo->address === 'social@garagebook.nl';
+        Bus::assertDispatched(SendOutreachEmailJob::class, 2);
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($selectedA): bool {
+            return $job->toEmail === 'a@example.com'
+                && $job->campaignId === $selectedA->outreach_campaign_id
+                && $job->prospectId === $selectedA->id
+                && str_contains($job->bodySnapshot, $selectedA->demoUrl());
         });
-        Mail::assertSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail) use ($selectedB): bool {
-            $replyTo = collect($mail->envelope()->replyTo ?? [])->first();
-
-            return $mail->hasTo('b@example.com')
-                && str_contains($mail->bodyText, $selectedB->demoUrl())
-                && $replyTo instanceof Address
-                && $replyTo->address === 'social@garagebook.nl';
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($selectedB): bool {
+            return $job->toEmail === 'b@example.com'
+                && $job->campaignId === $selectedB->outreach_campaign_id
+                && $job->prospectId === $selectedB->id
+                && str_contains($job->bodySnapshot, $selectedB->demoUrl());
         });
-        Mail::assertNotSent(OutreachCampaignMail::class, function (OutreachCampaignMail $mail): bool {
-            return $mail->hasTo('c@example.com');
-        });
-
-        $this->assertDatabaseHas('outreach_email_logs', [
-            'outreach_campaign_id' => $campaign->id,
-            'outreach_prospect_id' => $selectedA->id,
-            'status' => OutreachEmailLog::STATUS_SENT,
-        ]);
-
-        $log = OutreachEmailLog::query()->where('outreach_prospect_id', $selectedA->id)->latest('id')->firstOrFail();
-        $this->assertStringContainsString($selectedA->demoUrl(), $log->body_snapshot);
-        $this->assertNotNull($log->sent_at);
     }
 
     public function test_real_mail_uses_prospect_email_and_reply_to_social_address(): void
@@ -248,6 +234,119 @@ class OutreachEmailWorkflowTest extends TestCase
             'outreach_prospect_id' => $alreadySent->id,
             'status' => OutreachEmailLog::STATUS_SKIPPED,
             'error' => 'already_sent',
+        ]);
+    }
+
+    public function test_retry_failed_outreach_emails_command_requeues_only_unqueued_failed_logs(): void
+    {
+        Bus::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+        $queuedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Wacht',
+            'email' => 'wacht@example.com',
+        ]);
+        $failedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Retry',
+            'email' => 'retry@example.com',
+        ]);
+        $sentProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Sent',
+            'email' => 'sent@example.com',
+        ]);
+
+        $failedLog = OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $failedProspect->id,
+            'to_email' => 'retry@example.com',
+            'subject' => 'Retry',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_FAILED,
+        ]);
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $queuedProspect->id,
+            'to_email' => 'wacht@example.com',
+            'subject' => 'Queued',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_FAILED,
+            'queued_at' => now(),
+        ]);
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $sentProspect->id,
+            'to_email' => 'sent@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        Artisan::call('garagebook:retry-failed-outreach-emails');
+
+        Bus::assertDispatched(SendOutreachEmailJob::class, 1);
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($failedProspect): bool {
+            return $job->prospectId === $failedProspect->id
+                && $job->campaignId === $failedProspect->outreach_campaign_id
+                && $job->toEmail === 'retry@example.com';
+        });
+
+        $failedLog->refresh();
+        $this->assertNotNull($failedLog->queued_at);
+        $this->assertDatabaseHas('outreach_email_logs', [
+            'outreach_prospect_id' => $sentProspect->id,
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'queued_at' => null,
+        ]);
+    }
+
+    public function test_send_outreach_job_releases_on_resend_429_without_failed_log(): void
+    {
+        $campaign = OutreachCampaign::factory()->create([
+            'email_subject' => 'Demo voor {{company_name}}',
+            'email_body' => 'Bekijk {{demo_url}}',
+        ]);
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto 429',
+            'email' => 'limit@example.com',
+        ]);
+
+        $originalMailManager = Mail::getFacadeRoot();
+        Mail::swap(new class
+        {
+            public function to(string $email): object
+            {
+                return new class
+                {
+                    public function send(object $mailable): void
+                    {
+                        throw new \RuntimeException('429 Too many requests');
+                    }
+                };
+            }
+        });
+
+        $job = new SendOutreachEmailJob(
+            $prospect->id,
+            $campaign->id,
+            'limit@example.com',
+            'Onderwerp',
+            'Body',
+        );
+        $job->withFakeQueueInteractions();
+
+        $job->handle();
+
+        $job->assertReleased();
+        Mail::swap($originalMailManager);
+        $this->assertDatabaseMissing('outreach_email_logs', [
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'status' => OutreachEmailLog::STATUS_FAILED,
         ]);
     }
 

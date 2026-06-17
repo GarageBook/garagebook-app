@@ -14,6 +14,8 @@ use App\Policies\MaintenanceLogPolicy;
 use App\Policies\TripLogPolicy;
 use App\Policies\VehicleDocumentPolicy;
 use App\Policies\VehiclePolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use Carbon\Carbon;
 use Filament\Auth\Events\Registered;
 use Filament\Auth\Http\Responses\Contracts\RegistrationResponse as RegistrationResponseContract;
@@ -46,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(MaintenanceLog::class, MaintenanceLogPolicy::class);
         Gate::policy(TripLog::class, TripLogPolicy::class);
         Gate::policy(VehicleDocument::class, VehicleDocumentPolicy::class);
+
+        RateLimiter::for('outreach-email', fn () => Limit::perSecond(1)->by('outreach-email'));
 
         Event::listen(Login::class, TrackSuccessfulLogin::class);
         Event::listen(Registered::class, QueueMailerLiteSubscription::class);
