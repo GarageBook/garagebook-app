@@ -6,7 +6,7 @@
                     <div style="max-width:42rem; min-width:0;">
                         <h2 class="text-lg font-bold mb-3"><strong>Je GarageBook is actief</strong></h2>
                         <p style="margin:0; color:#64748b; line-height:1.7;">
-                            Je onboarding is afgerond. Werk nu verder aan je historie met onderhoud, ritten, documenten en deelbare voertuiggegevens.
+                            Je onboarding is afgerond. Werk nu verder aan je historie met onderhoud, herinneringen, ritten, documenten en deelbare voertuiggegevens.
                         </p>
                     </div>
 
@@ -20,6 +20,48 @@
                     @endif
                 </div>
             </div>
+
+            @if ($booklet)
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:20px; border-radius:20px; background:linear-gradient(180deg, #fffdf5 0%, #ffffff 100%); border:1px solid #fde68a;">
+                    <div style="max-width:42rem; min-width:0;">
+                        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#92400e; margin-bottom:8px;">
+                            Jouw onderhoudsboekje
+                        </div>
+                        <div style="color:#0f172a; font-size:18px; font-weight:700; line-height:1.3;">
+                            {{ $booklet['summary'] }}
+                        </div>
+                        <p style="margin:8px 0 0; color:#6b7280; font-size:14px; line-height:1.6;">
+                            Download een nette PDF van je onderhoudshistorie en maak de waarde van je dossier direct tastbaar.
+                        </p>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <x-filament::button
+                            :href="$booklet['download_url']"
+                            tag="a"
+                            color="warning"
+                            class="shadow-sm"
+                            :attributes="new \Illuminate\View\ComponentAttributeBag($booklet['download_attributes'])"
+                            style="background-color:#ffd200; color:#111827; min-width:fit-content;"
+                        >
+                            Download onderhoudsboekje
+                        </x-filament::button>
+
+                        @if ($booklet['public_cta'])
+                            <x-filament::button
+                                :href="$booklet['public_cta']['url']"
+                                tag="a"
+                                color="gray"
+                                outlined
+                                :attributes="new \Illuminate\View\ComponentAttributeBag($booklet['public_cta']['attributes'])"
+                                style="min-width:fit-content;"
+                            >
+                                {{ $booklet['public_cta']['label'] }}
+                            </x-filament::button>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:14px;">
                 @foreach ($actions as $action)

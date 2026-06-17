@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Models\MaintenanceLog;
 use App\Models\Vehicle;
 use Carbon\Carbon;
@@ -87,6 +88,70 @@ class ReminderService
             ->take($limit)
             ->values()
             ->all();
+    }
+
+    public function getWidgetData(?int $userId = null): array
+    {
+        $userId ??= auth()->id();
+
+        if ($userId === null) {
+            return [
+                'reminders' => [],
+                'headline' => __('reminders.empty_state'),
+                'supporting_text' => __('reminders.empty_support_no_vehicle'),
+                'cta' => null,
+            ];
+        }
+
+        $vehicle = Vehicle::query()
+            ->where('user_id', $userId)
+            ->latest('id')
+            ->first();
+
+        $latestLog = MaintenanceLog::query()
+            ->whereHas('vehicle', fn ($query) => $query->where('user_id', $userId))
+            ->latest('maintenance_date')
+            ->latest('id')
+            ->first();
+
+        $reminders = $this->getWidgetItems(userId: $userId);
+        $overdueCount = collect($reminders)->where('status.type', 'overdue')->count();
+        $upcomingCount = collect($reminders)->where('status.type', 'upcoming')->count();
+
+        if ($latestLog) {
+            $ctaUrl = MaintenanceLogResource::getUrl('edit', ['record' => $latestLog]).'?with_reminder=1';
+        } elseif ($vehicle) {
+            $ctaUrl = MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id, 'with_reminder' => 1]);
+        } else {
+            $ctaUrl = null;
+        }
+
+        if ($overdueCount > 0) {
+            $headline = __('reminders.widget_headline_overdue', ['count' => $overdueCount]);
+            $supportingText = __('reminders.widget_support_overdue', ['count' => $upcomingCount]);
+        } elseif ($upcomingCount > 0) {
+            $headline = __('reminders.widget_headline_upcoming', ['count' => $upcomingCount]);
+            $supportingText = __('reminders.widget_support_upcoming');
+        } elseif ($latestLog) {
+            $headline = __('reminders.empty_state');
+            $supportingText = __('reminders.empty_support_with_logs');
+        } elseif ($vehicle) {
+            $headline = __('reminders.empty_state');
+            $supportingText = __('reminders.empty_support_with_vehicle');
+        } else {
+            $headline = __('reminders.empty_state');
+            $supportingText = __('reminders.empty_support_no_vehicle');
+        }
+
+        return [
+            'reminders' => $reminders,
+            'headline' => $headline,
+            'supporting_text' => $supportingText,
+            'cta' => $ctaUrl ? [
+                'label' => 'Herinnering toevoegen',
+                'url' => $ctaUrl,
+            ] : null,
+        ];
     }
 
     private function getDateStatus(MaintenanceLog $log, Carbon $now): ?array
@@ -178,7 +243,7 @@ class ReminderService
 
         $sentence = implode(__('reminders.status.separator'), $parts);
 
-        return Str::ucfirst($sentence) . '.';
+        return Str::ucfirst($sentence).'.';
     }
 
     private function formatRoundedAbsoluteDiff(Carbon $from, Carbon $to): string

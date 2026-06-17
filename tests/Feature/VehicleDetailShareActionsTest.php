@@ -41,7 +41,7 @@ class VehicleDetailShareActionsTest extends TestCase
             $actions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(
-            url('/maintenance/pdf?vehicle_id=' . $vehicle->id),
+            url('/maintenance/pdf?vehicle_id='.$vehicle->id),
             $actions->get('exportPdf')->getUrl(),
         );
         $this->assertNull($actions->get('copyUrl'));
@@ -63,7 +63,7 @@ class VehicleDetailShareActionsTest extends TestCase
 
         $response->assertOk()
             ->assertSeeText('Open publieke voertuigpagina')
-            ->assertSeeText('Exporteer deelbare PDF')
+            ->assertSeeText('Download onderhoudsboekje')
             ->assertSee('data-analytics-event="public_share_created"', false)
             ->assertSee('data-analytics-param-source="share"', false)
             ->assertSee('data-analytics-param-source="export"', false)
@@ -83,11 +83,11 @@ class VehicleDetailShareActionsTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/garage/' . $vehicle->public_slug)
+            ->get('/garage/'.$vehicle->public_slug)
             ->assertOk();
 
         $this->actingAs($user)
-            ->get('/maintenance/pdf?vehicle_id=' . $vehicle->id)
+            ->get('/maintenance/pdf?vehicle_id='.$vehicle->id)
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
     }

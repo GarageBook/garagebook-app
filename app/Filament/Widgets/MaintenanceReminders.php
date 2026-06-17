@@ -10,12 +10,10 @@ class MaintenanceReminders extends Widget
 {
     protected string $view = 'filament.widgets.maintenance-reminders';
 
-    protected int | string | array $columnSpan = 1;
+    protected int|string|array $columnSpan = 'full';
 
     public function getViewData(): array
     {
-        return [
-            'reminders' => app(ReminderService::class)->getWidgetItems(userId: Filament::auth()->id()),
-        ];
+        return app(ReminderService::class)->getWidgetData(userId: Filament::auth()->id());
     }
 }

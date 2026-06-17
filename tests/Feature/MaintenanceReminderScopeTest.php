@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Filament\Widgets\MaintenanceReminders;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Filament\Widgets\MaintenanceReminders;
 use App\Services\DistanceUnitService;
 use App\Services\ReminderService;
 use Carbon\Carbon;
@@ -87,9 +88,9 @@ class MaintenanceReminderScopeTest extends TestCase
         $this->actingAs($newUser);
 
         Livewire::test(MaintenanceReminders::class)
-            ->assertSeeText('Toekomstig onderhoud')
-            ->assertSeeText('Geen aankomende onderhoudsmomenten')
-            ->assertSeeText('Voeg eerst een voertuig en onderhoudslogs toe.')
+            ->assertSeeText('Onderhoudsherinneringen')
+            ->assertSeeText('Nog geen actieve herinneringen')
+            ->assertSeeText('Voeg eerst een voertuig en daarna onderhoud toe om herinneringen te kunnen gebruiken.')
             ->assertDontSeeText('Aprilia RSV Mille')
             ->assertDontSeeText('Nieuwe olie Motul 300V 15W50 met lang oliefilter');
     }
@@ -108,9 +109,11 @@ class MaintenanceReminderScopeTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(MaintenanceReminders::class)
-            ->assertSeeText('Toekomstig onderhoud')
-            ->assertSeeText('Geen aankomende onderhoudsmomenten')
-            ->assertSeeText('Voeg eerst een voertuig en onderhoudslogs toe.');
+            ->assertSeeText('Onderhoudsherinneringen')
+            ->assertSeeText('Nog geen actieve herinneringen')
+            ->assertSeeText('Voeg eerst een onderhoudslog toe om daarna een herinnering in te stellen.')
+            ->assertSeeText('Herinnering toevoegen')
+            ->assertSeeHtml(e(MaintenanceLogResource::getUrl('create', ['vehicle_id' => Vehicle::query()->where('user_id', $user->id)->value('id'), 'with_reminder' => 1])));
     }
 
     public function test_user_without_vehicles_never_gets_reminders(): void
@@ -261,5 +264,32 @@ class MaintenanceReminderScopeTest extends TestCase
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_dashboard_widget_links_existing_reminder_to_edit_flow_with_reminder_context(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tenere 700',
+            'current_km' => 10000,
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Klepcontrole',
+            'km_reading' => 10000,
+            'maintenance_date' => now()->subMonths(15)->toDateString(),
+            'reminder_enabled' => true,
+            'interval_months' => 12,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MaintenanceReminders::class)
+            ->assertSeeText('Herinnering toevoegen')
+            ->assertSeeHtml(e(MaintenanceLogResource::getUrl('edit', ['record' => $log]).'?with_reminder=1'));
     }
 }

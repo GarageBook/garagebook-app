@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
+use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
+use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\AnalyticsAttribution;
 use App\Support\AnalyticsEventTracker;
+use App\Support\Growth\GrowthDashboardData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -94,7 +97,7 @@ class AnalyticsAndOnboardingTest extends TestCase
 
     public function test_growth_metrics_sanity_checks(): void
     {
-        $data = app(\App\Support\Growth\GrowthDashboardData::class)->kpiOverview();
+        $data = app(GrowthDashboardData::class)->kpiOverview();
 
         $this->assertNull(collect($data['cards'])->firstWhere('label', 'Conversieratio 30 dagen')['value']);
     }
@@ -104,7 +107,7 @@ class AnalyticsAndOnboardingTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Livewire::test(\App\Filament\Resources\Vehicles\Pages\CreateVehicle::class)
+        Livewire::test(CreateVehicle::class)
             ->fillForm([
                 'brand' => 'Suzuki',
                 'model' => 'GSX-R 750',
@@ -129,7 +132,7 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->assertSeeText('Maak je GarageBook compleet')
             ->assertSeeText('0 van 3 stappen voltooid')
             ->assertSeeText('Voertuig toevoegen')
-            ->assertSee('href="' . e(VehicleResource::getUrl('create')) . '"', false)
+            ->assertSee('href="'.e(VehicleResource::getUrl('create')).'"', false)
             ->assertSee('data-analytics-event="onboarding_vehicle_cta_clicked"', false);
     }
 
@@ -148,11 +151,13 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->assertOk()
             ->assertSeeText('Mooi, je voertuig staat erin.')
             ->assertSeeText('1 van 3 stappen voltooid')
-            ->assertSeeText('Voeg je laatste onderhoud toe')
+            ->assertSeeText('Voeg je eerste onderhoud toe')
             ->assertSeeText('Bijvoorbeeld een oliebeurt, bandenwissel, kettingonderhoud of reparatie.')
             ->assertSeeText('Factuur of foto toevoegen')
-            ->assertSee('href="' . e(MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id])) . '"', false)
-            ->assertSee('data-analytics-event="onboarding_maintenance_cta_clicked"', false);
+            ->assertSeeText('Jouw onderhoudsboekje')
+            ->assertSeeText('Voeg je eerste onderhoud toe om je onderhoudsboekje te starten.')
+            ->assertSee('href="'.e(MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id, 'onboarding' => 1])).'"', false)
+            ->assertSee('data-analytics-event="quick_maintenance_log_cta_clicked"', false);
     }
 
     public function test_widget_is_hidden_when_user_has_vehicle_and_maintenance_even_without_document(): void
@@ -203,12 +208,13 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->get('/admin')
             ->assertOk()
             ->assertSeeText('Je GarageBook is actief')
-            ->assertSeeText('Voeg onderhoud toe')
+            ->assertSeeText('Onderhoud toevoegen')
             ->assertSeeText('Voeg een rit toe')
             ->assertSeeText('Voeg een document toe')
             ->assertSeeText('Bekijk je voertuigpagina')
             ->assertSeeText('Deel je openbare garage')
-            ->assertSeeText('Exporteer je historie');
+            ->assertSeeText('Jouw onderhoudsboekje')
+            ->assertSeeText('Download onderhoudsboekje');
     }
 
     public function test_other_users_data_does_not_affect_dashboard_onboarding_state(): void
@@ -241,7 +247,7 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->get('/admin')
             ->assertOk()
             ->assertSeeText('Mooi, je voertuig staat erin.')
-            ->assertSeeText('Voeg je laatste onderhoud toe')
+            ->assertSeeText('Voeg je eerste onderhoud toe')
             ->assertDontSeeText('Desmo service');
     }
 
@@ -258,7 +264,7 @@ class AnalyticsAndOnboardingTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(\App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog::class)
+        Livewire::test(CreateMaintenanceLog::class)
             ->fillForm([
                 'vehicle_id' => $vehicle->id,
                 'distance_unit' => 'km',

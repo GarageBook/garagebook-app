@@ -45,7 +45,11 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
 
         Livewire::withQueryParams(['vehicle_id' => $requestedVehicle->id])
             ->test(CreateMaintenanceLog::class)
-            ->assertSet('data.vehicle_id', $requestedVehicle->id);
+            ->assertSet('data.vehicle_id', $requestedVehicle->id)
+            ->assertSet('data.maintenance_date', now()->toDateString())
+            ->assertSeeText("Begin simpel. Je kunt later altijd foto's, facturen of details toevoegen.")
+            ->assertSee('option value="Olie + filter vervangen"', false)
+            ->assertSee('option value="Algemene controle"', false);
     }
 
     public function test_create_form_defaults_to_vehicle_with_latest_maintenance_without_vehicle_context(): void
@@ -154,6 +158,39 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
         ]);
 
         Bus::assertDispatched(OptimizeMaintenanceLogMedia::class);
+    }
+
+    public function test_first_maintenance_log_can_be_saved_with_minimal_required_fields(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Kawasaki',
+            'model' => 'Versys 650',
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::withQueryParams(['vehicle_id' => $vehicle->id, 'onboarding' => 1])
+            ->test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Algemene controle',
+                'km_reading' => 18450,
+                'maintenance_date' => now()->toDateString(),
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors()
+            ->assertRedirect(MaintenanceLogResource::getUrl('index'));
+
+        $this->assertDatabaseHas('maintenance_logs', [
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Algemene controle',
+            'km_reading' => 18450,
+        ]);
     }
 
     public function test_mutate_form_data_uses_fallback_vehicle_when_vehicle_id_is_missing(): void

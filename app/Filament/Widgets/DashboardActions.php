@@ -42,6 +42,7 @@ class DashboardActions extends Widget
         return [
             'vehicle' => $vehicle,
             'actions' => $vehicle ? $this->buildActions($vehicle) : [],
+            'booklet' => $vehicle ? $this->buildBooklet($vehicle) : null,
         ];
     }
 
@@ -52,10 +53,18 @@ class DashboardActions extends Widget
 
         return [
             [
-                'label' => 'Voeg onderhoud toe',
+                'label' => 'Onderhoud toevoegen',
                 'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
+                'attributes' => Analytics::clickTrackingAttributes('quick_maintenance_log_cta_clicked', [
+                    'location' => 'dashboard_actions_widget',
+                    'user_state' => $userState,
+                ]),
+            ],
+            [
+                'label' => 'Herinnering toevoegen',
+                'url' => $this->reminderUrl($vehicle),
                 'attributes' => Analytics::clickTrackingAttributes('app_cta_clicked', [
-                    'cta_name' => 'add_maintenance_log',
+                    'cta_name' => 'add_reminder',
                     'location' => 'dashboard_actions_widget',
                     'user_state' => $userState,
                 ]),
@@ -106,15 +115,6 @@ class DashboardActions extends Widget
                 ]),
             ],
             [
-                'label' => 'Exporteer je historie',
-                'url' => MaintenanceLogResource::getUrl('index', ['vehicle_id' => $vehicle->id]),
-                'attributes' => Analytics::clickTrackingAttributes('app_cta_clicked', [
-                    'cta_name' => 'export_history',
-                    'location' => 'dashboard_actions_widget',
-                    'user_state' => $userState,
-                ]),
-            ],
-            [
                 'label' => 'Beheer je voertuigen',
                 'url' => VehicleResource::getUrl('index'),
                 'attributes' => Analytics::clickTrackingAttributes('app_cta_clicked', [
@@ -124,5 +124,40 @@ class DashboardActions extends Widget
                 ]),
             ],
         ];
+    }
+
+    private function buildBooklet(Vehicle $vehicle): array
+    {
+        $maintenanceCount = $vehicle->maintenanceLogs()->count();
+        $documentCount = $vehicle->documents()->count();
+
+        return [
+            'summary' => 'Jouw onderhoudsboekje bevat nu 1 voertuig, '.$maintenanceCount.' onderhoudslog'.($maintenanceCount === 1 ? '' : 's').' en '.$documentCount.' document'.($documentCount === 1 ? '' : 'en').'.',
+            'download_url' => url('/maintenance/pdf?vehicle_id='.$vehicle->id),
+            'download_attributes' => Analytics::clickTrackingAttributes('maintenance_booklet_downloaded', [
+                'location' => 'dashboard_actions_booklet',
+                'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                'user_state' => Analytics::userState(auth()->user()),
+            ]),
+            'public_cta' => $vehicle->is_public ? [
+                'label' => 'Bekijk publieke voertuigpagina',
+                'url' => app(PublicGarageService::class)->publicUrl($vehicle),
+                'attributes' => Analytics::clickTrackingAttributes('public_share_created', [
+                    'source' => 'dashboard_actions_booklet',
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                ]),
+            ] : null,
+        ];
+    }
+
+    private function reminderUrl(Vehicle $vehicle): string
+    {
+        $latestLog = $vehicle->maintenanceLogs()->latest('maintenance_date')->latest('id')->first();
+
+        if ($latestLog) {
+            return MaintenanceLogResource::getUrl('edit', ['record' => $latestLog]).'?with_reminder=1';
+        }
+
+        return MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id, 'with_reminder' => 1]);
     }
 }

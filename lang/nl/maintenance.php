@@ -11,6 +11,7 @@ return [
         'distance_unit' => 'Afstandseenheid',
         'distance_unit_help' => 'Wordt onthouden als standaard voor dit voertuig.',
         'description' => 'Omschrijving',
+        'description_help' => 'Kies een simpele suggestie of typ je eigen onderhoudsmoment.',
         'odometer' => 'Tellerstand',
         'maintenance_date' => 'Onderhoudsdatum',
         'cost' => 'Kosten',
@@ -42,7 +43,7 @@ return [
     'actions' => [
         'open_external_page' => 'Open publieke voertuigpagina',
         'copy_url' => 'Kopieer publieke link',
-        'export_pdf' => 'Exporteer deelbare PDF',
+        'export_pdf' => 'Download onderhoudsboekje',
         'delete' => 'Onderhoud verwijderen',
     ],
     'edit_page' => [

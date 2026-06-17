@@ -3,12 +3,13 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\FuelLogs\Pages\ListFuelLogs;
-use App\Support\AnalyticsEventTracker;
 use App\Filament\Resources\VehicleDocuments\Pages\ListVehicleDocuments;
 use App\Filament\Widgets\DashboardOnboardingWidget;
 use App\Filament\Widgets\MyVehicles;
+use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\AnalyticsEventTracker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -57,7 +58,7 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
 
         Livewire::test(DashboardOnboardingWidget::class)
             ->assertSeeHtml('data-analytics-click="true"')
-            ->assertSeeHtml('data-analytics-event="onboarding_maintenance_cta_clicked"')
+            ->assertSeeHtml('data-analytics-event="quick_maintenance_log_cta_clicked"')
             ->assertSeeHtml('data-analytics-param-location="dashboard_onboarding_widget"');
     }
 
@@ -76,6 +77,30 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
         $this->assertSame('maintenance', $events[0]['params']['next_step'] ?? null);
         $this->assertSame(1, $events[0]['params']['completed_steps'] ?? null);
         $this->assertSame(3, $events[0]['params']['total_steps'] ?? null);
+    }
+
+    public function test_dashboard_onboarding_widget_renders_booklet_download_tracking_after_activation(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'Transalp',
+            'current_km' => 12000,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie vervangen',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('data-analytics-event="maintenance_booklet_downloaded"', false)
+            ->assertSee('data-analytics-param-location="dashboard_actions_booklet"', false);
     }
 
     public function test_fuel_logs_page_renders_app_cta_clicked_tracking_attributes(): void

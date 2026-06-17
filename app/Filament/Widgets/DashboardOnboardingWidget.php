@@ -8,6 +8,7 @@ use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\PublicGarageService;
 use App\Support\Analytics;
 use App\Support\AnalyticsEventTracker;
 use Filament\Widgets\Widget;
@@ -22,7 +23,7 @@ class DashboardOnboardingWidget extends Widget
 
     protected string $view = 'filament.widgets.dashboard-onboarding-widget';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public static function canView(): bool
     {
@@ -58,6 +59,7 @@ class DashboardOnboardingWidget extends Widget
             'microcopy' => $this->resolveMicrocopy($progress),
             'progress' => $progress,
             'primaryCta' => $this->buildPrimaryCta($progress),
+            'booklet' => $this->buildBookletCard($progress),
         ];
     }
 
@@ -133,7 +135,7 @@ class DashboardOnboardingWidget extends Widget
     private function resolveDescription(array $progress): string
     {
         if ($progress['has_vehicle'] && ! $progress['has_maintenance']) {
-            return 'Voeg nu je laatste onderhoudsbeurt toe. Zelfs een registratie maakt je onderhoudsgeschiedenis direct waardevoller.';
+            return 'Voeg nu je eerste onderhoud toe. Zelfs een eenvoudige registratie maakt je onderhoudsgeschiedenis direct waardevoller.';
         }
 
         return 'Een complete onderhoudshistorie begint met je eerste registratie. Voeg je voertuig en onderhoud toe en bouw direct aan een waardevol dossier.';
@@ -155,9 +157,9 @@ class DashboardOnboardingWidget extends Widget
 
         return match ($progress['next_step']) {
             self::STEP_MAINTENANCE => [
-                'label' => 'Voeg je laatste onderhoud toe',
-                'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle?->id]),
-                'attributes' => Analytics::clickTrackingAttributes('onboarding_maintenance_cta_clicked', [
+                'label' => 'Voeg je eerste onderhoud toe',
+                'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle?->id, 'onboarding' => 1]),
+                'attributes' => Analytics::clickTrackingAttributes('quick_maintenance_log_cta_clicked', [
                     'location' => 'dashboard_onboarding_widget',
                     'user_state' => $userState,
                     'completed_steps' => $progress['completed_steps'],
@@ -182,5 +184,42 @@ class DashboardOnboardingWidget extends Widget
                 ]),
             ],
         };
+    }
+
+    private function buildBookletCard(array $progress): ?array
+    {
+        $vehicle = $progress['vehicle'];
+
+        if (! $vehicle instanceof Vehicle) {
+            return null;
+        }
+
+        $maintenanceCount = $vehicle->maintenanceLogs()->count();
+        $documentCount = $vehicle->documents()->count();
+
+        return [
+            'stats' => 'Je onderhoudsboekje bevat nu 1 voertuig, '.$maintenanceCount.' onderhoudslog'.($maintenanceCount === 1 ? '' : 's').' en '.$documentCount.' document'.($documentCount === 1 ? '' : 'en').'.',
+            'message' => $maintenanceCount > 0
+                ? 'Je hebt al een start gemaakt. Voeg doorlopend onderhoud toe om je onderhoudsboekje bruikbaarder te maken.'
+                : 'Voeg je eerste onderhoud toe om je onderhoudsboekje te starten.',
+            'primary_cta' => [
+                'label' => $maintenanceCount > 0 ? 'Download onderhoudsboekje' : 'Voeg je eerste onderhoud toe',
+                'url' => $maintenanceCount > 0
+                    ? url('/maintenance/pdf?vehicle_id='.$vehicle->id)
+                    : MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id, 'onboarding' => 1]),
+                'attributes' => Analytics::clickTrackingAttributes($maintenanceCount > 0 ? 'maintenance_booklet_downloaded' : 'quick_maintenance_log_cta_clicked', [
+                    'location' => 'dashboard_onboarding_booklet',
+                    'user_state' => Analytics::userState(auth()->user()),
+                ]),
+            ],
+            'public_cta' => $vehicle->is_public ? [
+                'label' => 'Bekijk publieke voertuigpagina',
+                'url' => app(PublicGarageService::class)->publicUrl($vehicle),
+                'attributes' => Analytics::clickTrackingAttributes('public_share_created', [
+                    'source' => 'dashboard_onboarding_booklet',
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                ]),
+            ] : null,
+        ];
     }
 }

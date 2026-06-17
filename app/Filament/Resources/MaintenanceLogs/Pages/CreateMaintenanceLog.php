@@ -41,6 +41,10 @@ class CreateMaintenanceLog extends CreateRecord
         $tracker = app(AnalyticsEventTracker::class);
         $tracker->queueMaintenanceLogCreated($this->record);
 
+        if ($this->record->reminder_enabled) {
+            $tracker->queueReminderCreated($this->record->vehicle, 'maintenance');
+        }
+
         $user = auth()->user();
         $maintenanceCount = $user?->vehicles()->withCount('maintenanceLogs')->get()->sum('maintenance_logs_count') ?? 0;
 
@@ -63,15 +67,23 @@ class CreateMaintenanceLog extends CreateRecord
             return 'Voeg je eerste onderhoud toe';
         }
 
-        return parent::getHeading();
+        if (request()->boolean('with_reminder')) {
+            return 'Onderhoud met herinnering toevoegen';
+        }
+
+        return 'Onderhoud toevoegen';
     }
 
     public function getSubheading(): ?string
     {
         if (request()->query('onboarding') === '1') {
-            return 'Gefeliciteerd! Je voertuig is toegevoegd. Leg nu je laatste onderhoud vast om je historie te starten en de waarde van je motor te borgen.';
+            return 'Gefeliciteerd! Je voertuig is toegevoegd. Leg nu je eerste onderhoud vast om je onderhoudsboekje echt te starten.';
         }
 
-        return parent::getSubheading();
+        if (request()->boolean('with_reminder')) {
+            return 'Leg een onderhoudsmoment vast en zet direct een simpele herinnering klaar voor later.';
+        }
+
+        return 'Begin simpel. Je kunt later altijd foto\'s, facturen of details toevoegen.';
     }
 }

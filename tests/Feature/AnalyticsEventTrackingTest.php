@@ -7,12 +7,15 @@ use App\Filament\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\FuelLogs\Pages\CreateFuelLog;
 use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
+use App\Filament\Resources\MaintenanceLogs\Pages\EditMaintenanceLog;
 use App\Filament\Resources\TripLogs\Pages\CreateTripLog;
 use App\Filament\Resources\VehicleDocuments\Pages\CreateVehicleDocument;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Jobs\ProcessTripLogUpload;
+use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\Analytics;
 use App\Support\AnalyticsAttribution;
 use App\Support\AnalyticsEventTracker;
 use Illuminate\Auth\Events\Login;
@@ -146,7 +149,7 @@ class AnalyticsEventTrackingTest extends TestCase
                 'name' => 'onboarding_completed',
                 'params' => [
                     'source' => 'filament',
-                    'vehicle_id_hash' => \App\Support\Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
                     'user_state' => 'active',
                 ],
             ],
@@ -171,12 +174,93 @@ class AnalyticsEventTrackingTest extends TestCase
                 'description' => 'Olie vervangen',
             ])
             ->call('create')
-            ->assertHasFormErrors(['vehicle_id', 'km_reading', 'maintenance_date']);
+            ->assertHasFormErrors(['vehicle_id', 'km_reading']);
 
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);
 
         $this->assertSessionEventNames($events, []);
         $this->assertNull($this->eventParams($events, 'maintenance_log_created'));
+    }
+
+    public function test_enabling_reminder_on_create_queues_reminder_created_event(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'F 900 GS',
+            'current_km' => 21000,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Olie vervangen',
+                'km_reading' => 21100,
+                'maintenance_date' => '2026-05-11',
+                'reminder_enabled' => true,
+                'interval_months' => 12,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, [
+            'maintenance_log_created',
+            'reminder_created',
+            'onboarding_completed',
+        ]);
+        $this->assertSame('maintenance', $this->eventParams($events, 'reminder_created')['type'] ?? null);
+        $this->assertSame('filament', $this->eventParams($events, 'reminder_created')['source'] ?? null);
+    }
+
+    public function test_enabling_reminder_on_edit_queues_reminder_created_event_once(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+            'current_km' => 32000,
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Kleine beurt',
+            'maintenance_date' => '2026-05-01',
+            'km_reading' => 32000,
+            'reminder_enabled' => false,
+        ]);
+
+        session()->start();
+        $this->actingAs($user);
+
+        Livewire::test(EditMaintenanceLog::class, ['record' => $log->getRouteKey()])
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Kleine beurt',
+                'km_reading' => 32000,
+                'maintenance_date' => '2026-05-01',
+                'reminder_enabled' => true,
+                'interval_months' => 12,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+
+        $this->assertSessionEventNames($events, ['reminder_created']);
+        $this->assertSame('maintenance', $this->eventParams($events, 'reminder_created')['type'] ?? null);
     }
 
     public function test_fuel_log_create_queues_ga4_payload_in_session(): void
