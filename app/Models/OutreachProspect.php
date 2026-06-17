@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OutreachProspect extends Model
 {
@@ -64,6 +65,16 @@ class OutreachProspect extends Model
     public function events(): HasMany
     {
         return $this->hasMany(OutreachEvent::class);
+    }
+
+    public function emailLogs(): HasMany
+    {
+        return $this->hasMany(OutreachEmailLog::class);
+    }
+
+    public function latestEmailLog(): HasOne
+    {
+        return $this->hasOne(OutreachEmailLog::class)->latestOfMany();
     }
 
     public function demoUrl(): string

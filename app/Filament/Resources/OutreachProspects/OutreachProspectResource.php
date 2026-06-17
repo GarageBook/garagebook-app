@@ -6,7 +6,9 @@ use App\Filament\Resources\OutreachProspects\Pages\CreateOutreachProspect;
 use App\Filament\Resources\OutreachProspects\Pages\EditOutreachProspect;
 use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
 use App\Filament\Resources\OutreachProspects\Pages\ViewOutreachProspect;
+use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
+use App\Services\Outreach\OutreachEmailService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -16,10 +18,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -159,7 +163,22 @@ class OutreachProspectResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['campaign', 'user'])->latest('id'))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->with(['campaign', 'user', 'latestEmailLog'])
+                ->addSelect([
+                    'latest_outreach_mail_status' => OutreachEmailLog::query()
+                        ->select('status')
+                        ->whereColumn('outreach_email_logs.outreach_prospect_id', 'outreach_prospects.id')
+                        ->latest('id')
+                        ->limit(1),
+                    'latest_outreach_sent_at' => OutreachEmailLog::query()
+                        ->select('sent_at')
+                        ->whereColumn('outreach_email_logs.outreach_prospect_id', 'outreach_prospects.id')
+                        ->where('status', OutreachEmailLog::STATUS_SENT)
+                        ->latest('sent_at')
+                        ->limit(1),
+                ])
+                ->latest('id'))
             ->columns([
                 Tables\Columns\TextColumn::make('company_name')
                     ->label('Bedrijfsnaam')
@@ -197,6 +216,25 @@ class OutreachProspectResource extends Resource
                     ->label('Logins')
                     ->badge()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('latest_outreach_mail_status')
+                    ->label('Mailstatus')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        OutreachEmailLog::STATUS_SENT => 'verstuurd',
+                        OutreachEmailLog::STATUS_SKIPPED => 'overgeslagen',
+                        OutreachEmailLog::STATUS_FAILED => 'mislukt',
+                        default => 'niet verstuurd',
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        OutreachEmailLog::STATUS_SENT => 'success',
+                        OutreachEmailLog::STATUS_SKIPPED => 'warning',
+                        OutreachEmailLog::STATUS_FAILED => 'danger',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('latest_outreach_sent_at')
+                    ->label('Laatst verstuurd op')
+                    ->dateTime('d-m-Y H:i')
+                    ->placeholder('Nog niet'),
             ])
             ->filters([
                 SelectFilter::make('click_status')
@@ -228,6 +266,15 @@ class OutreachProspectResource extends Resource
                 SelectFilter::make('outreach_campaign_id')
                     ->label('Campagne')
                     ->relationship('campaign', 'name'),
+                Filter::make('not_emailed')
+                    ->label('Nog niet gemaild')
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_SENT))),
+                Filter::make('emailed')
+                    ->label('Gemaild')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_SENT))),
+                Filter::make('missing_email')
+                    ->label('Geen e-mailadres')
+                    ->query(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', '')),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -244,6 +291,41 @@ class OutreachProspectResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->toolbarActions([
+                BulkAction::make('sendOutreachMail')
+                    ->label('Verstuur outreach-mail')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->requiresConfirmation()
+                    ->modalHeading('Verstuur outreach-mail')
+                    ->modalSubmitActionLabel('Nu versturen')
+                    ->modalContent(function (Collection $records, OutreachEmailService $service) {
+                        /** @var ?OutreachProspect $firstProspect */
+                        $firstProspect = $records->load('campaign')->first();
+
+                        if (! $firstProspect || ! $firstProspect->campaign) {
+                            return view('filament.resources.outreach-prospects.bulk-mail-preview', [
+                                'count' => $records->count(),
+                                'subject' => $service->defaultSubject(),
+                                'body' => 'Geen campagne of prospect beschikbaar voor preview.',
+                            ]);
+                        }
+
+                        $preview = $service->renderForProspect($firstProspect->campaign, $firstProspect);
+
+                        return view('filament.resources.outreach-prospects.bulk-mail-preview', [
+                            'count' => $records->count(),
+                            'subject' => $preview['subject'],
+                            'body' => $preview['body'],
+                        ]);
+                    })
+                    ->action(function (Collection $records, OutreachEmailService $service): void {
+                        $result = $service->queueBulkSend($records->load('campaign'));
+
+                        Notification::make()
+                            ->title('Outreach-mailverzending gestart')
+                            ->body('Gequeued: ' . $result['queued'] . '. Overgeslagen: ' . $result['skipped'] . '.')
+                            ->success()
+                            ->send();
+                    }),
                 BulkAction::make('exportSelected')
                     ->label('Export geselecteerde CSV')
                     ->icon('heroicon-o-arrow-down-tray')

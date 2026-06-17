@@ -6,10 +6,13 @@ use App\Filament\Resources\OutreachCampaigns\Pages\CreateOutreachCampaign;
 use App\Filament\Resources\OutreachCampaigns\Pages\EditOutreachCampaign;
 use App\Filament\Resources\OutreachCampaigns\Pages\ListOutreachCampaigns;
 use App\Models\OutreachCampaign;
+use App\Services\Outreach\OutreachEmailService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -75,6 +78,14 @@ class OutreachCampaignResource extends Resource
             Textarea::make('description')
                 ->label('Beschrijving')
                 ->rows(4),
+            TextInput::make('email_subject')
+                ->label('E-mail onderwerp')
+                ->placeholder(app(OutreachEmailService::class)->defaultSubject()),
+            Textarea::make('email_body')
+                ->label('E-mail body')
+                ->rows(16)
+                ->placeholder(app(OutreachEmailService::class)->defaultBody())
+                ->helperText('Beschikbare placeholders: {{company_name}}, {{contact_name}}, {{demo_url}}.'),
         ]);
     }
 
@@ -100,6 +111,22 @@ class OutreachCampaignResource extends Resource
             ->filters([])
             ->recordActions([
                 EditAction::make(),
+                Action::make('sendTestMail')
+                    ->label('Verstuur testmail')
+                    ->requiresConfirmation()
+                    ->action(function (OutreachCampaign $record, OutreachEmailService $service): void {
+                        $prospect = $record->prospects()->orderBy('id')->first();
+
+                        if (! $prospect) {
+                            Notification::make()->title('Geen prospect beschikbaar voor testmail.')->danger()->send();
+
+                            return;
+                        }
+
+                        $service->sendTestMail($record, $prospect);
+
+                        Notification::make()->title('Testmail verstuurd.')->success()->send();
+                    }),
             ])
             ->toolbarActions([]);
     }
