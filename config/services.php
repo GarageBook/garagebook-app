@@ -59,4 +59,8 @@ return [
         'credentials_json' => env('GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON'),
     ],
 
+    'growth_report' => [
+        'recipient' => env('GROWTH_REPORT_RECIPIENT', 'willemvanveelen@icloud.com'),
+    ],
+
 ];

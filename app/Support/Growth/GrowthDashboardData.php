@@ -297,6 +297,51 @@ class GrowthDashboardData
         ];
     }
 
+
+    public function weeklyGrowthReport(): array
+    {
+        $activation = $this->activationFunnel();
+        $stats = $activation['stats'];
+        $conversions = collect($activation['conversions']);
+
+        $largestDropOff = $conversions
+            ->filter(fn (array $conversion) => $conversion['percentage'] !== null)
+            ->sortBy('percentage')
+            ->first();
+
+        $attentionPoint = $largestDropOff
+            ? 'Grootste drop-off: '.$largestDropOff['label'].' ('.number_format((float) $largestDropOff['percentage'], 1, ',', '.').'%).'
+            : 'Nog onvoldoende data om een duidelijk aandachtspunt te bepalen.';
+
+        $interpretation = [
+            'largest_drop_off' => $largestDropOff
+                ? $largestDropOff['label']
+                : 'Nog onvoldoende data',
+            'attention_point' => $attentionPoint,
+            'summary' => $stats['users_with_maintenance'] === 0
+                ? 'De activatie stopt nog voor de eerste onderhoudslog. Focus op het sneller vastleggen van het eerste onderhoud.'
+                : (($stats['users_with_active_reminder'] ?? 0) === 0
+                    ? 'Er zijn wel onderhoudslogs, maar reminders worden nog nauwelijks geactiveerd.'
+                    : 'De basisactivatie loopt. Kijk vooral of remindergebruik en onderhoudsboekje-downloads blijven meegroeien.'),
+        ];
+
+        return [
+            'stats' => [
+                'total_users' => $stats['total_users'],
+                'registrations_last_7_days' => $stats['registrations_last_7_days'],
+                'registrations_last_30_days' => $stats['registrations_last_30_days'],
+                'users_with_vehicle' => $stats['users_with_vehicle'],
+                'users_with_maintenance' => $stats['users_with_maintenance'],
+                'users_with_active_reminder' => $stats['users_with_active_reminder'],
+                'users_with_booklet_download' => $stats['users_with_booklet_download'],
+                'active_last_7_days' => $stats['active_last_7_days'],
+                'active_last_30_days' => $stats['active_last_30_days'],
+            ],
+            'conversions' => $conversions->all(),
+            'interpretation' => $interpretation,
+        ];
+    }
+
     public function activationFunnel(): array
     {
         $today = Carbon::today();
