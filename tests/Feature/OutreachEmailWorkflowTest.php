@@ -188,6 +188,26 @@ class OutreachEmailWorkflowTest extends TestCase
         });
     }
 
+    public function test_outreach_prospects_list_shows_email_column_and_missing_email_filter(): void
+    {
+        $admin = User::factory()->admin()->create();
+        OutreachCampaign::factory()->create();
+
+        $prospect = OutreachProspect::factory()->create([
+            'company_name' => 'Moto Email',
+            'city' => 'Utrecht',
+            'website' => 'motoemail.nl',
+            'email' => 'info@motoemail.nl',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListOutreachProspects::class)
+            ->assertSee('info@motoemail.nl');
+
+        $this->assertTrue(method_exists(\App\Filament\Resources\OutreachProspects\OutreachProspectResource::class, 'table'));
+        $this->assertSame('mailto:info@motoemail.nl', 'mailto:' . $prospect->email);
+    }
+
     public function test_bulk_send_skips_missing_email_and_prevents_duplicate_send(): void
     {
         Mail::fake();

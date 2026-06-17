@@ -193,6 +193,13 @@ class OutreachProspectResource extends Resource
                     ->openUrlInNewTab()
                     ->searchable()
                     ->placeholder('-'),
+                Tables\Columns\TextColumn::make('email')
+                    ->label('E-mail')
+                    ->url(fn (OutreachProspect $record) => filled($record->email) ? 'mailto:' . $record->email : null)
+                    ->openUrlInNewTab()
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('-'),
                 Tables\Columns\TextColumn::make('campaign.name')
                     ->label('Campagne')
                     ->sortable()
@@ -277,7 +284,7 @@ class OutreachProspectResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_FAILED))),
                 Filter::make('missing_email')
                     ->label('Geen e-mailadres')
-                    ->query(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', '')),
+                    ->query(fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', ''))),
             ])
             ->recordActions([
                 ViewAction::make(),
