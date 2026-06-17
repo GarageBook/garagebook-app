@@ -13,6 +13,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -97,10 +99,11 @@ class OutreachDemoService
     private function seedDemoVehicle(OutreachProspect $prospect, User $user): Vehicle
     {
         $directory = 'outreach-demos/prospect-' . $prospect->id;
-        $photoPath = $directory . '/demo-motor.svg';
         $reportPath = $directory . '/onderhoudsrapport.txt';
+        $vehiclePhotoPaths = $this->importDemoVehicleImages($prospect);
+        $primaryPhotoPath = $vehiclePhotoPaths[0] ?? null;
+        $galleryPhotoPaths = array_slice($vehiclePhotoPaths, 1);
 
-        Storage::disk('public')->put($photoPath, $this->demoVehicleSvg($prospect->company_name));
         Storage::disk('local')->put($reportPath, $this->demoDocumentText($prospect->company_name));
 
         $vehicle = Vehicle::query()->create([
@@ -116,7 +119,8 @@ class OutreachDemoService
             'share_costs_publicly' => true,
             'share_attachments_publicly' => true,
             'notes' => 'Voorbeeldaccount voor outreach naar ' . $prospect->company_name . '.',
-            'photo' => $photoPath,
+            'photo' => $primaryPhotoPath,
+            'photos' => $galleryPhotoPaths,
         ]);
 
         $maintenanceLogs = [
@@ -140,8 +144,8 @@ class OutreachDemoService
                 'km_reading' => 18420,
                 'cost' => '289.95',
                 'notes' => 'Deze demo-log bevat een voorbeeldafbeelding en gekoppeld document.',
-                'attachments' => [$photoPath],
-                'media_attachments' => [$photoPath],
+                'attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
+                'media_attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
                 'file_attachments' => [],
                 'share_attachments_publicly' => true,
                 'hide_photos_on_public_page' => false,
@@ -170,6 +174,52 @@ class OutreachDemoService
         return $vehicle;
     }
 
+    /**
+     * @return list<string>
+     */
+    private function importDemoVehicleImages(OutreachProspect $prospect): array
+    {
+        $sourceDirectory = (string) config('services.outreach_demo.image_source_path', '/temp/3');
+
+        if ($sourceDirectory === '' || ! is_dir($sourceDirectory)) {
+            Log::info('Outreach demo image import skipped', [
+                'prospect_id' => $prospect->id,
+                'source_path' => $sourceDirectory,
+                'imported_count' => 0,
+                'reason' => 'missing_directory',
+            ]);
+
+            return [];
+        }
+
+        $paths = collect(File::files($sourceDirectory))
+            ->filter(fn (\SplFileInfo $file): bool => in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'webp'], true))
+            ->sortBy(fn (\SplFileInfo $file): string => strtolower($file->getFilename()))
+            ->values()
+            ->map(function (\SplFileInfo $file, int $index) use ($prospect): string {
+                $extension = strtolower($file->getExtension());
+                $targetPath = sprintf(
+                    'vehicle-photos/outreach-demo-%d-%02d.%s',
+                    $prospect->id,
+                    $index + 1,
+                    $extension,
+                );
+
+                Storage::disk('public')->put($targetPath, File::get($file->getPathname()));
+
+                return $targetPath;
+            })
+            ->all();
+
+        Log::info('Outreach demo images imported', [
+            'prospect_id' => $prospect->id,
+            'source_path' => $sourceDirectory,
+            'imported_count' => count($paths),
+        ]);
+
+        return $paths;
+    }
+
     private function recordEvent(OutreachProspect $prospect, string $eventType, Request $request): OutreachEvent
     {
         return $prospect->events()->create([
@@ -188,27 +238,6 @@ class OutreachDemoService
         }
 
         return 'outreach+' . $prospect->id . '-' . Str::lower(Str::random(6)) . '@garagebook.nl';
-    }
-
-    private function demoVehicleSvg(string $companyName): string
-    {
-        $label = htmlspecialchars(Str::limit($companyName, 28), ENT_QUOTES, 'UTF-8');
-
-        return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" fill="none">
-  <rect width="1200" height="675" fill="#0f172a"/>
-  <rect x="54" y="54" width="1092" height="567" rx="32" fill="#111827" stroke="#fbbf24" stroke-width="4"/>
-  <circle cx="330" cy="475" r="88" fill="#1f2937" stroke="#f8fafc" stroke-width="18"/>
-  <circle cx="866" cy="475" r="88" fill="#1f2937" stroke="#f8fafc" stroke-width="18"/>
-  <path d="M280 420h170l88-116h145l98 54h83" stroke="#fbbf24" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M495 420l76 66h158" stroke="#38bdf8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M680 288l70-72" stroke="#f8fafc" stroke-width="18" stroke-linecap="round"/>
-  <path d="M746 212h66" stroke="#f8fafc" stroke-width="18" stroke-linecap="round"/>
-  <text x="88" y="128" fill="#fbbf24" font-family="Arial, sans-serif" font-size="34" font-weight="700">GarageBook demo</text>
-  <text x="88" y="182" fill="#f8fafc" font-family="Arial, sans-serif" font-size="58" font-weight="700">Publieke motorhistorie voor garages</text>
-  <text x="88" y="242" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="30">Voorbeeldaccount voor {$label}</text>
-</svg>
-SVG;
     }
 
     private function demoDocumentText(string $companyName): string

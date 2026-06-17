@@ -7,7 +7,9 @@ use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class OutreachDemoFlowTest extends TestCase
@@ -29,6 +31,36 @@ class OutreachDemoFlowTest extends TestCase
             'https://app.garagebook.nl' . route('outreach.demo.login', ['token' => $prospect->token], false),
             $prospect->demoUrl(),
         );
+    }
+
+    public function test_demo_vehicle_imports_local_images_when_source_directory_has_files(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $sourceDirectory = sys_get_temp_dir() . '/outreach-demo-images-' . Str::random(8);
+        File::ensureDirectoryExists($sourceDirectory);
+        File::put($sourceDirectory . '/01-bike.jpg', 'demo-jpg');
+        File::put($sourceDirectory . '/02-bike.png', 'demo-png');
+        File::put($sourceDirectory . '/ignore.txt', 'not-an-image');
+
+        config()->set('services.outreach_demo.image_source_path', $sourceDirectory);
+
+        $prospect = OutreachProspect::factory()->create([
+            'company_name' => 'Moto Breda',
+            'user_id' => null,
+        ]);
+
+        $this->get('/demo/garage/' . $prospect->token)->assertRedirect();
+
+        $vehicle = $prospect->refresh()->user->vehicles()->firstOrFail();
+
+        $this->assertSame('vehicle-photos/outreach-demo-' . $prospect->id . '-01.jpg', $vehicle->photo);
+        $this->assertSame(['vehicle-photos/outreach-demo-' . $prospect->id . '-02.png'], $vehicle->photos);
+        Storage::disk('public')->assertExists($vehicle->photo);
+        Storage::disk('public')->assertExists($vehicle->photos[0]);
+
+        File::deleteDirectory($sourceDirectory);
     }
 
     public function test_demo_link_marks_prospect_clicked_creates_demo_user_and_public_vehicle_page(): void
