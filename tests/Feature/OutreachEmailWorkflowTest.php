@@ -74,6 +74,30 @@ class OutreachEmailWorkflowTest extends TestCase
         });
     }
 
+    public function test_test_and_real_mail_use_same_rendered_body(): void
+    {
+        $campaign = OutreachCampaign::factory()->create([
+            'email_subject' => 'Demo voor {{company_name}}',
+            'email_body' => 'Beste {{contact_name}},' . PHP_EOL . '{{demo_url}}',
+        ]);
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Arnhem',
+            'contact_name' => 'Pieter',
+            'email' => 'pieter@example.com',
+        ]);
+
+        $service = app(OutreachEmailService::class);
+
+        $testMail = $service->makeMailForProspect($campaign, $prospect, true);
+        $realMail = $service->makeMailForProspect($campaign, $prospect, false);
+
+        $this->assertSame($realMail->bodyText, $testMail->bodyText);
+        $this->assertSame('[TEST] ' . $realMail->subjectLine, $testMail->subjectLine);
+        $this->assertSame('willemvanveelen@icloud.com', OutreachEmailService::TEST_RECIPIENT);
+        $this->assertNotSame($prospect->email, OutreachEmailService::TEST_RECIPIENT);
+    }
+
     public function test_bulk_send_service_sends_only_selected_prospects_and_stores_body_snapshot(): void
     {
         Mail::fake();

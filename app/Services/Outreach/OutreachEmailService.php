@@ -71,10 +71,15 @@ class OutreachEmailService
         ];
     }
 
+    public function makeMailForProspect(OutreachCampaign $campaign, OutreachProspect $prospect, bool $isTest = false): OutreachCampaignMail
+    {
+        $rendered = $this->renderForProspect($campaign, $prospect, $isTest);
+
+        return new OutreachCampaignMail($rendered['subject'], $rendered['body']);
+    }
+
     public function sendTestMail(OutreachCampaign $campaign, OutreachProspect $prospect): void
     {
-        $rendered = $this->renderForProspect($campaign, $prospect, true);
-
         $recipient = self::TEST_RECIPIENT;
 
         if ($recipient !== self::TEST_RECIPIENT) {
@@ -87,9 +92,7 @@ class OutreachEmailService
             throw new \RuntimeException('Testmail-recipient moet exact willemvanveelen@icloud.com zijn.');
         }
 
-        Mail::to($recipient)->send(
-            new OutreachCampaignMail($rendered['subject'], $rendered['body'])
-        );
+        Mail::to($recipient)->send($this->makeMailForProspect($campaign, $prospect, true));
     }
 
     /**

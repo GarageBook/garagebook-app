@@ -26,6 +26,7 @@ class OutreachCampaignMail extends Mailable
     {
         return new Content(
             view: 'emails.outreach.campaign',
+            text: 'emails.outreach.campaign-text',
             with: [
                 'bodyText' => $this->bodyText,
             ],
