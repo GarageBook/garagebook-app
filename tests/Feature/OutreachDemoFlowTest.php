@@ -14,6 +14,23 @@ class OutreachDemoFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_demo_url_uses_live_app_host_and_exact_route_path(): void
+    {
+        $prospect = OutreachProspect::factory()->create([
+            'token' => 'demo-token-1234567890',
+        ]);
+
+        $this->assertSame(
+            'https://app.garagebook.nl/demo/garage/demo-token-1234567890',
+            $prospect->demoUrl(),
+        );
+
+        $this->assertSame(
+            'https://app.garagebook.nl' . route('outreach.demo.login', ['token' => $prospect->token], false),
+            $prospect->demoUrl(),
+        );
+    }
+
     public function test_demo_link_marks_prospect_clicked_creates_demo_user_and_public_vehicle_page(): void
     {
         Storage::fake('public');

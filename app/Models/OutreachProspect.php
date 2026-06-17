@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OutreachProspect extends Model
 {
+    private const DEMO_APP_URL = 'https://app.garagebook.nl';
+
     /** @use HasFactory<OutreachProspectFactory> */
     use HasFactory;
 
@@ -62,7 +64,7 @@ class OutreachProspect extends Model
 
     public function demoUrl(): string
     {
-        return route('outreach.demo.login', ['token' => $this->token]);
+        return self::DEMO_APP_URL . route('outreach.demo.login', ['token' => $this->token], false);
     }
 
     public static function generateUniqueToken(): string
