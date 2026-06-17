@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
-use App\Services\LifecycleEmailService;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Schema;
@@ -16,13 +15,13 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
 
     protected ?string $heading = 'Lifecycle e-mailactivatie';
 
-    protected ?string $description = 'Activatiekansen en verzonden lifecycle-mails binnen GarageBook.';
+    protected ?string $description = 'Per lifecycle-key: queue-status, klikgedrag en activatie naar eerste onderhoudslog.';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
-    protected int | array | null $columns = [
+    protected int|array|null $columns = [
         'md' => 2,
-        'xl' => 4,
+        'xl' => 3,
     ];
 
     public static function canView(): bool
@@ -33,63 +32,110 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
     protected function getStats(): array
     {
         $stats = self::calculateStats();
+        $cards = [];
 
-        return [
-            Stat::make('Verzonden laatste 30 dagen', (string) $stats['sent_last_30_days'])
-                ->description('Alle lifecycle-mails met status sent.')
-                ->color('success'),
-            Stat::make('Openstaand dag 3', (string) $stats['outstanding_day_3'])
-                ->description('Users die nu de dag-3 lifecycle-mail kwalificeren.')
-                ->color('warning'),
-            Stat::make('Openstaand dag 14', (string) $stats['outstanding_day_14'])
-                ->description('Users die nu de dag-14 lifecycle-mail kwalificeren.')
-                ->color('warning'),
-            Stat::make('Openstaand dag 30', (string) $stats['outstanding_day_30'])
-                ->description('Users die nu de dag-30 lifecycle-mail kwalificeren.')
-                ->color('danger'),
-        ];
+        foreach ($stats['email_keys'] as $emailKey => $row) {
+            $conversionRate = $row['sent'] > 0
+                ? round(($row['goal_completed'] / $row['sent']) * 100, 1)
+                : 0.0;
+
+            $cards[] = Stat::make($emailKey, sprintf('Q %d | S %d | F %d', $row['queued'], $row['sent'], $row['failed']))
+                ->description(sprintf('Kliks %d | Goals %d | Conv %.1f%%', $row['clicked'], $row['goal_completed'], $conversionRate))
+                ->color($row['failed'] > 0 ? 'danger' : ($row['queued'] > 0 ? 'warning' : 'success'));
+        }
+
+        $cards[] = Stat::make('Voertuig zonder onderhoud', (string) $stats['users_with_vehicle_no_maintenance'])
+            ->description('Gebruikers met minimaal 1 voertuig maar nog geen eerste onderhoudslog.')
+            ->color('warning');
+
+        return $cards;
     }
 
     public static function calculateStats(): array
     {
-        $stats = [
-            'sent_last_30_days' => 0,
-            'outstanding_day_3' => 0,
-            'outstanding_day_14' => 0,
-            'outstanding_day_30' => 0,
+        $emailKeys = [
+            LifecycleEmailTemplate::NO_VEHICLE_ADDED,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
+            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
         ];
+
+        $stats = [
+            'email_keys' => [],
+            'users_with_vehicle_no_maintenance' => 0,
+        ];
+
+        foreach ($emailKeys as $emailKey) {
+            $stats['email_keys'][$emailKey] = [
+                'queued' => 0,
+                'sent' => 0,
+                'failed' => 0,
+                'clicked' => 0,
+                'goal_completed' => 0,
+            ];
+        }
 
         if (! Schema::hasTable('lifecycle_email_logs')) {
             return $stats;
         }
 
-        $stats['sent_last_30_days'] = LifecycleEmailLog::query()
-            ->where('status', LifecycleEmailLog::STATUS_SENT)
-            ->where('sent_at', '>=', now()->subDays(30))
-            ->count();
+        $rows = LifecycleEmailLog::query()
+            ->selectRaw('email_key, status, COUNT(*) as aggregate')
+            ->whereIn('email_key', $emailKeys)
+            ->groupBy('email_key', 'status')
+            ->get();
 
-        if (! Schema::hasTable('lifecycle_email_templates')) {
-            return $stats;
+        foreach ($rows as $row) {
+            if (! isset($stats['email_keys'][$row->email_key])) {
+                continue;
+            }
+
+            if (in_array($row->status, [LifecycleEmailLog::STATUS_QUEUED, LifecycleEmailLog::STATUS_PROCESSING], true)) {
+                $stats['email_keys'][$row->email_key]['queued'] += (int) $row->aggregate;
+
+                continue;
+            }
+
+            if ($row->status === LifecycleEmailLog::STATUS_SENT) {
+                $stats['email_keys'][$row->email_key]['sent'] = (int) $row->aggregate;
+
+                continue;
+            }
+
+            if ($row->status === LifecycleEmailLog::STATUS_FAILED) {
+                $stats['email_keys'][$row->email_key]['failed'] = (int) $row->aggregate;
+            }
         }
 
-        $service = app(LifecycleEmailService::class);
+        $clickedRows = LifecycleEmailLog::query()
+            ->selectRaw('email_key, COUNT(*) as aggregate')
+            ->whereIn('email_key', $emailKeys)
+            ->whereNotNull('clicked_at')
+            ->groupBy('email_key')
+            ->pluck('aggregate', 'email_key');
 
-        User::query()
-            ->whereHas('vehicles')
-            ->whereNull('lifecycle_emails_unsubscribed_at')
-            ->orderBy('id')
-            ->chunkById(100, function ($users) use (&$stats, $service): void {
-                foreach ($users as $user) {
-                    $emailKey = $service->resolveEligibleEmailKey($user);
+        foreach ($clickedRows as $emailKey => $aggregate) {
+            $stats['email_keys'][$emailKey]['clicked'] = (int) $aggregate;
+        }
 
-                    match ($emailKey) {
-                        LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => $stats['outstanding_day_3']++,
-                        LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => $stats['outstanding_day_14']++,
-                        LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => $stats['outstanding_day_30']++,
-                        default => null,
-                    };
-                }
-            });
+        $goalRows = LifecycleEmailLog::query()
+            ->selectRaw('email_key, COUNT(*) as aggregate')
+            ->whereIn('email_key', $emailKeys)
+            ->whereNotNull('goal_completed_at')
+            ->groupBy('email_key')
+            ->pluck('aggregate', 'email_key');
+
+        foreach ($goalRows as $emailKey => $aggregate) {
+            $stats['email_keys'][$emailKey]['goal_completed'] = (int) $aggregate;
+        }
+
+        if (Schema::hasTable('users') && Schema::hasTable('vehicles') && Schema::hasTable('maintenance_logs')) {
+            $stats['users_with_vehicle_no_maintenance'] = User::query()
+                ->whereHas('vehicles')
+                ->whereDoesntHave('vehicles.maintenanceLogs')
+                ->count();
+        }
 
         return $stats;
     }

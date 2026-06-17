@@ -10,6 +10,8 @@ class LifecycleEmailLog extends Model
 {
     public const STATUS_QUEUED = 'queued';
 
+    public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_SENT = 'sent';
 
     public const STATUS_FAILED = 'failed';
@@ -31,6 +33,7 @@ class LifecycleEmailLog extends Model
         'documents_count',
         'last_login_at',
         'clicked_at',
+        'goal_completed_at',
         'retried_at',
         'retry_status',
         'retry_log_id',
@@ -41,6 +44,7 @@ class LifecycleEmailLog extends Model
         'clicked_at' => 'datetime',
         'documents_count' => 'integer',
         'failed_at' => 'datetime',
+        'goal_completed_at' => 'datetime',
         'last_login_at' => 'datetime',
         'maintenance_logs_count' => 'integer',
         'retried_at' => 'datetime',

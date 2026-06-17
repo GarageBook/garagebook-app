@@ -22,8 +22,18 @@ class LifecycleEmailStatsWidgetTest extends TestCase
         $this->seed(LifecycleEmailTemplateSeeder::class);
     }
 
-    public function test_lifecycle_email_stats_widget_reports_sent_and_outstanding_counts(): void
+    public function test_lifecycle_email_stats_widget_reports_effectiveness_metrics_per_email_key(): void
     {
+        $userWithVehicleNoMaintenance = User::factory()->create([
+            'created_at' => now()->subDays(3),
+        ]);
+
+        Vehicle::query()->create([
+            'user_id' => $userWithVehicleNoMaintenance->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+        ]);
+
         $sentUser = User::factory()->create();
         Vehicle::query()->create([
             'user_id' => $sentUser->id,
@@ -37,40 +47,46 @@ class LifecycleEmailStatsWidgetTest extends TestCase
             'subject' => 'Verzonden',
             'status' => LifecycleEmailLog::STATUS_SENT,
             'sent_at' => now()->subDays(2),
+            'clicked_at' => now()->subDay(),
+            'goal_completed_at' => now()->subHours(12),
         ]);
 
-        $day3User = User::factory()->create([
-            'created_at' => now()->subDays(3),
-        ]);
+        $queuedUser = User::factory()->create();
         Vehicle::query()->create([
-            'user_id' => $day3User->id,
-            'brand' => 'Honda',
-            'model' => 'CB500X',
-        ]);
-
-        $day14User = User::factory()->create([
-            'created_at' => now()->subDays(14),
-        ]);
-        Vehicle::query()->create([
-            'user_id' => $day14User->id,
+            'user_id' => $queuedUser->id,
             'brand' => 'Yamaha',
             'model' => 'Tracer 9',
         ]);
 
-        $day30User = User::factory()->create([
-            'created_at' => now()->subDays(30),
+        LifecycleEmailLog::query()->create([
+            'user_id' => $queuedUser->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            'subject' => 'Queued',
+            'status' => LifecycleEmailLog::STATUS_QUEUED,
         ]);
+
+        $failedUser = User::factory()->create();
         Vehicle::query()->create([
-            'user_id' => $day30User->id,
+            'user_id' => $failedUser->id,
             'brand' => 'Suzuki',
             'model' => 'V-Strom',
         ]);
 
+        LifecycleEmailLog::query()->create([
+            'user_id' => $failedUser->id,
+            'email_key' => LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            'subject' => 'Failed',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'failed_at' => now()->subHour(),
+        ]);
+
         $stats = LifecycleEmailStatsWidget::calculateStats();
 
-        $this->assertSame(1, $stats['sent_last_30_days']);
-        $this->assertSame(1, $stats['outstanding_day_3']);
-        $this->assertSame(1, $stats['outstanding_day_14']);
-        $this->assertSame(1, $stats['outstanding_day_30']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['sent']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['clicked']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['goal_completed']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14]['queued']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG]['failed']);
+        $this->assertSame(4, $stats['users_with_vehicle_no_maintenance']);
     }
 }

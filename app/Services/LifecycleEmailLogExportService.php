@@ -29,7 +29,7 @@ class LifecycleEmailLogExportService
             'documents_count',
             'last_login_at',
             'clicked_at',
-            'completed_goal_at',
+            'goal_completed_at',
         ];
     }
 
@@ -61,7 +61,7 @@ class LifecycleEmailLogExportService
                 $log->documents_count,
                 $this->formatDate($log->last_login_at),
                 $this->formatDate($log->clicked_at),
-                null,
+                $this->formatDate($log->goal_completed_at),
             ]);
         }
 
@@ -69,7 +69,7 @@ class LifecycleEmailLogExportService
         $csv = stream_get_contents($handle) ?: '';
         fclose($handle);
 
-        return "\xEF\xBB\xBF" . $csv;
+        return "\xEF\xBB\xBF".$csv;
     }
 
     private function formatDate(mixed $value): ?string

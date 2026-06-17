@@ -5,6 +5,7 @@ namespace App\Filament\Resources\MaintenanceLogs\Pages;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Jobs\OptimizeMaintenanceLogMedia;
 use App\Services\DistanceUnitService;
+use App\Services\LifecycleEmailService;
 use App\Support\AnalyticsEventTracker;
 use App\Support\MaintenanceLogVehicleResolver;
 use Filament\Resources\Pages\CreateRecord;
@@ -45,6 +46,7 @@ class CreateMaintenanceLog extends CreateRecord
 
         if ($user && $maintenanceCount === 1) {
             $tracker->queueOnboardingCompleted($user, $this->record);
+            app(LifecycleEmailService::class)->markGoalCompletedForFirstMaintenanceLog($user);
         }
 
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());

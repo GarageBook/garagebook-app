@@ -22,7 +22,7 @@ class LifecycleEmailLogResource extends Resource
 {
     protected static ?string $model = LifecycleEmailLog::class;
 
-    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedQueueList;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
 
     protected static ?string $navigationLabel = 'Lifecycle e-maillogs';
 
@@ -30,7 +30,7 @@ class LifecycleEmailLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Lifecycle e-maillogs';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Beheer';
+    protected static string|UnitEnum|null $navigationGroup = 'Beheer';
 
     protected static ?int $navigationSort = 211;
 
@@ -111,6 +111,7 @@ class LifecycleEmailLogResource extends Resource
                     ->label('Status')
                     ->colors([
                         'gray' => LifecycleEmailLog::STATUS_QUEUED,
+                        'info' => LifecycleEmailLog::STATUS_PROCESSING,
                         'warning' => LifecycleEmailLog::STATUS_SKIPPED,
                         'success' => LifecycleEmailLog::STATUS_SENT,
                         'danger' => LifecycleEmailLog::STATUS_FAILED,
@@ -140,6 +141,11 @@ class LifecycleEmailLogResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('clicked_at')
                     ->label('Klik op CTA')
+                    ->dateTime('d-m-Y H:i')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('goal_completed_at')
+                    ->label('Doel behaald')
                     ->dateTime('d-m-Y H:i')
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -175,6 +181,7 @@ class LifecycleEmailLogResource extends Resource
                     ->label('Status')
                     ->options([
                         LifecycleEmailLog::STATUS_QUEUED => LifecycleEmailLog::STATUS_QUEUED,
+                        LifecycleEmailLog::STATUS_PROCESSING => LifecycleEmailLog::STATUS_PROCESSING,
                         LifecycleEmailLog::STATUS_SENT => LifecycleEmailLog::STATUS_SENT,
                         LifecycleEmailLog::STATUS_FAILED => LifecycleEmailLog::STATUS_FAILED,
                         LifecycleEmailLog::STATUS_SKIPPED => LifecycleEmailLog::STATUS_SKIPPED,

@@ -80,7 +80,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
 
         $this->assertNotNull($log);
         $this->assertSame($admin->id, $log->user_id);
-        $this->assertStringStartsWith('test_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 . '_', $log->email_key);
+        $this->assertStringStartsWith('test_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3.'_', $log->email_key);
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
         $this->assertNotNull($log->sent_at);
         $this->assertNull($log->failed_at);
@@ -102,7 +102,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
 
         $this->assertNotNull($log);
         $this->assertSame($admin->id, $log->user_id);
-        $this->assertStringStartsWith('test_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 . '_', $log->email_key);
+        $this->assertStringStartsWith('test_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3.'_', $log->email_key);
         $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $log->status);
         $this->assertNull($log->sent_at);
         $this->assertNotNull($log->failed_at);
@@ -162,7 +162,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ListLifecycleEmailLogs::class)
             ->callAction('export')
-            ->assertFileDownloaded('lifecycle-email-logs-' . now()->format('Y-m-d') . '.csv');
+            ->assertFileDownloaded('lifecycle-email-logs-'.now()->format('Y-m-d').'.csv');
     }
 
     public function test_lifecycle_email_log_csv_export_contains_expected_columns_and_values(): void
@@ -185,6 +185,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             'documents_count' => 0,
             'last_login_at' => '2026-06-01 09:30:00',
             'clicked_at' => '2026-06-05 12:00:00',
+            'goal_completed_at' => '2026-06-06 08:00:00',
             'skipped_at' => '2026-06-05 12:00:00',
         ]);
 
@@ -192,7 +193,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             LifecycleEmailLog::query()->with('user')->whereKey($log->getKey())
         );
 
-        $this->assertStringContainsString('id,created_at,sent_at,user_id,user_name,user_email,email_key,status,reason_skipped,error_message,vehicles_count,maintenance_logs_count,documents_count,last_login_at,clicked_at,completed_goal_at', $csv);
+        $this->assertStringContainsString('id,created_at,sent_at,user_id,user_name,user_email,email_key,status,reason_skipped,error_message,vehicles_count,maintenance_logs_count,documents_count,last_login_at,clicked_at,goal_completed_at', $csv);
         $this->assertStringContainsString('CSV Gebruiker', $csv);
         $this->assertStringContainsString('csv@example.com', $csv);
         $this->assertStringContainsString(LifecycleEmailTemplate::NO_VEHICLE_ADDED, $csv);
