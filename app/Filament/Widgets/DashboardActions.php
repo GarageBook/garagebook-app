@@ -40,9 +40,7 @@ class DashboardActions extends Widget
         $vehicle = $user->vehicles()->latest()->first();
 
         return [
-            'vehicle' => $vehicle,
             'actions' => $vehicle ? $this->buildActions($vehicle) : [],
-            'booklet' => $vehicle ? $this->buildBooklet($vehicle) : null,
         ];
     }
 
@@ -123,30 +121,6 @@ class DashboardActions extends Widget
                     'user_state' => $userState,
                 ]),
             ],
-        ];
-    }
-
-    private function buildBooklet(Vehicle $vehicle): array
-    {
-        $maintenanceCount = $vehicle->maintenanceLogs()->count();
-        $documentCount = $vehicle->documents()->count();
-
-        return [
-            'summary' => 'Jouw onderhoudsboekje bevat nu 1 voertuig, '.$maintenanceCount.' onderhoudslog'.($maintenanceCount === 1 ? '' : 's').' en '.$documentCount.' document'.($documentCount === 1 ? '' : 'en').'.',
-            'download_url' => url('/maintenance/pdf?vehicle_id='.$vehicle->id),
-            'download_attributes' => Analytics::clickTrackingAttributes('maintenance_booklet_downloaded', [
-                'location' => 'dashboard_actions_booklet',
-                'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                'user_state' => Analytics::userState(auth()->user()),
-            ]),
-            'public_cta' => $vehicle->is_public ? [
-                'label' => 'Bekijk publieke voertuigpagina',
-                'url' => app(PublicGarageService::class)->publicUrl($vehicle),
-                'attributes' => Analytics::clickTrackingAttributes('public_share_created', [
-                    'source' => 'dashboard_actions_booklet',
-                    'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                ]),
-            ] : null,
         ];
     }
 

@@ -79,7 +79,7 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
         $this->assertSame(3, $events[0]['params']['total_steps'] ?? null);
     }
 
-    public function test_dashboard_onboarding_widget_renders_booklet_download_tracking_after_activation(): void
+    public function test_dashboard_actions_widget_renders_tracking_after_activation(): void
     {
         $user = User::factory()->create();
         $vehicle = Vehicle::query()->create([
@@ -99,8 +99,9 @@ class AnalyticsCtaRenderSmokeTest extends TestCase
         $this->actingAs($user)
             ->get('/admin')
             ->assertOk()
-            ->assertSee('data-analytics-event="maintenance_booklet_downloaded"', false)
-            ->assertSee('data-analytics-param-location="dashboard_actions_booklet"', false);
+            ->assertSee('data-analytics-event="quick_maintenance_log_cta_clicked"', false)
+            ->assertSee('data-analytics-param-location="dashboard_actions_widget"', false)
+            ->assertDontSee('data-analytics-event="maintenance_booklet_downloaded"', false);
     }
 
     public function test_fuel_logs_page_renders_app_cta_clicked_tracking_attributes(): void

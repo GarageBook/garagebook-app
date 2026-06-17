@@ -209,12 +209,16 @@ class AnalyticsAndOnboardingTest extends TestCase
             ->assertOk()
             ->assertSeeText('Je GarageBook is actief')
             ->assertSeeText('Onderhoud toevoegen')
+            ->assertSeeText('Herinnering toevoegen')
             ->assertSeeText('Voeg een rit toe')
             ->assertSeeText('Voeg een document toe')
             ->assertSeeText('Bekijk je voertuigpagina')
+            ->assertSeeText('Bekijk je tijdlijn')
             ->assertSeeText('Deel je openbare garage')
-            ->assertSeeText('Jouw onderhoudsboekje')
-            ->assertSeeText('Download onderhoudsboekje');
+            ->assertSeeText('Beheer je voertuigen')
+            ->assertDontSeeText('Actief voertuig')
+            ->assertDontSeeText('Jouw onderhoudsboekje')
+            ->assertDontSeeText('Download onderhoudsboekje');
     }
 
     public function test_other_users_data_does_not_affect_dashboard_onboarding_state(): void
