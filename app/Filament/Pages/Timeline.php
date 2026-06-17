@@ -7,6 +7,7 @@ use App\Models\MaintenanceLog;
 use App\Models\TripLog;
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
+use App\Services\Outreach\OutreachDemoService;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
 use Filament\Pages\Page;
@@ -121,6 +122,8 @@ class Timeline extends Page
             'timelineGroups' => $timelineGroups->all(),
             'totalItems' => $totalItems,
             'periodLabel' => $periodLabel,
+            'showDemoIntro' => app(OutreachDemoService::class)->shouldShowDemoIntroForAuthenticatedUser(),
+            'demoIntroDismissUrl' => route('outreach.demo.intro-dismiss'),
             'totalCostLabel' => $activeVehicle
                 ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')
                 : __('dashboard.timeline.currency_prefix') . ' 0,00',

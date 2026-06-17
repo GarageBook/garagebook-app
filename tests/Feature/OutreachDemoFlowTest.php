@@ -79,7 +79,7 @@ class OutreachDemoFlowTest extends TestCase
         $user = $prospect->user;
         $vehicle = $user?->vehicles()->first();
 
-        $response->assertRedirect('/admin/vehicles/' . $vehicle?->id);
+        $response->assertRedirect('/admin/tijdlijn?vehicle_id=' . $vehicle?->id);
         $this->assertNotNull($prospect->clicked_at);
         $this->assertNotNull($prospect->first_login_at);
         $this->assertSame(1, $prospect->login_count);

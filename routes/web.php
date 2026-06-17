@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
+use App\Http\Controllers\OutreachDemoIntroDismissController;
 use App\Http\Controllers\OutreachDemoLoginController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\Public\StartRedirectController;
@@ -90,6 +91,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/trips/{trip}/photos/{photoIndex}', [TripPhotoController::class, 'show'])
         ->whereNumber('photoIndex')
         ->name('trip-photos.show');
+
+    Route::post('/demo/garage/intro-dismiss', OutreachDemoIntroDismissController::class)
+        ->name('outreach.demo.intro-dismiss');
 });
 
 /*

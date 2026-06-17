@@ -27,6 +27,8 @@ class OutreachProspect extends Model
         'clicked_at',
         'first_login_at',
         'last_login_at',
+        'demo_intro_shown_at',
+        'demo_intro_dismissed_at',
         'login_count',
         'notes',
     ];
@@ -35,6 +37,8 @@ class OutreachProspect extends Model
         'clicked_at' => 'datetime',
         'first_login_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'demo_intro_shown_at' => 'datetime',
+        'demo_intro_dismissed_at' => 'datetime',
         'login_count' => 'integer',
     ];
 

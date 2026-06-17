@@ -542,6 +542,60 @@
             overflow-wrap: anywhere;
         }
 
+        .gb-demo-intro {
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+        }
+
+        .gb-demo-intro[x-cloak] {
+            display: none !important;
+        }
+
+        .gb-demo-intro__dialog {
+            width: min(100%, 34rem);
+            border-radius: 1.5rem;
+            background: #fffdf5;
+            box-shadow: 0 32px 80px rgba(15, 23, 42, 0.25);
+            padding: 2rem;
+            color: #0f172a;
+        }
+
+        .gb-demo-intro__title {
+            margin: 0 0 0.75rem;
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .gb-demo-intro__body {
+            margin: 0;
+            color: #475569;
+            line-height: 1.7;
+            white-space: pre-line;
+        }
+
+        .gb-demo-intro__actions {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .gb-demo-intro__button {
+            border: none;
+            border-radius: 999px;
+            background: #ffd200;
+            color: #0f172a;
+            padding: 0.9rem 1.3rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
         .gb-timeline-modal {
             position: fixed;
             inset: 0;
@@ -821,6 +875,27 @@
         @keydown.window.prevent.arrow-right="selectedEntry && nextImage()"
         @keydown.window.prevent.arrow-left="selectedEntry && prevImage()"
     >
+        @if($showDemoIntro)
+            <div
+                x-data="{ open: true, dismiss() { fetch(@js($demoIntroDismissUrl), { method: 'POST', headers: { 'X-CSRF-TOKEN': @js(csrf_token()), 'Accept': 'application/json' } }).finally(() => { this.open = false }) } }"
+                x-show="open"
+                x-cloak
+                class="gb-demo-intro"
+            >
+                <div class="gb-demo-intro__dialog">
+                    <h2 class="gb-demo-intro__title">Welkom in GarageBook</h2>
+                    <p class="gb-demo-intro__body">Dit is een korte demo van een digitaal onderhoudsboekje voor motoren.
+
+In deze omgeving ziet u hoe een motorrijder onderhoud, foto’s, documenten, ritten en voertuiggeschiedenis kan bewaren. De tijdlijn geeft direct een overzicht van alles wat aan deze Yamaha MT-07 is toegevoegd.
+
+U kunt vrij rondkijken. Er is niets te installeren en registreren is niet nodig.</p>
+                    <div class="gb-demo-intro__actions">
+                        <button type="button" class="gb-demo-intro__button" @click="dismiss()">Start demo</button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="gb-timeline-shell">
             <section class="gb-timeline-hero">
                 <div class="gb-timeline-hero__top">

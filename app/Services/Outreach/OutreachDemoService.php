@@ -2,7 +2,7 @@
 
 namespace App\Services\Outreach;
 
-use App\Filament\Resources\Vehicles\VehicleResource;
+use App\Filament\Pages\Timeline;
 use App\Models\MaintenanceLog;
 use App\Models\OutreachEvent;
 use App\Models\OutreachProspect;
@@ -82,7 +82,59 @@ class OutreachDemoService
             $this->recordEvent($lockedProspect, 'demo_login_completed', $request);
         });
 
-        return redirect()->to(VehicleResource::getUrl('view', ['record' => $vehicle]));
+        return redirect()->to(Timeline::getUrl(['vehicle_id' => $vehicle->id]));
+    }
+
+    public function shouldShowDemoIntroForAuthenticatedUser(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User || ! $user->is_outreach_demo || $user->isAdmin()) {
+            return false;
+        }
+
+        $prospect = $user->outreachProspect;
+
+        if (! $prospect instanceof OutreachProspect || $prospect->demo_intro_dismissed_at !== null) {
+            return false;
+        }
+
+        if ($prospect->demo_intro_shown_at === null) {
+            $prospect->forceFill(['demo_intro_shown_at' => now()])->save();
+            $prospect->events()->create([
+                'event_type' => 'demo_intro_shown',
+                'ip_address' => request()?->ip(),
+                'user_agent' => Str::limit((string) request()?->userAgent(), 1000, ''),
+            ]);
+        }
+
+        return true;
+    }
+
+    public function dismissDemoIntroForAuthenticatedUser(Request $request): void
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User || ! $user->is_outreach_demo || $user->isAdmin()) {
+            return;
+        }
+
+        $prospect = $user->outreachProspect;
+
+        if (! $prospect instanceof OutreachProspect || $prospect->demo_intro_dismissed_at !== null) {
+            return;
+        }
+
+        $prospect->forceFill([
+            'demo_intro_shown_at' => $prospect->demo_intro_shown_at ?: now(),
+            'demo_intro_dismissed_at' => now(),
+        ])->save();
+
+        $prospect->events()->create([
+            'event_type' => 'demo_intro_dismissed',
+            'ip_address' => $request->ip(),
+            'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+        ]);
     }
 
     /**
