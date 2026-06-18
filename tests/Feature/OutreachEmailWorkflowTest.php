@@ -208,6 +208,70 @@ class OutreachEmailWorkflowTest extends TestCase
         $this->assertSame('mailto:info@motoemail.nl', 'mailto:' . $prospect->email);
     }
 
+    public function test_outreach_prospects_list_shows_sent_when_sent_log_has_later_already_sent_skip(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Sent Later Skip',
+            'email' => 'sent-later-skip@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'sent-later-skip@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now()->subMinute(),
+        ]);
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'sent-later-skip@example.com',
+            'subject' => 'Skipped',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'error' => 'already_sent',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListOutreachProspects::class)
+            ->assertSee('Moto Sent Later Skip')
+            ->assertSee('verstuurd')
+            ->assertDontSee('overgeslagen');
+    }
+
+    public function test_outreach_prospects_list_keeps_skipped_when_no_sent_log_exists(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Only Skipped',
+            'email' => 'only-skipped@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'only-skipped@example.com',
+            'subject' => 'Skipped',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'error' => 'missing_email',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListOutreachProspects::class)
+            ->assertSee('Moto Only Skipped')
+            ->assertSee('overgeslagen');
+    }
+
     public function test_bulk_send_skips_missing_email_and_prevents_duplicate_send(): void
     {
         Mail::fake();

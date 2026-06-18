@@ -169,6 +169,7 @@ class OutreachProspectResource extends Resource
                     'latest_outreach_mail_status' => OutreachEmailLog::query()
                         ->select('status')
                         ->whereColumn('outreach_email_logs.outreach_prospect_id', 'outreach_prospects.id')
+                        ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [OutreachEmailLog::STATUS_SENT])
                         ->latest('id')
                         ->limit(1),
                     'latest_outreach_sent_at' => OutreachEmailLog::query()
