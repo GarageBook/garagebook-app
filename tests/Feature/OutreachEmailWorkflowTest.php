@@ -323,6 +323,145 @@ class OutreachEmailWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_retry_overlooked_outreach_emails_command_queues_unsent_prospects_and_skips_sent_prospects(): void
+    {
+        Bus::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+
+        $unsentProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Nieuw',
+            'email' => 'nieuw@example.com',
+        ]);
+
+        $failedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Opnieuw',
+            'email' => 'opnieuw@example.com',
+        ]);
+
+        $skippedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Skipped',
+            'email' => 'skipped@example.com',
+        ]);
+
+        $sentProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Sent',
+            'email' => 'sent@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $failedProspect->id,
+            'to_email' => 'opnieuw@example.com',
+            'subject' => 'Failed',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_FAILED,
+            'queued_at' => now(),
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $skippedProspect->id,
+            'to_email' => 'skipped@example.com',
+            'subject' => 'Skipped',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'queued_at' => now(),
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $sentProspect->id,
+            'to_email' => 'sent@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        Artisan::call('garagebook:retry-overlooked-outreach-emails', [
+            '--campaign' => (string) $campaign->id,
+        ]);
+
+        Bus::assertDispatched(SendOutreachEmailJob::class, 3);
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($unsentProspect): bool {
+            return $job->prospectId === $unsentProspect->id
+                && $job->campaignId === $unsentProspect->outreach_campaign_id
+                && $job->toEmail === 'nieuw@example.com';
+        });
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($failedProspect): bool {
+            return $job->prospectId === $failedProspect->id
+                && $job->campaignId === $failedProspect->outreach_campaign_id
+                && $job->toEmail === 'opnieuw@example.com';
+        });
+        Bus::assertDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($skippedProspect): bool {
+            return $job->prospectId === $skippedProspect->id
+                && $job->campaignId === $skippedProspect->outreach_campaign_id
+                && $job->toEmail === 'skipped@example.com';
+        });
+        Bus::assertNotDispatched(SendOutreachEmailJob::class, function (SendOutreachEmailJob $job) use ($sentProspect): bool {
+            return $job->prospectId === $sentProspect->id;
+        });
+
+        $failedProspect->refresh();
+        $skippedProspect->refresh();
+
+        $this->assertNotNull($failedProspect->emailLogs()->latest('id')->first()?->queued_at);
+        $this->assertNotNull($skippedProspect->emailLogs()->latest('id')->first()?->queued_at);
+
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('Gevonden prospects zonder sent-log: 3', $output);
+        $this->assertStringContainsString("Gequeue'd: 3", $output);
+        $this->assertStringNotContainsString('al succesvol verstuurd', $output);
+    }
+
+    public function test_retry_overlooked_outreach_emails_command_skips_invalid_and_missing_email_with_reason(): void
+    {
+        Bus::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+
+        $missingEmailProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Zonder Mail',
+            'email' => null,
+        ]);
+
+        $invalidEmailProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Ongeldig',
+            'email' => 'ongeldig@',
+        ]);
+
+        Artisan::call('garagebook:retry-overlooked-outreach-emails', [
+            '--campaign' => (string) $campaign->id,
+        ]);
+
+        Bus::assertNothingDispatched();
+
+        $this->assertDatabaseHas('outreach_email_logs', [
+            'outreach_prospect_id' => $missingEmailProspect->id,
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'error' => 'missing_email',
+        ]);
+        $this->assertDatabaseHas('outreach_email_logs', [
+            'outreach_prospect_id' => $invalidEmailProspect->id,
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'error' => 'invalid_email',
+        ]);
+
+        $output = Artisan::output();
+
+        $this->assertStringContainsString('leeg e-mailadres', $output);
+        $this->assertStringContainsString('ongeldig e-mailadres', $output);
+    }
+
+
     public function test_send_outreach_job_releases_on_resend_429_without_failed_log(): void
     {
         $campaign = OutreachCampaign::factory()->create([

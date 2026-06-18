@@ -95,57 +95,146 @@ class OutreachEmailService
         Mail::to($recipient)->send($this->makeMailForProspect($campaign, $prospect, true));
     }
 
+    public function hasSentMail(OutreachProspect $prospect): bool
+    {
+        return $prospect->emailLogs()
+            ->where('status', OutreachEmailLog::STATUS_SENT)
+            ->exists();
+    }
+
+    public function isValidEmailAddress(?string $email): bool
+    {
+        $email = trim((string) $email);
+
+        if ($email === '') {
+            return false;
+        }
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
     /**
      * @param  Collection<int, OutreachProspect>  $prospects
      * @return array{queued:int, skipped:int}
      */
     public function queueBulkSend(Collection $prospects): array
     {
-        $queued = 0;
-        $skipped = 0;
+        $result = $this->queueProspects($prospects, false);
+
+        return [
+            'queued' => $result['queued'],
+            'skipped' => $result['skipped'],
+        ];
+    }
+
+    /**
+     * @param  Collection<int, OutreachProspect>  $prospects
+     * @return array{found:int, queued:int, skipped:int, skips: array<int, array{prospect_id:int, campaign_id:int|null, company_name:string, reason:string}>}
+     */
+    public function queueOverlookedBulkSend(Collection $prospects): array
+    {
+        return $this->queueProspects($prospects, true);
+    }
+
+    public function recordSkippedMail(OutreachProspect $prospect, ?OutreachCampaign $campaign, string $reason): void
+    {
+        $this->createSkippedLog($prospect, $campaign, $reason);
+    }
+
+    public function markRetryQueued(OutreachProspect $prospect): void
+    {
+        $log = $prospect->emailLogs()
+            ->latest('id')
+            ->first();
+
+        if (! $log || $log->status === OutreachEmailLog::STATUS_SENT) {
+            return;
+        }
+
+        $log->forceFill([
+            'queued_at' => now(),
+        ])->save();
+    }
+
+    /**
+     * @param  Collection<int, OutreachProspect>  $prospects
+     * @return array{found:int, queued:int, skipped:int, skips: array<int, array{prospect_id:int, campaign_id:int|null, company_name:string, reason:string}>}
+     */
+    private function queueProspects(Collection $prospects, bool $includeSkipReasons): array
+    {
+        $result = [
+            'found' => 0,
+            'queued' => 0,
+            'skipped' => 0,
+            'skips' => [],
+        ];
 
         foreach ($prospects as $prospect) {
+            $result['found']++;
+
             $campaign = $prospect->campaign;
 
             if (! $campaign instanceof OutreachCampaign) {
                 $this->createSkippedLog($prospect, null, 'missing_campaign');
-                $skipped++;
+                $this->appendSkipReason($result, $prospect, null, 'missing_campaign', $includeSkipReasons);
                 continue;
             }
 
-            if (blank($prospect->email)) {
+            $email = trim((string) $prospect->email);
+
+            if ($email === '') {
                 $this->createSkippedLog($prospect, $campaign, 'missing_email');
-                $skipped++;
+                $this->appendSkipReason($result, $prospect, $campaign, 'missing_email', $includeSkipReasons);
                 continue;
             }
 
-            if (OutreachEmailLog::query()
-                ->where('outreach_campaign_id', $campaign->id)
-                ->where('outreach_prospect_id', $prospect->id)
-                ->where(function ($query): void {
-                    $query->where('status', OutreachEmailLog::STATUS_SENT)
-                        ->orWhereNotNull('queued_at');
-                })
-                ->exists()) {
-                $this->createSkippedLog($prospect, $campaign, 'already_sent');
-                $skipped++;
+            if (! $this->isValidEmailAddress($email)) {
+                $this->createSkippedLog($prospect, $campaign, 'invalid_email');
+                $this->appendSkipReason($result, $prospect, $campaign, 'invalid_email', $includeSkipReasons);
                 continue;
             }
+
+            if ($this->hasSentMail($prospect)) {
+                $this->createSkippedLog($prospect, $campaign, 'already_sent');
+                $this->appendSkipReason($result, $prospect, $campaign, 'already_sent', $includeSkipReasons);
+                continue;
+            }
+
+            $this->markRetryQueued($prospect);
 
             $rendered = $this->renderForProspect($campaign, $prospect);
 
             SendOutreachEmailJob::dispatch(
                 $prospect->id,
                 $campaign->id,
-                (string) $prospect->email,
+                $email,
                 $rendered['subject'],
                 $rendered['body'],
             );
 
-            $queued++;
+            $result['queued']++;
         }
 
-        return ['queued' => $queued, 'skipped' => $skipped];
+        return $result;
+    }
+
+    /**
+     * @param  array{found:int, queued:int, skipped:int, skips: array<int, array{prospect_id:int, campaign_id:int|null, company_name:string, reason:string}>}  $result
+     */
+    private function appendSkipReason(array &$result, OutreachProspect $prospect, ?OutreachCampaign $campaign, string $reason, bool $includeSkipReasons): void
+    {
+        $result['skipped']++;
+
+        if (! $includeSkipReasons) {
+            return;
+        }
+
+        $result['skips'][] = [
+            'prospect_id' => $prospect->id,
+            'campaign_id' => $campaign?->id,
+            'company_name' => (string) $prospect->company_name,
+            'reason' => $reason,
+        ];
     }
 
     private function createSkippedLog(OutreachProspect $prospect, ?OutreachCampaign $campaign, string $reason): void
