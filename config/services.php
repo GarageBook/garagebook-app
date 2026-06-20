@@ -63,6 +63,11 @@ return [
         'recipient' => env('GROWTH_REPORT_RECIPIENT', 'willemvanveelen@icloud.com'),
     ],
 
+    'outreach' => [
+        'daily_limit' => env('OUTREACH_DAILY_LIMIT', 100),
+        'warning_threshold' => env('OUTREACH_WARNING_THRESHOLD', 95),
+    ],
+
     'outreach_demo' => [
         'image_source_path' => env('OUTREACH_DEMO_IMAGE_SOURCE_PATH', '/temp/3'),
     ],

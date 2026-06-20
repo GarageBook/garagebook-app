@@ -7,6 +7,7 @@ use App\Mail\OutreachCampaignMail;
 use App\Models\OutreachCampaign;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
+use App\Support\Outreach\OutreachQuota;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -62,7 +63,7 @@ class OutreachEmailService
         $body = $this->replacePlaceholders($this->bodyForCampaign($campaign), $prospect);
 
         if ($isTest) {
-            $subject = '[TEST] ' . $subject;
+            $subject = '[TEST] '.$subject;
         }
 
         return [
@@ -162,6 +163,19 @@ class OutreachEmailService
      */
     private function queueProspects(Collection $prospects, bool $includeSkipReasons): array
     {
+        $quota = app(OutreachQuota::class);
+
+        if ($quota->hasReachedLimit()) {
+            return [
+                'found' => $prospects->count(),
+                'queued' => 0,
+                'skipped' => 0,
+                'skips' => [],
+                'blocked' => true,
+                'message' => $quota->limitReachedMessage(),
+            ];
+        }
+
         $result = [
             'found' => 0,
             'queued' => 0,
@@ -177,6 +191,7 @@ class OutreachEmailService
             if (! $campaign instanceof OutreachCampaign) {
                 $this->createSkippedLog($prospect, null, 'missing_campaign');
                 $this->appendSkipReason($result, $prospect, null, 'missing_campaign', $includeSkipReasons);
+
                 continue;
             }
 
@@ -185,18 +200,21 @@ class OutreachEmailService
             if ($email === '') {
                 $this->createSkippedLog($prospect, $campaign, 'missing_email');
                 $this->appendSkipReason($result, $prospect, $campaign, 'missing_email', $includeSkipReasons);
+
                 continue;
             }
 
             if (! $this->isValidEmailAddress($email)) {
                 $this->createSkippedLog($prospect, $campaign, 'invalid_email');
                 $this->appendSkipReason($result, $prospect, $campaign, 'invalid_email', $includeSkipReasons);
+
                 continue;
             }
 
             if ($this->hasSentMail($prospect)) {
                 $this->createSkippedLog($prospect, $campaign, 'already_sent');
                 $this->appendSkipReason($result, $prospect, $campaign, 'already_sent', $includeSkipReasons);
+
                 continue;
             }
 

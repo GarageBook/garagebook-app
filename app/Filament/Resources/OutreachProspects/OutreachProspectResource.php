@@ -167,14 +167,16 @@ class OutreachProspectResource extends Resource
                 ->with(['campaign', 'user', 'latestEmailLog'])
                 ->addSelect([
                     'latest_outreach_mail_status' => OutreachEmailLog::query()
-                        ->select('status')
+                        ->selectRaw("CASE WHEN status <> ? AND queued_at IS NOT NULL THEN 'queued' ELSE status END", [OutreachEmailLog::STATUS_SENT])
                         ->whereColumn('outreach_email_logs.outreach_prospect_id', 'outreach_prospects.id')
+                        ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
                         ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [OutreachEmailLog::STATUS_SENT])
                         ->latest('id')
                         ->limit(1),
                     'latest_outreach_sent_at' => OutreachEmailLog::query()
                         ->select('sent_at')
                         ->whereColumn('outreach_email_logs.outreach_prospect_id', 'outreach_prospects.id')
+                        ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
                         ->where('status', OutreachEmailLog::STATUS_SENT)
                         ->latest('sent_at')
                         ->limit(1),
@@ -190,13 +192,13 @@ class OutreachProspectResource extends Resource
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('website')
                     ->label('Website')
-                    ->url(fn (OutreachProspect $record) => filled($record->website) ? (str_starts_with($record->website, 'http') ? $record->website : 'https://' . $record->website) : null)
+                    ->url(fn (OutreachProspect $record) => filled($record->website) ? (str_starts_with($record->website, 'http') ? $record->website : 'https://'.$record->website) : null)
                     ->openUrlInNewTab()
                     ->searchable()
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('email')
                     ->label('E-mail')
-                    ->url(fn (OutreachProspect $record) => filled($record->email) ? 'mailto:' . $record->email : null)
+                    ->url(fn (OutreachProspect $record) => filled($record->email) ? 'mailto:'.$record->email : null)
                     ->openUrlInNewTab()
                     ->searchable()
                     ->sortable()
@@ -227,16 +229,19 @@ class OutreachProspectResource extends Resource
                 Tables\Columns\TextColumn::make('latest_outreach_mail_status')
                     ->label('Mailstatus')
                     ->badge()
+                    ->placeholder('niet verstuurd')
                     ->formatStateUsing(fn (?string $state) => match ($state) {
                         OutreachEmailLog::STATUS_SENT => 'verstuurd',
                         OutreachEmailLog::STATUS_SKIPPED => 'overgeslagen',
                         OutreachEmailLog::STATUS_FAILED => 'mislukt',
+                        'queued' => 'gequeued',
                         default => 'niet verstuurd',
                     })
                     ->color(fn (?string $state) => match ($state) {
                         OutreachEmailLog::STATUS_SENT => 'success',
                         OutreachEmailLog::STATUS_SKIPPED => 'warning',
                         OutreachEmailLog::STATUS_FAILED => 'danger',
+                        'queued' => 'warning',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('latest_outreach_sent_at')
@@ -276,13 +281,23 @@ class OutreachProspectResource extends Resource
                     ->relationship('campaign', 'name'),
                 Filter::make('not_emailed')
                     ->label('Nog niet gemaild')
-                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_SENT))),
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('emailLogs', fn (Builder $logQuery) => $logQuery
+                        ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
+                        ->where('status', OutreachEmailLog::STATUS_SENT))),
                 Filter::make('emailed')
                     ->label('Gemaild')
-                    ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_SENT))),
+                    ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery
+                        ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
+                        ->where('status', OutreachEmailLog::STATUS_SENT))),
                 Filter::make('failed_mail')
                     ->label('Mislukt')
-                    ->query(fn (Builder $query): Builder => $query->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery->where('status', OutreachEmailLog::STATUS_FAILED))),
+                    ->query(fn (Builder $query): Builder => $query
+                        ->whereDoesntHave('emailLogs', fn (Builder $logQuery) => $logQuery
+                            ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
+                            ->where('status', OutreachEmailLog::STATUS_SENT))
+                        ->whereHas('emailLogs', fn (Builder $logQuery) => $logQuery
+                            ->whereColumn('outreach_email_logs.outreach_campaign_id', 'outreach_prospects.outreach_campaign_id')
+                            ->where('status', OutreachEmailLog::STATUS_FAILED))),
                 Filter::make('missing_email')
                     ->label('Geen e-mailadres')
                     ->query(fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', ''))),
@@ -329,11 +344,23 @@ class OutreachProspectResource extends Resource
                         ]);
                     })
                     ->action(function (Collection $records, OutreachEmailService $service): void {
+                        $quota = app(OutreachQuota::class);
+
+                        if ($quota->hasReachedLimit()) {
+                            Notification::make()
+                                ->title('Outreach-daglimiet bereikt')
+                                ->body($quota->limitReachedMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
                         $result = $service->queueBulkSend($records->load('campaign'));
 
                         Notification::make()
                             ->title('Outreach-mailverzending gestart')
-                            ->body('Gequeued: ' . $result['queued'] . '. Overgeslagen: ' . $result['skipped'] . '.')
+                            ->body('Gequeued: '.$result['queued'].'. Overgeslagen: '.$result['skipped'].'.')
                             ->success()
                             ->send();
                     }),
@@ -362,7 +389,7 @@ class OutreachProspectResource extends Resource
                             }
 
                             fclose($handle);
-                        }, 'outreach-prospects-selected-' . now()->format('Y-m-d') . '.csv', [
+                        }, 'outreach-prospects-selected-'.now()->format('Y-m-d').'.csv', [
                             'Content-Type' => 'text/csv; charset=UTF-8',
                         ]);
                     }),

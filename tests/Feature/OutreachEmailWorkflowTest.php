@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\OutreachCampaigns\Pages\EditOutreachCampaign;
+use App\Filament\Resources\OutreachCampaigns\Pages\ListOutreachCampaigns;
+use App\Filament\Resources\OutreachProspects\OutreachProspectResource;
 use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
 use App\Jobs\SendOutreachEmailJob;
 use App\Mail\OutreachCampaignMail;
@@ -16,6 +18,7 @@ use Illuminate\Mail\Mailables\Address;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
@@ -37,7 +40,7 @@ class OutreachEmailWorkflowTest extends TestCase
                 'slug' => $campaign->slug,
                 'description' => $campaign->description,
                 'email_subject' => 'Speciaal voor {{company_name}}',
-                'email_body' => 'Hallo {{contact_name}},' . PHP_EOL . '{{demo_url}}',
+                'email_body' => 'Hallo {{contact_name}},'.PHP_EOL.'{{demo_url}}',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -55,7 +58,7 @@ class OutreachEmailWorkflowTest extends TestCase
         $admin = User::factory()->admin()->create();
         $campaign = OutreachCampaign::factory()->create([
             'email_subject' => 'Demo voor {{company_name}}',
-            'email_body' => 'Beste {{contact_name}},' . PHP_EOL . '{{demo_url}}',
+            'email_body' => 'Beste {{contact_name}},'.PHP_EOL.'{{demo_url}}',
         ]);
         $prospect = OutreachProspect::factory()->create([
             'outreach_campaign_id' => $campaign->id,
@@ -88,7 +91,7 @@ class OutreachEmailWorkflowTest extends TestCase
         $replyTo = collect($realMail->envelope()->replyTo ?? [])->first();
 
         $this->assertSame($realMail->bodyText, $testMail->bodyText);
-        $this->assertSame('[TEST] ' . $realMail->subjectLine, $testMail->subjectLine);
+        $this->assertSame('[TEST] '.$realMail->subjectLine, $testMail->subjectLine);
         $this->assertInstanceOf(Address::class, $replyTo);
         $this->assertSame('social@garagebook.nl', $replyTo->address);
         $this->assertSame('GarageBook Social', $replyTo->name);
@@ -98,7 +101,7 @@ class OutreachEmailWorkflowTest extends TestCase
     {
         $campaign = OutreachCampaign::factory()->create([
             'email_subject' => 'Demo voor {{company_name}}',
-            'email_body' => 'Beste {{contact_name}},' . PHP_EOL . '{{demo_url}}',
+            'email_body' => 'Beste {{contact_name}},'.PHP_EOL.'{{demo_url}}',
         ]);
         $prospect = OutreachProspect::factory()->create([
             'outreach_campaign_id' => $campaign->id,
@@ -113,7 +116,7 @@ class OutreachEmailWorkflowTest extends TestCase
         $realMail = $service->makeMailForProspect($campaign, $prospect, false);
 
         $this->assertSame($realMail->bodyText, $testMail->bodyText);
-        $this->assertSame('[TEST] ' . $realMail->subjectLine, $testMail->subjectLine);
+        $this->assertSame('[TEST] '.$realMail->subjectLine, $testMail->subjectLine);
         $this->assertSame('willemvanveelen@icloud.com', OutreachEmailService::TEST_RECIPIENT);
         $this->assertNotSame($prospect->email, OutreachEmailService::TEST_RECIPIENT);
     }
@@ -124,7 +127,7 @@ class OutreachEmailWorkflowTest extends TestCase
 
         $campaign = OutreachCampaign::factory()->create([
             'email_subject' => 'Demo voor {{company_name}}',
-            'email_body' => 'Beste {{company_name}},' . PHP_EOL . '{{demo_url}}',
+            'email_body' => 'Beste {{company_name}},'.PHP_EOL.'{{demo_url}}',
         ]);
         $selectedA = OutreachProspect::factory()->create([
             'outreach_campaign_id' => $campaign->id,
@@ -206,8 +209,8 @@ class OutreachEmailWorkflowTest extends TestCase
             ->test(ListOutreachProspects::class)
             ->assertSee('info@motoemail.nl');
 
-        $this->assertTrue(method_exists(\App\Filament\Resources\OutreachProspects\OutreachProspectResource::class, 'table'));
-        $this->assertSame('mailto:info@motoemail.nl', 'mailto:' . $prospect->email);
+        $this->assertTrue(method_exists(OutreachProspectResource::class, 'table'));
+        $this->assertSame('mailto:info@motoemail.nl', 'mailto:'.$prospect->email);
     }
 
     public function test_outreach_prospects_list_shows_sent_when_sent_log_has_later_already_sent_skip(): void
@@ -246,6 +249,70 @@ class OutreachEmailWorkflowTest extends TestCase
             ->assertSee('Moto Sent Later Skip')
             ->assertSee('verstuurd')
             ->assertDontSee('overgeslagen');
+    }
+
+    public function test_outreach_prospects_list_shows_sent_when_failed_log_is_followed_by_sent_log(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Failed Then Sent',
+            'email' => 'failed-then-sent@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'failed-then-sent@example.com',
+            'subject' => 'Failed',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_FAILED,
+            'error' => 'Temporary failure',
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ]);
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'failed-then-sent@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListOutreachProspects::class)
+            ->assertSee('Moto Failed Then Sent')
+            ->assertSee('verstuurd')
+            ->assertDontSee('mislukt');
+    }
+
+    public function test_outreach_prospects_list_ignores_sent_log_from_other_campaign(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $campaign = OutreachCampaign::factory()->create();
+        $otherCampaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'company_name' => 'Moto Other Campaign Sent',
+            'email' => 'other-campaign-sent@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $otherCampaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'other-campaign-sent@example.com',
+            'subject' => 'Other campaign sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+        Livewire::actingAs($admin)
+            ->test(ListOutreachProspects::class)
+            ->assertSee('Moto Other Campaign Sent')
+            ->assertSee('niet verstuurd');
     }
 
     public function test_outreach_prospects_list_keeps_skipped_when_no_sent_log_exists(): void
@@ -629,7 +696,7 @@ class OutreachEmailWorkflowTest extends TestCase
 
     public function test_outreach_job_rate_limiter_releases_fifth_job_without_running_handler(): void
     {
-        RateLimiter::clear(md5('outreach-email' . 'resend-outreach-email'));
+        RateLimiter::clear(md5('outreach-email'.'resend-outreach-email'));
 
         $middleware = (new RateLimited('outreach-email'))->releaseAfter(1);
         $job = new class
@@ -698,6 +765,102 @@ class OutreachEmailWorkflowTest extends TestCase
             'outreach_prospect_id' => $prospect->id,
             'status' => OutreachEmailLog::STATUS_FAILED,
         ]);
+    }
+
+    public function test_outreach_campaign_page_warns_when_daily_quota_reaches_threshold(): void
+    {
+        Config::set('services.outreach.daily_limit', 100);
+        Config::set('services.outreach.warning_threshold', 95);
+
+        $admin = User::factory()->admin()->create();
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+        ]);
+
+        for ($i = 0; $i < 95; $i++) {
+            OutreachEmailLog::query()->create([
+                'outreach_campaign_id' => $campaign->id,
+                'outreach_prospect_id' => $prospect->id,
+                'to_email' => 'quota-warning@example.com',
+                'subject' => 'Sent',
+                'body_snapshot' => 'Body',
+                'status' => OutreachEmailLog::STATUS_SENT,
+                'sent_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        Livewire::actingAs($admin)
+            ->test(ListOutreachCampaigns::class)
+            ->assertSee('Vandaag zijn 95 van de 100 toegestane outreach-mails verzonden. Na 100 mails stopt GarageBook automatisch met queueën tot morgen.');
+    }
+
+    public function test_bulk_send_is_blocked_when_daily_outreach_quota_is_reached(): void
+    {
+        Config::set('services.outreach.daily_limit', 1);
+        Config::set('services.outreach.warning_threshold', 1);
+        Bus::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+        $sentProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+        ]);
+        $queuedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'email' => 'blocked@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $sentProspect->id,
+            'to_email' => 'sent@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(OutreachEmailService::class)->queueBulkSend(collect([$queuedProspect->load('campaign')]));
+
+        $this->assertSame(['queued' => 0, 'skipped' => 0], $result);
+        Bus::assertNotDispatched(SendOutreachEmailJob::class);
+    }
+
+    public function test_bulk_send_still_queues_when_daily_outreach_quota_is_below_limit(): void
+    {
+        Config::set('services.outreach.daily_limit', 2);
+        Config::set('services.outreach.warning_threshold', 1);
+        Bus::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+        $sentProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+        ]);
+        $queuedProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'email' => 'below-limit@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $sentProspect->id,
+            'to_email' => 'sent@example.com',
+            'subject' => 'Sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(OutreachEmailService::class)->queueBulkSend(collect([$queuedProspect->load('campaign')]));
+
+        $this->assertSame(['queued' => 1, 'skipped' => 0], $result);
+        Bus::assertDispatched(SendOutreachEmailJob::class, 1);
     }
 
     public function test_admin_can_open_outreach_prospects_page_with_bulk_send_action(): void
