@@ -7,15 +7,17 @@ use App\Filament\Resources\OutreachProspects\Pages\ListOutreachProspects;
 use App\Jobs\SendOutreachEmailJob;
 use App\Mail\OutreachCampaignMail;
 use App\Models\OutreachCampaign;
-use Illuminate\Mail\Mailables\Address;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Services\Outreach\OutreachEmailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Mailables\Address;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -525,6 +527,131 @@ class OutreachEmailWorkflowTest extends TestCase
         $this->assertStringContainsString('ongeldig e-mailadres', $output);
     }
 
+    public function test_send_outreach_job_logs_failure_with_safe_subject_and_body_snapshot(): void
+    {
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'email' => 'fail-safe@example.com',
+        ]);
+
+        $originalMailManager = Mail::getFacadeRoot();
+        Mail::swap(new class
+        {
+            public function to(string $email): object
+            {
+                return new class
+                {
+                    public function send(object $mailable): void
+                    {
+                        throw new \RuntimeException('Resend rejected message');
+                    }
+                };
+            }
+        });
+
+        try {
+            $job = new SendOutreachEmailJob(
+                $prospect->id,
+                $campaign->id,
+                'fail-safe@example.com',
+                null,
+                null,
+            );
+
+            try {
+                $job->handle();
+                $this->fail('Expected outreach send failure.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame('Resend rejected message', $exception->getMessage());
+            }
+        } finally {
+            Mail::swap($originalMailManager);
+        }
+
+        $this->assertDatabaseHas('outreach_email_logs', [
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'fail-safe@example.com',
+            'subject' => 'Outreach mail failed',
+            'body_snapshot' => '',
+            'status' => OutreachEmailLog::STATUS_FAILED,
+            'error' => 'Resend rejected message',
+        ]);
+    }
+
+    public function test_send_outreach_job_skips_when_sent_log_already_exists(): void
+    {
+        Mail::fake();
+
+        $campaign = OutreachCampaign::factory()->create();
+        $prospect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'email' => 'already-job@example.com',
+        ]);
+
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'already-job@example.com',
+            'subject' => 'Already sent',
+            'body_snapshot' => 'Body',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $job = new SendOutreachEmailJob(
+            $prospect->id,
+            $campaign->id,
+            'already-job@example.com',
+            'New subject',
+            'New body',
+        );
+
+        $job->handle();
+
+        Mail::assertNothingSent();
+        $this->assertSame(1, OutreachEmailLog::query()
+            ->where('outreach_campaign_id', $campaign->id)
+            ->where('outreach_prospect_id', $prospect->id)
+            ->where('status', OutreachEmailLog::STATUS_SENT)
+            ->count());
+        $this->assertDatabaseHas('outreach_email_logs', [
+            'outreach_campaign_id' => $campaign->id,
+            'outreach_prospect_id' => $prospect->id,
+            'to_email' => 'already-job@example.com',
+            'subject' => 'New subject',
+            'body_snapshot' => 'New body',
+            'status' => OutreachEmailLog::STATUS_SKIPPED,
+            'error' => 'already_sent',
+        ]);
+    }
+
+    public function test_outreach_job_rate_limiter_releases_fifth_job_without_running_handler(): void
+    {
+        RateLimiter::clear(md5('outreach-email' . 'resend-outreach-email'));
+
+        $middleware = (new RateLimited('outreach-email'))->releaseAfter(1);
+        $job = new class
+        {
+            public array $released = [];
+
+            public function release(int $delay): void
+            {
+                $this->released[] = $delay;
+            }
+        };
+        $handled = 0;
+
+        for ($i = 0; $i < 5; $i++) {
+            $middleware->handle($job, function () use (&$handled): void {
+                $handled++;
+            });
+        }
+
+        $this->assertSame(4, $handled);
+        $this->assertSame([1], $job->released);
+    }
 
     public function test_send_outreach_job_releases_on_resend_429_without_failed_log(): void
     {

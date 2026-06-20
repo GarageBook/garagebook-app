@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Services\LocaleService;
 use App\Filament\Auth\Http\Responses\RegistrationResponse as CustomRegistrationResponse;
 use App\Listeners\QueueMailerLiteSubscription;
 use App\Listeners\TrackSuccessfulLogin;
@@ -14,14 +13,15 @@ use App\Policies\MaintenanceLogPolicy;
 use App\Policies\TripLogPolicy;
 use App\Policies\VehicleDocumentPolicy;
 use App\Policies\VehiclePolicy;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Support\Facades\RateLimiter;
+use App\Services\LocaleService;
 use Carbon\Carbon;
 use Filament\Auth\Events\Registered;
 use Filament\Auth\Http\Responses\Contracts\RegistrationResponse as RegistrationResponseContract;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -49,7 +49,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(TripLog::class, TripLogPolicy::class);
         Gate::policy(VehicleDocument::class, VehicleDocumentPolicy::class);
 
-        RateLimiter::for('outreach-email', fn () => Limit::perSecond(1)->by('outreach-email'));
+        RateLimiter::for('outreach-email', fn () => Limit::perSecond(4)->by('resend-outreach-email'));
 
         Event::listen(Login::class, TrackSuccessfulLogin::class);
         Event::listen(Registered::class, QueueMailerLiteSubscription::class);

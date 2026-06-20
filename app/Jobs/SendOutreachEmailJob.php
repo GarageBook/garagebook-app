@@ -7,12 +7,12 @@ use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
-use Illuminate\Queue\Middleware\RateLimited;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -26,8 +26,8 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
         public int $prospectId,
         public int $campaignId,
         public string $toEmail,
-        public string $subjectLine,
-        public string $bodySnapshot,
+        public ?string $subjectLine,
+        public ?string $bodySnapshot,
     ) {}
 
     public function middleware(): array
@@ -76,6 +76,32 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
         };
     }
 
+    private function safeSubject(): string
+    {
+        $subject = trim((string) $this->subjectLine);
+
+        return $subject !== '' ? $subject : 'Outreach mail failed';
+    }
+
+    private function safeBodySnapshot(): string
+    {
+        return (string) $this->bodySnapshot;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function createEmailLog(array $attributes): void
+    {
+        OutreachEmailLog::query()->create(array_merge([
+            'outreach_campaign_id' => $this->campaignId,
+            'outreach_prospect_id' => $this->prospectId,
+            'to_email' => $this->toEmail,
+            'subject' => $this->safeSubject(),
+            'body_snapshot' => $this->safeBodySnapshot(),
+        ], $attributes));
+    }
+
     public function handle(): void
     {
         $prospect = OutreachProspect::query()
@@ -92,12 +118,7 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
             ->where('outreach_prospect_id', $this->prospectId)
             ->where('status', OutreachEmailLog::STATUS_SENT)
             ->exists()) {
-            OutreachEmailLog::query()->create([
-                'outreach_campaign_id' => $this->campaignId,
-                'outreach_prospect_id' => $this->prospectId,
-                'to_email' => $this->toEmail,
-                'subject' => $this->subjectLine,
-                'body_snapshot' => $this->bodySnapshot,
+            $this->createEmailLog([
                 'status' => OutreachEmailLog::STATUS_SKIPPED,
                 'error' => 'already_sent',
             ]);
@@ -106,14 +127,9 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
         }
 
         try {
-            Mail::to($this->toEmail)->send(new OutreachCampaignMail($this->subjectLine, $this->bodySnapshot));
+            Mail::to($this->toEmail)->send(new OutreachCampaignMail($this->safeSubject(), $this->safeBodySnapshot()));
 
-            OutreachEmailLog::query()->create([
-                'outreach_campaign_id' => $this->campaignId,
-                'outreach_prospect_id' => $this->prospectId,
-                'to_email' => $this->toEmail,
-                'subject' => $this->subjectLine,
-                'body_snapshot' => $this->bodySnapshot,
+            $this->createEmailLog([
                 'status' => OutreachEmailLog::STATUS_SENT,
                 'sent_at' => now(),
                 'error' => null,
@@ -132,12 +148,7 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
                 ]);
 
                 if ($this->attempts() >= $this->tries) {
-                    OutreachEmailLog::query()->create([
-                        'outreach_campaign_id' => $this->campaignId,
-                        'outreach_prospect_id' => $this->prospectId,
-                        'to_email' => $this->toEmail,
-                        'subject' => $this->subjectLine,
-                        'body_snapshot' => $this->bodySnapshot,
+                    $this->createEmailLog([
                         'status' => OutreachEmailLog::STATUS_FAILED,
                         'error' => $exception->getMessage(),
                     ]);
@@ -150,12 +161,7 @@ class SendOutreachEmailJob implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            OutreachEmailLog::query()->create([
-                'outreach_campaign_id' => $this->campaignId,
-                'outreach_prospect_id' => $this->prospectId,
-                'to_email' => $this->toEmail,
-                'subject' => $this->subjectLine,
-                'body_snapshot' => $this->bodySnapshot,
+            $this->createEmailLog([
                 'status' => OutreachEmailLog::STATUS_FAILED,
                 'error' => $exception->getMessage(),
             ]);
