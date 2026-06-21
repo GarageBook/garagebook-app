@@ -16,6 +16,7 @@ class SyncOutreachMasterCommand extends Command
         {csv_path : Pad naar het master CSV-bestand}
         {--dry-run : Analyseer en schrijf alleen rapportbestanden}
         {--campaign= : Verplichte campaign slug}
+        {--archive-missing : Archiveer bestaande prospects binnen de gekozen campaign die niet meer in de CSV staan}
         {--force : Voer writes uit zonder interactieve bevestiging}';
 
     protected $description = 'Synchroniseer outreach prospects veilig tegen een CSV-masterlijst zonder outreach-historie te verwijderen.';
@@ -39,6 +40,7 @@ class SyncOutreachMasterCommand extends Command
     public function handle(): int
     {
         $dryRun = (bool) $this->option('dry-run');
+        $archiveMissing = (bool) $this->option('archive-missing');
         $campaignSlug = trim((string) $this->option('campaign'));
 
         if ($campaignSlug === '') {
@@ -67,7 +69,7 @@ class SyncOutreachMasterCommand extends Command
         $plan = $this->buildPlan($rows, $campaign);
 
         $this->writeReports($plan['reports']);
-        $this->renderSummary($plan, $dryRun);
+        $this->renderSummary($plan, $dryRun, $archiveMissing);
 
         if ($plan['summary']['valid_with_email'] < self::MIN_VALID_ROWS) {
             $this->error('Stop: CSV bevat minder dan '.self::MIN_VALID_ROWS.' geldige regels met email. Dit voorkomt sync op een verkeerd of onvolledig bestand.');
@@ -81,13 +83,17 @@ class SyncOutreachMasterCommand extends Command
             return self::SUCCESS;
         }
 
-        if (! (bool) $this->option('force') && ! $this->confirm('Deze sync gaat prospects aanmaken, updaten en campaign-scoped archiveren. Doorgaan?')) {
+        $confirmation = $archiveMissing
+            ? 'Deze sync gaat prospects aanmaken, updaten en ontbrekende prospects binnen de campaign archiveren. Doorgaan?'
+            : 'Deze sync gaat prospects aanmaken en updaten. Ontbrekende prospects worden alleen gerapporteerd, niet gearchiveerd. Doorgaan?';
+
+        if (! (bool) $this->option('force') && ! $this->confirm($confirmation)) {
             $this->warn('Afgebroken: er zijn geen databasewijzigingen opgeslagen.');
 
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($plan): void {
+        DB::transaction(function () use ($plan, $archiveMissing): void {
             foreach (array_chunk($plan['updates'], 250) as $chunk) {
                 foreach ($chunk as $item) {
                     /** @var OutreachProspect $prospect */
@@ -102,12 +108,14 @@ class SyncOutreachMasterCommand extends Command
                 }
             }
 
-            foreach (array_chunk($plan['archives'], 250) as $chunk) {
-                foreach ($chunk as $item) {
-                    OutreachProspect::query()
-                        ->whereKey($item['prospect_id'])
-                        ->whereNull('archived_at')
-                        ->update(['archived_at' => now()]);
+            if ($archiveMissing) {
+                foreach (array_chunk($plan['archives'], 250) as $chunk) {
+                    foreach ($chunk as $item) {
+                        OutreachProspect::query()
+                            ->whereKey($item['prospect_id'])
+                            ->whereNull('archived_at')
+                            ->update(['archived_at' => now()]);
+                    }
                 }
             }
         });
@@ -540,7 +548,7 @@ class SyncOutreachMasterCommand extends Command
     /**
      * @param  array<string, mixed>  $plan
      */
-    private function renderSummary(array $plan, bool $dryRun): void
+    private function renderSummary(array $plan, bool $dryRun, bool $archiveMissing): void
     {
         $summary = $plan['summary'];
 
@@ -553,7 +561,7 @@ class SyncOutreachMasterCommand extends Command
         $this->line('Matched by company: '.$summary['matched_by_company']);
         $this->line('Review conflicts: '.$summary['review_conflicts']);
         $this->line('Nieuw aan te maken: '.$summary['to_create']);
-        $this->line('Te archiveren binnen campaign: '.$summary['to_archive']);
+        $this->line(($archiveMissing ? 'Te archiveren binnen campaign: ' : 'Ontbrekend binnen campaign, alleen rapportage: ').$summary['to_archive']);
         $this->line('Updates: '.$summary['updates']);
         $this->line('Untouched: '.$summary['untouched']);
         $this->line('Errors: '.$summary['errors']);

@@ -134,7 +134,7 @@ class OutreachMasterSyncCommandTest extends TestCase
         $this->assertStringContainsString('Website matcht, maar email wijkt af', File::get(storage_path('app/outreach-sync-reports/sync_to_review.csv')));
     }
 
-    public function test_live_prospect_not_in_csv_is_archived_on_real_run_within_campaign_only(): void
+    public function test_default_sync_does_not_archive_live_prospect_not_in_csv(): void
     {
         $targetCampaign = OutreachCampaign::factory()->create(['slug' => 'target-campaign']);
         $otherCampaign = OutreachCampaign::factory()->create(['slug' => 'other-campaign']);
@@ -152,6 +152,33 @@ class OutreachMasterSyncCommandTest extends TestCase
         $this->artisan('garagebook:sync-outreach-master', [
             'csv_path' => $path,
             '--campaign' => $targetCampaign->slug,
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $this->assertNull($targetProspect->fresh()->archived_at);
+        $this->assertNull($otherProspect->fresh()->archived_at);
+        $this->assertStringContainsString('Actieve prospect in gekozen campaign staat niet meer in CSV', File::get(storage_path('app/outreach-sync-reports/sync_to_archive.csv')));
+    }
+
+    public function test_sync_with_archive_missing_archives_campaign_scoped_missing_prospects(): void
+    {
+        $targetCampaign = OutreachCampaign::factory()->create(['slug' => 'target-campaign']);
+        $otherCampaign = OutreachCampaign::factory()->create(['slug' => 'other-campaign']);
+        $targetProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $targetCampaign->id,
+            'email' => 'old-target@example.nl',
+        ]);
+        $otherProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $otherCampaign->id,
+            'email' => 'old-other@example.nl',
+        ]);
+
+        $path = $this->writeMasterCsv('master-archive-opt-in.csv', $this->fillerRows(50, 'archive-opt-in'));
+
+        $this->artisan('garagebook:sync-outreach-master', [
+            'csv_path' => $path,
+            '--campaign' => $targetCampaign->slug,
+            '--archive-missing' => true,
             '--force' => true,
         ])->assertSuccessful();
 
