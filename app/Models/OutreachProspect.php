@@ -22,7 +22,14 @@ class OutreachProspect extends Model
         'contact_name',
         'email',
         'website',
+        'phone',
         'city',
+        'province',
+        'postal_code',
+        'country',
+        'source',
+        'import_note',
+        'archived_at',
         'token',
         'user_id',
         'clicked_at',
@@ -40,6 +47,7 @@ class OutreachProspect extends Model
         'last_login_at' => 'datetime',
         'demo_intro_shown_at' => 'datetime',
         'demo_intro_dismissed_at' => 'datetime',
+        'archived_at' => 'datetime',
         'login_count' => 'integer',
     ];
 
@@ -79,7 +87,7 @@ class OutreachProspect extends Model
 
     public function demoUrl(): string
     {
-        return self::DEMO_APP_URL . route('outreach.demo.login', ['token' => $this->token], false);
+        return self::DEMO_APP_URL.route('outreach.demo.login', ['token' => $this->token], false);
     }
 
     public static function generateUniqueToken(): string
