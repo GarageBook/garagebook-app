@@ -9,6 +9,7 @@ use App\Filament\Resources\OutreachProspects\Pages\ViewOutreachProspect;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use App\Services\Outreach\OutreachEmailService;
+use App\Support\Outreach\OutreachQuota;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
