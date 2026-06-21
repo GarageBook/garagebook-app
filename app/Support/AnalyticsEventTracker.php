@@ -2,9 +2,9 @@
 
 namespace App\Support;
 
-use App\Models\TripLog;
 use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
+use App\Models\TripLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
@@ -24,10 +24,11 @@ class AnalyticsEventTracker
             'utm_source' => Arr::get($attribution, 'utm_source'),
             'utm_medium' => Arr::get($attribution, 'utm_medium'),
             'utm_campaign' => Arr::get($attribution, 'utm_campaign'),
+            ...$this->outreachDemoParams($attribution),
         ]);
     }
 
-    public function queueSignUp(string $method = 'email', ?string $registrationSource = null): void
+    public function queueSignUp(string $method = 'email', ?string $registrationSource = null, ?array $attribution = null): void
     {
         $params = [
             'method' => $method,
@@ -37,7 +38,19 @@ class AnalyticsEventTracker
             $params['registration_source'] = $registrationSource;
         }
 
-        $this->queue('registration_completed', $params);
+        $this->queue('registration_completed', [
+            ...$params,
+            ...$this->outreachDemoParams($attribution),
+        ]);
+    }
+
+    public function queueOutreachDemoVehicleCreateBlocked(int $demoUserId, ?int $outreachProspectId = null): void
+    {
+        $this->queue('outreach_demo_vehicle_create_blocked', array_filter([
+            'demo_user_id' => $demoUserId,
+            'outreach_prospect_id' => $outreachProspectId,
+            'intended' => 'vehicle_create',
+        ], fn (mixed $value): bool => $value !== null));
     }
 
     public function queueLogin(string $method = 'email'): void
@@ -136,7 +149,6 @@ class AnalyticsEventTracker
         ]);
     }
 
-
     public function queueLifecycleEmailSent(?User $user, string $emailKey): void
     {
         $params = [
@@ -210,6 +222,20 @@ class AnalyticsEventTracker
     protected function sanitizeParams(array $params): array
     {
         return Analytics::sanitizeParams($params);
+    }
+
+    protected function outreachDemoParams(?array $attribution): array
+    {
+        if (! is_array($attribution)) {
+            return [];
+        }
+
+        return array_filter([
+            'source' => Arr::get($attribution, 'source'),
+            'demo_user_id' => is_numeric(Arr::get($attribution, 'demo_user_id')) ? (int) Arr::get($attribution, 'demo_user_id') : null,
+            'outreach_prospect_id' => is_numeric(Arr::get($attribution, 'outreach_prospect_id')) ? (int) Arr::get($attribution, 'outreach_prospect_id') : null,
+            'intended' => Arr::get($attribution, 'intended'),
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
     protected function context(string $appSection = '', array $extra = []): array

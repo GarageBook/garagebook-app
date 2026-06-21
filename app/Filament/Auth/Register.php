@@ -27,6 +27,22 @@ class Register extends BaseRegister
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeRegister(array $data): array
+    {
+        $data = parent::mutateFormDataBeforeRegister($data);
+        $attribution = app(AnalyticsAttribution::class)->current();
+
+        if (($attribution['source'] ?? null) === 'outreach_demo') {
+            $data['registration_source'] = 'outreach_demo';
+        }
+
+        return $data;
+    }
+
     public function register(): ?RegistrationResponse
     {
         try {
@@ -67,11 +83,15 @@ class Register extends BaseRegister
 
         Filament::auth()->login($user, true);
         session()->regenerate();
-        RateLimiter::clear('filament-register:' . sha1((string) $user->email));
+        RateLimiter::clear('filament-register:'.sha1((string) $user->email));
 
-        app(AnalyticsAttribution::class)->pullForUser($user);
+        $attribution = app(AnalyticsAttribution::class)->pullForUser($user);
 
-        app(AnalyticsEventTracker::class)->queueSignUp(method: 'email', registrationSource: $user->registration_source);
+        app(AnalyticsEventTracker::class)->queueSignUp(
+            method: 'email',
+            registrationSource: $user->registration_source,
+            attribution: $attribution?->only(['source', 'demo_user_id', 'outreach_prospect_id', 'intended']),
+        );
 
         return app(RegistrationResponse::class);
     }

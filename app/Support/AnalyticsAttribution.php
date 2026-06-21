@@ -62,6 +62,10 @@ class AnalyticsAttribution
         }
 
         $payload = $this->sanitizePayload([
+            'source' => $request->query('source'),
+            'demo_user_id' => $request->query('demo_user_id'),
+            'outreach_prospect_id' => $request->query('outreach_prospect_id'),
+            'intended' => $request->query('intended'),
             'utm_source' => $request->query('utm_source'),
             'utm_medium' => $request->query('utm_medium'),
             'utm_campaign' => $request->query('utm_campaign'),
@@ -79,6 +83,10 @@ class AnalyticsAttribution
             'utm_content',
             'utm_term',
             'gclid',
+            'source',
+            'demo_user_id',
+            'outreach_prospect_id',
+            'intended',
         ])->contains(fn (string $key): bool => filled($payload[$key] ?? null));
 
         if (! $hasUtm && blank($payload['referrer'] ?? null)) {

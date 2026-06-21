@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Auth\Register;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
@@ -49,6 +50,51 @@ class AnalyticsAndOnboardingTest extends TestCase
                 'utm_medium' => 'email',
                 'landing_page' => '/',
             ]);
+    }
+
+    public function test_outreach_demo_registration_query_parameters_are_captured_and_persisted(): void
+    {
+        session()->start();
+
+        $this->get('/admin/register?source=outreach_demo&demo_user_id=123&outreach_prospect_id=456&intended=vehicle_create')
+            ->assertOk()
+            ->assertSessionHas(AnalyticsAttribution::SESSION_KEY, [
+                'source' => 'outreach_demo',
+                'demo_user_id' => '123',
+                'outreach_prospect_id' => '456',
+                'intended' => 'vehicle_create',
+                'landing_page' => '/admin/register',
+            ]);
+
+        Livewire::test(Register::class)
+            ->fillForm([
+                'name' => 'Outreach Signup',
+                'email' => 'outreach-signup@example.com',
+                'password' => 'password',
+                'passwordConfirmation' => 'password',
+            ])
+            ->call('register');
+
+        $user = User::query()->where('email', 'outreach-signup@example.com')->firstOrFail();
+
+        $this->assertSame('outreach_demo', $user->registration_source);
+        $this->assertDatabaseHas('user_attributions', [
+            'user_id' => $user->id,
+            'source' => 'outreach_demo',
+            'demo_user_id' => 123,
+            'outreach_prospect_id' => 456,
+            'intended' => 'vehicle_create',
+            'landing_page' => '/admin/register',
+        ]);
+
+        $events = session(AnalyticsEventTracker::SESSION_KEY, []);
+        $registrationCompleted = collect($events)->firstWhere('name', 'registration_completed');
+
+        $this->assertSame('outreach_demo', $registrationCompleted['params']['registration_source'] ?? null);
+        $this->assertSame('outreach_demo', $registrationCompleted['params']['source'] ?? null);
+        $this->assertSame(123, $registrationCompleted['params']['demo_user_id'] ?? null);
+        $this->assertSame(456, $registrationCompleted['params']['outreach_prospect_id'] ?? null);
+        $this->assertSame('vehicle_create', $registrationCompleted['params']['intended'] ?? null);
     }
 
     public function test_ga4_tracking_is_rendered_in_production_when_configured(): void

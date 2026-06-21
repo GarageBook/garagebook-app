@@ -9,6 +9,10 @@ class UserAttribution extends Model
 {
     protected $fillable = [
         'user_id',
+        'source',
+        'demo_user_id',
+        'outreach_prospect_id',
+        'intended',
         'utm_source',
         'utm_medium',
         'utm_campaign',
