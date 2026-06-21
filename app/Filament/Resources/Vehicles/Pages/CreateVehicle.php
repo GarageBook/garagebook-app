@@ -75,10 +75,10 @@ class CreateVehicle extends CreateRecord
 
     public function getOutreachDemoRegisterUrl(): string
     {
-        return route('filament.admin.auth.register', [
+        return url('/register?'.http_build_query([
             'source' => 'outreach_demo',
             ...$this->getOutreachDemoAnalyticsParams(),
-        ]);
+        ]));
     }
 
     public function getTitle(): string

@@ -1,9 +1,10 @@
 <?php
 
+use App\Filament\Auth\Register;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
+use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\OutreachDemoIntroDismissController;
 use App\Http\Controllers\OutreachDemoLoginController;
-use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
@@ -27,6 +28,8 @@ Route::get('/', function () {
 });
 
 Route::get('/start', StartRedirectController::class);
+
+Route::get('/register', Register::class)->name('register');
 
 Route::get('/demo/garage/{token}', OutreachDemoLoginController::class)
     ->name('outreach.demo.login');

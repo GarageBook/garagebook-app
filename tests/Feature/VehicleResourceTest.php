@@ -63,6 +63,8 @@ class VehicleResourceTest extends TestCase
             ->assertSeeText('Je kijkt nu rond in een demo-account.')
             ->assertSeeText('Gratis account aanmaken')
             ->assertSeeText('Terug naar demo')
+            ->assertSee('href="'.url('/register?'), false)
+            ->assertDontSee('href="'.url('/admin/register'), false)
             ->assertSee('source=outreach_demo', false)
             ->assertSee('demo_user_id='.$user->id, false)
             ->assertSee('outreach_prospect_id='.$prospect->id, false)
@@ -97,6 +99,8 @@ class VehicleResourceTest extends TestCase
         $this->actingAs($user)
             ->get(VehicleResource::getUrl('create'))
             ->assertOk()
+            ->assertSee('href="'.url('/register?'), false)
+            ->assertDontSee('href="'.url('/admin/register'), false)
             ->assertSee('source=outreach_demo', false)
             ->assertSee('demo_user_id='.$user->id, false)
             ->assertSee('intended=vehicle_create', false);

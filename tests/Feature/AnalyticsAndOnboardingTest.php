@@ -56,14 +56,14 @@ class AnalyticsAndOnboardingTest extends TestCase
     {
         session()->start();
 
-        $this->get('/admin/register?source=outreach_demo&demo_user_id=123&outreach_prospect_id=456&intended=vehicle_create')
+        $this->get('/register?source=outreach_demo&demo_user_id=123&outreach_prospect_id=456&intended=vehicle_create')
             ->assertOk()
             ->assertSessionHas(AnalyticsAttribution::SESSION_KEY, [
                 'source' => 'outreach_demo',
                 'demo_user_id' => '123',
                 'outreach_prospect_id' => '456',
                 'intended' => 'vehicle_create',
-                'landing_page' => '/admin/register',
+                'landing_page' => '/register',
             ]);
 
         Livewire::test(Register::class)
@@ -84,7 +84,7 @@ class AnalyticsAndOnboardingTest extends TestCase
             'demo_user_id' => 123,
             'outreach_prospect_id' => 456,
             'intended' => 'vehicle_create',
-            'landing_page' => '/admin/register',
+            'landing_page' => '/register',
         ]);
 
         $events = session(AnalyticsEventTracker::SESSION_KEY, []);

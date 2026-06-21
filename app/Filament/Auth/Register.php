@@ -10,12 +10,17 @@ use Filament\Auth\Events\Registered;
 use Filament\Auth\Pages\Register as BaseRegister;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 
 class Register extends BaseRegister
 {
     public function mount(): void
     {
+        if (request()->is('register') && (auth()->user()?->is_outreach_demo ?? false)) {
+            Auth::logout();
+        }
+
         parent::mount();
 
         if (! request()->isMethod('GET') || request()->header('X-Livewire')) {
