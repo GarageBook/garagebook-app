@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
@@ -28,6 +29,8 @@ class SendLifecycleEmailJob implements ShouldQueue
         $user = User::query()->find($this->userId);
 
         if (! $user) {
+            $this->markMissingUserSkipped();
+
             return;
         }
 
@@ -47,6 +50,12 @@ class SendLifecycleEmailJob implements ShouldQueue
         }
 
         $log->refresh();
+
+        if ($this->isNoVehicleDay2Log($log)) {
+            $this->sendNoVehicleDay2Mail($user, $log, $service);
+
+            return;
+        }
 
         if ($user->hasUnsubscribedFromLifecycleEmails()) {
             $service->markLifecycleEmailSkipped($user, $this->emailKey, 'unsubscribed');
@@ -100,7 +109,73 @@ class SendLifecycleEmailJob implements ShouldQueue
             'status' => LifecycleEmailLog::STATUS_FAILED,
             'failed_at' => now(),
             'error_message' => str($exception->getMessage())->limit(65535)->value(),
+            'error' => str($exception->getMessage())->limit(65535)->value(),
         ]);
+    }
+
+    private function markMissingUserSkipped(): void
+    {
+        if (! $this->logId) {
+            return;
+        }
+
+        LifecycleEmailLog::query()
+            ->whereKey($this->logId)
+            ->whereIn('status', [LifecycleEmailLog::STATUS_QUEUED, LifecycleEmailLog::STATUS_PROCESSING])
+            ->update([
+                'status' => LifecycleEmailLog::STATUS_SKIPPED,
+                'skipped_at' => now(),
+                'reason_skipped' => 'user_missing',
+                'error' => 'user_missing',
+                'error_message' => 'user_missing',
+            ]);
+    }
+
+    private function isNoVehicleDay2Log(LifecycleEmailLog $log): bool
+    {
+        return $log->trigger === LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2
+            || $log->email_key === LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2
+            || $log->mail_class === NoVehicleDay2Mail::class;
+    }
+
+    private function sendNoVehicleDay2Mail(User $user, LifecycleEmailLog $log, LifecycleEmailService $service): void
+    {
+        if ($user->vehicles()->exists()) {
+            $log->forceFill([
+                'status' => LifecycleEmailLog::STATUS_SKIPPED,
+                'skipped_at' => now(),
+                'reason_skipped' => 'vehicle_added',
+                'error' => 'vehicle_added',
+                'error_message' => 'vehicle_added',
+            ])->save();
+
+            return;
+        }
+
+        try {
+            Mail::to($user->email)->send(new NoVehicleDay2Mail(
+                user: $user,
+                ctaUrl: url('/admin/vehicles/create'),
+                unsubscribeUrl: $service->unsubscribeUrl($user),
+            ));
+
+            $log->forceFill([
+                'status' => LifecycleEmailLog::STATUS_SENT,
+                'sent_at' => now(),
+                'failed_at' => null,
+                'skipped_at' => null,
+                'reason_skipped' => null,
+                'error' => null,
+                'error_message' => null,
+            ])->save();
+        } catch (\Throwable $exception) {
+            $log->forceFill([
+                'status' => LifecycleEmailLog::STATUS_FAILED,
+                'failed_at' => now(),
+                'error' => str($exception->getMessage())->limit(65535)->value(),
+                'error_message' => str($exception->getMessage())->limit(65535)->value(),
+            ])->save();
+        }
     }
 
     private function resolveLog(?LifecycleEmailTemplate $template): ?LifecycleEmailLog
@@ -127,6 +202,7 @@ class SendLifecycleEmailJob implements ShouldQueue
             [
                 'subject' => $template?->subject ?? $this->emailKey,
                 'status' => LifecycleEmailLog::STATUS_QUEUED,
+                'queued_at' => now(),
             ],
         );
     }
@@ -146,6 +222,7 @@ class SendLifecycleEmailJob implements ShouldQueue
                 'skipped_at' => null,
                 'reason_skipped' => null,
                 'error_message' => null,
+                'error' => null,
             ]) === 1;
     }
 }

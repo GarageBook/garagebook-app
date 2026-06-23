@@ -18,15 +18,21 @@ class LifecycleEmailLog extends Model
 
     public const STATUS_SKIPPED = 'skipped';
 
+    public const TRIGGER_NO_VEHICLE_DAY2 = 'no_vehicle_day2';
+
     protected $fillable = [
         'user_id',
         'email_key',
+        'trigger',
         'subject',
+        'mail_class',
         'status',
+        'queued_at',
         'sent_at',
         'failed_at',
         'skipped_at',
         'error_message',
+        'error',
         'reason_skipped',
         'vehicles_count',
         'maintenance_logs_count',
@@ -47,6 +53,7 @@ class LifecycleEmailLog extends Model
         'goal_completed_at' => 'datetime',
         'last_login_at' => 'datetime',
         'maintenance_logs_count' => 'integer',
+        'queued_at' => 'datetime',
         'retried_at' => 'datetime',
         'sent_at' => 'datetime',
         'skipped_at' => 'datetime',

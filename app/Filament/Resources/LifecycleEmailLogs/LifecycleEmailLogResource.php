@@ -103,6 +103,15 @@ class LifecycleEmailLogResource extends Resource
                 Tables\Columns\TextColumn::make('email_key')
                     ->label('E-mail key')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('trigger')
+                    ->label('Trigger')
+                    ->placeholder('-')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('mail_class')
+                    ->label('Mail class')
+                    ->limit(60)
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Onderwerp')
                     ->limit(70)
@@ -149,8 +158,13 @@ class LifecycleEmailLogResource extends Resource
                     ->dateTime('d-m-Y H:i')
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('queued_at')
+                    ->label('Queued')
+                    ->dateTime('d-m-Y H:i')
+                    ->placeholder('-')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('sent_at')
-                    ->label('Verzonden op')
+                    ->label('Sent')
                     ->dateTime('d-m-Y H:i')
                     ->placeholder('-')
                     ->sortable(),
@@ -159,6 +173,11 @@ class LifecycleEmailLogResource extends Resource
                     ->dateTime('d-m-Y H:i')
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('error')
+                    ->label('Error')
+                    ->limit(80)
+                    ->wrap()
+                    ->placeholder('-'),
                 Tables\Columns\TextColumn::make('error_message')
                     ->label('Foutmelding')
                     ->limit(80)
@@ -170,6 +189,7 @@ class LifecycleEmailLogResource extends Resource
                 SelectFilter::make('email_key')
                     ->label('E-mail key')
                     ->options([
+                        'no_vehicle_day2' => 'no_vehicle_day2',
                         'no_vehicle_added' => 'no_vehicle_added',
                         'no_maintenance_log_day_3' => 'no_maintenance_log_day_3',
                         'no_maintenance_log_day_14' => 'no_maintenance_log_day_14',
