@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\LifecycleEmailLogs\Pages;
 
 use App\Filament\Resources\LifecycleEmailLogs\LifecycleEmailLogResource;
+use App\Services\Lifecycle\LifecycleEmailService;
 use App\Services\LifecycleEmailLogExportService;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -20,6 +22,28 @@ class ListLifecycleEmailLogs extends ListRecords
         }
 
         return [
+            Action::make('queueNoVehicleCampaign')
+                ->label('Queue no-vehicle campagne')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('primary')
+                ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false)
+                ->requiresConfirmation()
+                ->action(function (LifecycleEmailService $service): void {
+                    abort_unless(auth()->user()?->isAdmin() ?? false, 403);
+
+                    $result = $service->queueNoVehicleUsers();
+
+                    Notification::make()
+                        ->title('No-vehicle campagne queued')
+                        ->body(sprintf(
+                            'Gevonden: %d. Queued: %d. Overgeslagen: %d.',
+                            $result['found'],
+                            $result['queued'],
+                            $result['skipped'],
+                        ))
+                        ->success()
+                        ->send();
+                }),
             Action::make('export')
                 ->label('Export CSV')
                 ->icon('heroicon-o-arrow-down-tray')
@@ -29,7 +53,7 @@ class ListLifecycleEmailLogs extends ListRecords
 
                     return response()->streamDownload(function () use ($exporter, $query): void {
                         echo $exporter->toCsv($query);
-                    }, 'lifecycle-email-logs-' . now()->format('Y-m-d') . '.csv', [
+                    }, 'lifecycle-email-logs-'.now()->format('Y-m-d').'.csv', [
                         'Content-Type' => 'text/csv; charset=UTF-8',
                     ]);
                 }),

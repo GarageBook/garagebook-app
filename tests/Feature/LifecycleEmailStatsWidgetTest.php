@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Widgets\LifecycleEmailStatsWidget;
+use App\Filament\Widgets\LifecycleOverviewWidget;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
@@ -20,6 +21,60 @@ class LifecycleEmailStatsWidgetTest extends TestCase
         parent::setUp();
 
         $this->seed(LifecycleEmailTemplateSeeder::class);
+    }
+
+    public function test_lifecycle_overview_widget_reports_admin_only_campaign_totals(): void
+    {
+        User::factory()->create([
+            'created_at' => now()->subDays(3),
+            'email_verified_at' => now()->subDays(3),
+        ]);
+
+        $tooNewUser = User::factory()->create([
+            'created_at' => now()->subDay(),
+            'email_verified_at' => now()->subDay(),
+        ]);
+
+        Vehicle::query()->create([
+            'user_id' => $tooNewUser->id,
+            'brand' => 'Toyota',
+            'model' => 'Yaris',
+        ]);
+
+        $queuedUser = User::factory()->create();
+        LifecycleEmailLog::query()->create([
+            'user_id' => $queuedUser->id,
+            'email_key' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
+            'trigger' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
+            'subject' => 'Queued',
+            'status' => LifecycleEmailLog::STATUS_QUEUED,
+            'queued_at' => now(),
+        ]);
+
+        $sentUser = User::factory()->create();
+        LifecycleEmailLog::query()->create([
+            'user_id' => $sentUser->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Sent today',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $failedUser = User::factory()->create();
+        LifecycleEmailLog::query()->create([
+            'user_id' => $failedUser->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            'subject' => 'Failed',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'failed_at' => now(),
+        ]);
+
+        $stats = LifecycleOverviewWidget::calculateStats();
+
+        $this->assertSame(1, $stats['users_without_vehicle']);
+        $this->assertSame(1, $stats['queued']);
+        $this->assertSame(1, $stats['sent_today']);
+        $this->assertSame(1, $stats['failed']);
     }
 
     public function test_lifecycle_email_stats_widget_reports_effectiveness_metrics_per_email_key(): void

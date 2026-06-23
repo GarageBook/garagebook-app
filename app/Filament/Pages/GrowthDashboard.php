@@ -10,6 +10,7 @@ use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
 use App\Filament\Widgets\LifecycleEmailStatsWidget;
+use App\Filament\Widgets\LifecycleOverviewWidget;
 use App\Support\AnalyticsEventTracker;
 use App\Support\Growth\GrowthDashboardData;
 use Filament\Actions\Action;
@@ -18,7 +19,7 @@ use Filament\Support\Icons\Heroicon;
 
 class GrowthDashboard extends Page
 {
-    protected static string | \BackedEnum | null $navigationIcon = Heroicon::OutlinedChartBarSquare;
+    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBarSquare;
 
     protected static ?int $navigationSort = 191;
 
@@ -41,7 +42,7 @@ class GrowthDashboard extends Page
 
                         $kpis = $data->kpiOverview();
                         foreach ($kpis['cards'] as $card) {
-                            fputcsv($handle, ['kpi_overview', $card['label'], $card['value'] . ($card['suffix'] ?? null), $card['meta'] ?? '']);
+                            fputcsv($handle, ['kpi_overview', $card['label'], $card['value'].($card['suffix'] ?? null), $card['meta'] ?? '']);
                         }
 
                         $acquisition = $data->acquisitionPerformance();
@@ -73,7 +74,7 @@ class GrowthDashboard extends Page
                         }
 
                         fclose($handle);
-                    }, 'growth-export-' . now()->format('Y-m-d') . '.csv', [
+                    }, 'growth-export-'.now()->format('Y-m-d').'.csv', [
                         'Content-Type' => 'text/csv; charset=UTF-8',
                     ]);
                 }),
@@ -119,6 +120,7 @@ class GrowthDashboard extends Page
     {
         return [
             GrowthKpiOverviewWidget::class,
+            LifecycleOverviewWidget::class,
             LifecycleEmailStatsWidget::class,
             GrowthAcquisitionPerformanceWidget::class,
             GrowthPartnerPerformanceWidget::class,
@@ -129,7 +131,7 @@ class GrowthDashboard extends Page
         ];
     }
 
-    public function getHeaderWidgetsColumns(): int | array
+    public function getHeaderWidgetsColumns(): int|array
     {
         return [
             'md' => 2,

@@ -7,10 +7,12 @@ use App\Filament\Resources\LifecycleEmailLogs\Pages\ViewLifecycleEmailLog;
 use App\Models\LifecycleEmailLog;
 use BackedEnum;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -197,6 +199,17 @@ class LifecycleEmailLogResource extends Resource
                         'after_first_maintenance_log' => 'after_first_maintenance_log',
                         'inactive_user_return' => 'inactive_user_return',
                     ]),
+                SelectFilter::make('trigger')
+                    ->label('Trigger')
+                    ->options([
+                        'no_vehicle_day2' => 'no_vehicle_day2',
+                        'no_vehicle_added' => 'no_vehicle_added',
+                        'no_maintenance_log_day_3' => 'no_maintenance_log_day_3',
+                        'no_maintenance_log_day_14' => 'no_maintenance_log_day_14',
+                        'no_maintenance_log_day_30' => 'no_maintenance_log_day_30',
+                        'after_first_maintenance_log' => 'after_first_maintenance_log',
+                        'inactive_user_return' => 'inactive_user_return',
+                    ]),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options([
@@ -206,6 +219,19 @@ class LifecycleEmailLogResource extends Resource
                         LifecycleEmailLog::STATUS_FAILED => LifecycleEmailLog::STATUS_FAILED,
                         LifecycleEmailLog::STATUS_SKIPPED => LifecycleEmailLog::STATUS_SKIPPED,
                     ]),
+                Filter::make('created_at')
+                    ->label('Datum')
+                    ->schema([
+                        DatePicker::make('from')
+                            ->label('Vanaf'),
+                        DatePicker::make('until')
+                            ->label('Tot en met'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '>=', $date))
+                            ->when($data['until'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '<=', $date));
+                    }),
             ])
             ->recordActions([
                 ViewAction::make(),

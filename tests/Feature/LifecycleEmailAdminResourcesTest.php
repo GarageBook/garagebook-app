@@ -6,10 +6,12 @@ use App\Filament\Resources\LifecycleEmailLogs\LifecycleEmailLogResource;
 use App\Filament\Resources\LifecycleEmailLogs\Pages\ListLifecycleEmailLogs;
 use App\Filament\Resources\LifecycleEmailTemplates\LifecycleEmailTemplateResource;
 use App\Filament\Resources\LifecycleEmailTemplates\Pages\EditLifecycleEmailTemplate;
+use App\Filament\Widgets\LifecycleOverviewWidget;
 use App\Mail\NoMaintenanceLogDay3Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
+use App\Services\Lifecycle\LifecycleEmailService as NoVehicleLifecycleEmailService;
 use App\Services\LifecycleEmailLogExportService;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -296,6 +298,89 @@ class LifecycleEmailAdminResourcesTest extends TestCase
 
         $this->get('/admin/lifecycle-email-templates')->assertForbidden();
         $this->get('/admin/lifecycle-email-logs')->assertForbidden();
+    }
+
+    public function test_admin_can_access_lifecycle_logs_overview_and_queue_no_vehicle_action(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $fakeService = new class extends NoVehicleLifecycleEmailService
+        {
+            public int $calls = 0;
+
+            public function queueNoVehicleUsers(): array
+            {
+                $this->calls++;
+
+                return [
+                    'found' => 3,
+                    'queued' => 2,
+                    'skipped' => 1,
+                ];
+            }
+        };
+
+        $this->app->instance(NoVehicleLifecycleEmailService::class, $fakeService);
+
+        $this->actingAs($admin)
+            ->get('/admin/lifecycle-email-logs')
+            ->assertOk();
+
+        $this->assertTrue(LifecycleEmailLogResource::canViewAny());
+        $this->assertTrue(LifecycleEmailLogResource::shouldRegisterNavigation());
+        $this->assertTrue(LifecycleOverviewWidget::canView());
+
+        Livewire::actingAs($admin)
+            ->test(ListLifecycleEmailLogs::class)
+            ->callAction('queueNoVehicleCampaign');
+
+        $this->assertSame(1, $fakeService->calls);
+    }
+
+    public function test_regular_user_cannot_access_lifecycle_logs_overview_or_queue_action(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/admin/lifecycle-email-logs')
+            ->assertForbidden();
+
+        $this->assertFalse(LifecycleEmailLogResource::canViewAny());
+        $this->assertFalse(LifecycleEmailLogResource::shouldRegisterNavigation());
+        $this->assertFalse(LifecycleOverviewWidget::canView());
+    }
+
+    public function test_queue_action_and_artisan_command_use_the_same_no_vehicle_lifecycle_service(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $fakeService = new class extends NoVehicleLifecycleEmailService
+        {
+            public int $calls = 0;
+
+            public function queueNoVehicleUsers(): array
+            {
+                $this->calls++;
+
+                return [
+                    'found' => 4,
+                    'queued' => 3,
+                    'skipped' => 1,
+                ];
+            }
+        };
+
+        $this->app->instance(NoVehicleLifecycleEmailService::class, $fakeService);
+
+        Livewire::actingAs($admin)
+            ->test(ListLifecycleEmailLogs::class)
+            ->callAction('queueNoVehicleCampaign');
+
+        $this->artisan('garagebook:lifecycle:no-vehicle')
+            ->expectsOutput('Gevonden: 4')
+            ->expectsOutput('Queued: 3')
+            ->expectsOutput('Overgeslagen: 1')
+            ->assertSuccessful();
+
+        $this->assertSame(2, $fakeService->calls);
     }
 
     public function test_admin_can_open_lifecycle_template_index_page(): void
