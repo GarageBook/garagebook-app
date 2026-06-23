@@ -160,6 +160,34 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
         Bus::assertDispatched(OptimizeMaintenanceLogMedia::class);
     }
 
+    public function test_create_public_vehicle_maintenance_log_notifies_that_public_page_was_updated(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Toyota',
+            'model' => 'Highlander',
+            'is_public' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Olie vervangen',
+                'km_reading' => 15100,
+                'maintenance_date' => '2026-06-15',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors()
+            ->assertNotified('Onderhoud toegevoegd. Je publieke voertuigpagina is bijgewerkt.')
+            ->assertRedirect(MaintenanceLogResource::getUrl('index'));
+    }
+
     public function test_first_maintenance_log_can_be_saved_with_minimal_required_fields(): void
     {
         Bus::fake();

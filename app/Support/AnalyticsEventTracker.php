@@ -167,6 +167,13 @@ class AnalyticsEventTracker
         ]);
     }
 
+    public function queuePublicVehicleDashboardWidgetViewed(int $publicVehicleCount): void
+    {
+        $this->queue('public_vehicle_dashboard_widget_viewed', [
+            'public_vehicle_count' => $publicVehicleCount,
+        ]);
+    }
+
     public function queueDashboardViewed(User $user): void
     {
         $vehicles = Vehicle::query()

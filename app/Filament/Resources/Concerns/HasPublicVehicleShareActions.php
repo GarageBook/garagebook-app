@@ -14,34 +14,36 @@ trait HasPublicVehicleShareActions
      */
     protected function getPublicVehicleShareActions(Vehicle $vehicle, bool $includeCopyUrl = true): array
     {
-        $shareUrl = app(PublicGarageService::class)->publicUrl($vehicle);
-        $pdfUrl = url('/maintenance/pdf?vehicle_id=' . $vehicle->id);
+        $pdfUrl = url('/maintenance/pdf?vehicle_id='.$vehicle->id);
 
-        $actions = [
-            Action::make('openSharePage')
+        $actions = [];
+
+        if ($vehicle->is_public) {
+            $shareUrl = app(PublicGarageService::class)->publicUrl($vehicle);
+            $actions[] = Action::make('openSharePage')
                 ->label(__('maintenance.actions.open_external_page'))
                 ->url($shareUrl)
                 ->openUrlInNewTab()
-                ->extraAttributes(Analytics::clickTrackingAttributes('public_share_created', [
+                ->extraAttributes(Analytics::clickTrackingAttributes('public_vehicle_page_view_clicked', [
                     'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                    'source' => 'share',
+                    'location' => 'header_action',
                 ]))
                 ->color('warning')
-                ->outlined(),
-        ];
-
-        if ($includeCopyUrl) {
-            $actions[] = Action::make('copyUrl')
-                ->label(__('maintenance.actions.copy_url'))
-                ->extraAttributes([
-                    'onclick' => "navigator.clipboard.writeText('{$shareUrl}')",
-                    ...Analytics::clickTrackingAttributes('public_share_created', [
-                        'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
-                        'source' => 'share',
-                    ]),
-                ])
-                ->color('warning')
                 ->outlined();
+
+            if ($includeCopyUrl) {
+                $actions[] = Action::make('copyUrl')
+                    ->label(__('maintenance.actions.copy_url'))
+                    ->extraAttributes([
+                        'onclick' => "navigator.clipboard.writeText('{$shareUrl}'); new FilamentNotification().title('Publieke link gekopieerd').success().send();",
+                        ...Analytics::clickTrackingAttributes('public_vehicle_page_link_copied', [
+                            'vehicle_id_hash' => Analytics::anonymizeIdentifier('vehicle', $vehicle->id),
+                            'location' => 'header_action',
+                        ]),
+                    ])
+                    ->color('warning')
+                    ->outlined();
+            }
         }
 
         $actions[] = Action::make('exportPdf')

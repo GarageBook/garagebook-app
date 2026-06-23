@@ -104,40 +104,69 @@ class MaintenanceListVehicleContextTest extends TestCase
         $otherUser = User::factory()->create();
 
         $ownVehicle = Vehicle::query()->create([
-            "user_id" => $user->id,
-            "brand" => "Honda",
-            "model" => "CBR600F",
-            "nickname" => "Eigen motor",
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CBR600F',
+            'nickname' => 'Eigen motor',
         ]);
 
         $otherVehicle = Vehicle::query()->create([
-            "user_id" => $otherUser->id,
-            "brand" => "BMW",
-            "model" => "R 1250 GS",
-            "nickname" => "Andere motor",
+            'user_id' => $otherUser->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+            'nickname' => 'Andere motor',
         ]);
 
         MaintenanceLog::query()->create([
-            "vehicle_id" => $ownVehicle->id,
-            "description" => "Eigen onderhoud",
-            "km_reading" => 12000,
-            "maintenance_date" => now()->subDay()->toDateString(),
+            'vehicle_id' => $ownVehicle->id,
+            'description' => 'Eigen onderhoud',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDay()->toDateString(),
         ]);
 
         MaintenanceLog::query()->create([
-            "vehicle_id" => $otherVehicle->id,
-            "description" => "Andermans onderhoud",
-            "km_reading" => 22000,
-            "maintenance_date" => now()->toDateString(),
+            'vehicle_id' => $otherVehicle->id,
+            'description' => 'Andermans onderhoud',
+            'km_reading' => 22000,
+            'maintenance_date' => now()->toDateString(),
         ]);
 
         $this->actingAs($user)
-            ->get("/admin/maintenance-logs")
+            ->get('/admin/maintenance-logs')
             ->assertOk()
-            ->assertSeeText("Eigen motor")
-            ->assertSeeText("Eigen onderhoud")
-            ->assertDontSeeText("Andermans onderhoud")
-            ->assertDontSeeText("Andere motor");
+            ->assertSeeText('Eigen motor')
+            ->assertSeeText('Eigen onderhoud')
+            ->assertDontSeeText('Andermans onderhoud')
+            ->assertDontSeeText('Andere motor');
+    }
+
+    public function test_maintenance_list_shows_public_vehicle_page_card_for_public_vehicle(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Toyota',
+            'model' => 'Highlander',
+            'nickname' => 'Gezinsauto',
+            'is_public' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Olie vervangen',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/maintenance-logs?vehicle_id='.$vehicle->id)
+            ->assertOk()
+            ->assertSeeText('Publieke voertuigpagina')
+            ->assertSeeText('Je publieke voertuigpagina wordt bijgewerkt zodra je onderhoud toevoegt.')
+            ->assertSeeText('Bekijk publieke pagina')
+            ->assertSeeText('Kopieer link')
+            ->assertSee('data-analytics-param-location="maintenance_logs_index"', false);
     }
 
     public function test_maintenance_list_header_actions_follow_the_selected_vehicle(): void
@@ -151,6 +180,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             'brand' => 'Honda',
             'model' => 'CBR600F',
             'nickname' => 'Circuitfiets',
+            'is_public' => true,
         ]);
 
         $secondVehicle = Vehicle::query()->create([
@@ -158,6 +188,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             'brand' => 'BMW',
             'model' => 'R 1200 GS',
             'nickname' => 'Allroad',
+            'is_public' => true,
         ]);
 
         $this->actingAs($user);
@@ -174,7 +205,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             $actions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(
-            url('/maintenance/pdf?vehicle_id=' . $secondVehicle->id),
+            url('/maintenance/pdf?vehicle_id='.$secondVehicle->id),
             $actions->get('exportPdf')->getUrl(),
         );
     }
@@ -190,6 +221,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             'brand' => 'Honda',
             'model' => 'CBR600F',
             'nickname' => 'Circuitfiets',
+            'is_public' => true,
         ]);
 
         $secondVehicle = Vehicle::query()->create([
@@ -197,6 +229,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             'brand' => 'BMW',
             'model' => 'R 1200 GS',
             'nickname' => 'Allroad',
+            'is_public' => true,
         ]);
 
         $this->actingAs($user);
@@ -213,7 +246,7 @@ class MaintenanceListVehicleContextTest extends TestCase
             $cachedActions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(
-            url('/maintenance/pdf?vehicle_id=' . $secondVehicle->id),
+            url('/maintenance/pdf?vehicle_id='.$secondVehicle->id),
             $cachedActions->get('exportPdf')->getUrl(),
         );
     }

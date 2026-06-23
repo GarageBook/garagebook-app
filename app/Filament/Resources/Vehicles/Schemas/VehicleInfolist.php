@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Vehicles\Schemas;
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -14,6 +15,17 @@ class VehicleInfolist
     {
         return $schema
             ->components([
+                Section::make('Publieke voertuigpagina')
+                    ->schema([
+                        ViewEntry::make('public_vehicle_page_card')
+                            ->hiddenLabel()
+                            ->view('filament.components.public-vehicle-page-card')
+                            ->viewData([
+                                'context' => 'vehicle_detail',
+                                'title' => 'Publieke pagina',
+                            ]),
+                    ])
+                    ->columnSpanFull(),
                 Section::make(__('vehicles.model_label'))
                     ->schema([
                         TextEntry::make('nickname')

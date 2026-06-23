@@ -12,6 +12,7 @@ use App\Filament\Widgets\MaintenanceActivityChart;
 use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use App\Filament\Widgets\MyVehicles;
+use App\Filament\Widgets\PublicVehiclePagesWidget;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -73,6 +74,7 @@ class Dashboard extends BaseDashboard
 
         return $schema->components([
             $primaryWidget,
+            Livewire::make(PublicVehiclePagesWidget::class),
             Grid::make([
                 'md' => 2,
             ])->schema([

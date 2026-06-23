@@ -73,16 +73,11 @@
     </div>
 
     @if($activeVehicle)
-        <section style="padding:20px 22px; border-radius:24px; background:#f8fafc; border:1px solid #e5e7eb; color:#111827;">
-            <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:#6b7280; margin-bottom:10px;">
-                Deelbare voertuiggeschiedenis in opbouw
-            </div>
-            <div style="font-size:1.3rem; font-weight:700; line-height:1.15; margin-bottom:8px; overflow-wrap:anywhere;">
-                {{ $activeVehicle->nickname ?: ($activeVehicle->brand . ' ' . $activeVehicle->model) }}
-            </div>
-            <div style="max-width:48rem; color:#4b5563; line-height:1.65; font-size:0.96rem; overflow-wrap:anywhere;">
-                Elke onderhoudsregel, kilometerstand en bijlage helpt om later een aantoonbare voertuiggeschiedenis te delen met koper, garage of liefhebber, terwijl jij controle houdt over wat openbaar wordt.
-            </div>
-        </section>
+        @include('filament.components.public-vehicle-page-card', [
+            'vehicle' => $activeVehicle,
+            'context' => 'maintenance_logs_index',
+            'title' => 'Publieke voertuigpagina',
+            'description' => 'Je publieke voertuigpagina wordt bijgewerkt zodra je onderhoud toevoegt. Zo groeit je deelbare onderhoudshistorie vanzelf mee.',
+        ])
     @endif
 </div>

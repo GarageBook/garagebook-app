@@ -6,8 +6,11 @@ use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Jobs\OptimizeMaintenanceLogMedia;
 use App\Services\DistanceUnitService;
 use App\Services\LifecycleEmailService;
+use App\Services\PublicGarageService;
 use App\Support\AnalyticsEventTracker;
 use App\Support\MaintenanceLogVehicleResolver;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateMaintenanceLog extends CreateRecord
@@ -54,6 +57,31 @@ class CreateMaintenanceLog extends CreateRecord
         }
 
         OptimizeMaintenanceLogMedia::dispatch($this->record->getKey());
+    }
+
+    protected function getCreatedNotification(): ?Notification
+    {
+        $vehicle = $this->record->vehicle;
+
+        $notification = Notification::make()
+            ->success()
+            ->title($vehicle?->is_public
+                ? 'Onderhoud toegevoegd. Je publieke voertuigpagina is bijgewerkt.'
+                : 'Onderhoud toegevoegd.')
+            ->body($vehicle?->is_public
+                ? 'Nieuwe onderhoudsregels worden meegenomen op je publieke voertuigpagina.'
+                : 'Je onderhoudshistorie is bijgewerkt.');
+
+        if ($vehicle?->is_public) {
+            $notification->actions([
+                Action::make('viewPublicVehiclePage')
+                    ->label('Bekijk publieke pagina')
+                    ->url(app(PublicGarageService::class)->publicUrl($vehicle))
+                    ->openUrlInNewTab(),
+            ]);
+        }
+
+        return $notification;
     }
 
     protected function getRedirectUrl(): string
