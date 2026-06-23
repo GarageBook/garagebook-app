@@ -323,7 +323,8 @@ class LifecycleEmailAdminResourcesTest extends TestCase
 
         $this->actingAs($admin)
             ->get('/admin/lifecycle-email-logs')
-            ->assertOk();
+            ->assertOk()
+            ->assertSeeText('Queue no-vehicle campagne');
 
         $this->assertTrue(LifecycleEmailLogResource::canViewAny());
         $this->assertTrue(LifecycleEmailLogResource::shouldRegisterNavigation());
