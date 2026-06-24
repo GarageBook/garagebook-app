@@ -47,6 +47,7 @@ return [
         'client_id' => env('GOOGLE_ANALYTICS_CLIENT_ID'),
         'client_secret' => env('GOOGLE_ANALYTICS_CLIENT_SECRET'),
         'refresh_token' => env('GOOGLE_ANALYTICS_REFRESH_TOKEN'),
+        'token_uri' => env('GOOGLE_ANALYTICS_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
         'credentials_json' => env('GOOGLE_ANALYTICS_CREDENTIALS_JSON'),
     ],
 
@@ -56,6 +57,7 @@ return [
         'client_id' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET'),
         'refresh_token' => env('GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN'),
+        'token_uri' => env('GOOGLE_SEARCH_CONSOLE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
         'credentials_json' => env('GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON'),
     ],
 
