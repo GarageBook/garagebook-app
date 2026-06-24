@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\FuelLogs\FuelLogResource;
+use App\Filament\Resources\FuelLogs\Pages\CreateFuelLog;
 use App\Filament\Resources\FuelLogs\Pages\ListFuelLogs;
 use App\Models\FuelLog;
 use App\Models\User;
@@ -181,5 +182,188 @@ class FuelLogResourceTest extends TestCase
             ->assertOk()
             ->assertSeeText('Verbruik over tijd')
             ->assertSeeText('Nog niet genoeg tankbeurten met afstand om een verbruiksgrafiek te tonen.');
+    }
+
+    public function test_electric_vehicle_can_create_charge_entry_with_home_rate(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Tesla',
+            'model' => 'Model 3',
+            'powertrain_type' => Vehicle::POWERTRAIN_ELECTRIC,
+            'home_kwh_rate' => 0.31,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(CreateFuelLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => DistanceUnitService::UNIT_KM,
+                'fuel_date' => '2026-06-01',
+                'odometer_km' => 12000,
+                'energy_kwh' => 42.5,
+                'charge_type' => FuelLog::CHARGE_TYPE_HOME,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('fuel_logs', [
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_liters' => null,
+            'energy_kwh' => 42.5,
+            'price_per_kwh' => 0.31,
+            'total_cost' => 13.18,
+            'charge_type' => FuelLog::CHARGE_TYPE_HOME,
+        ]);
+    }
+
+    public function test_hybrid_uses_existing_fuel_flow(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Toyota',
+            'model' => 'Corolla',
+            'powertrain_type' => Vehicle::POWERTRAIN_HYBRID,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(CreateFuelLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => DistanceUnitService::UNIT_KM,
+                'fuel_date' => '2026-06-02',
+                'odometer_km' => 30100,
+                'distance_km' => 500,
+                'fuel_liters' => 25,
+                'price_per_liter' => 2.00,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('fuel_logs', [
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_FUEL,
+            'fuel_liters' => 25,
+            'energy_kwh' => null,
+            'total_cost' => 50.00,
+        ]);
+    }
+
+    public function test_phev_can_create_fuel_charge_and_combined_entries(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Volvo',
+            'model' => 'XC60 T8',
+            'powertrain_type' => Vehicle::POWERTRAIN_PHEV,
+            'home_kwh_rate' => 0.29,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(CreateFuelLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'entry_type' => FuelLog::ENTRY_TYPE_FUEL,
+                'distance_unit' => DistanceUnitService::UNIT_KM,
+                'fuel_date' => '2026-06-03',
+                'odometer_km' => 15000,
+                'distance_km' => 420,
+                'fuel_liters' => 24,
+                'price_per_liter' => 2.10,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        Livewire::actingAs($user)
+            ->test(CreateFuelLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+                'distance_unit' => DistanceUnitService::UNIT_KM,
+                'fuel_date' => '2026-06-04',
+                'odometer_km' => 15120,
+                'energy_kwh' => 12,
+                'charge_type' => FuelLog::CHARGE_TYPE_HOME,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        Livewire::actingAs($user)
+            ->test(CreateFuelLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'entry_type' => FuelLog::ENTRY_TYPE_COMBINED,
+                'distance_unit' => DistanceUnitService::UNIT_KM,
+                'fuel_date' => '2026-06-05',
+                'odometer_km' => 15300,
+                'distance_km' => 180,
+                'fuel_liters' => 8,
+                'price_per_liter' => 2.00,
+                'energy_kwh' => 10,
+                'price_per_kwh' => 0.45,
+                'charge_type' => FuelLog::CHARGE_TYPE_PUBLIC_AC,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('fuel_logs', [
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_FUEL,
+            'fuel_liters' => 24,
+            'energy_kwh' => null,
+            'total_cost' => 50.40,
+        ]);
+        $this->assertDatabaseHas('fuel_logs', [
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_liters' => null,
+            'energy_kwh' => 12,
+            'price_per_kwh' => 0.29,
+            'total_cost' => 3.48,
+        ]);
+        $this->assertDatabaseHas('fuel_logs', [
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_COMBINED,
+            'fuel_liters' => 8,
+            'energy_kwh' => 10,
+            'total_cost' => 20.50,
+        ]);
+    }
+
+    public function test_electric_overview_remains_reachable_with_incomplete_intervals(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Nissan',
+            'model' => 'Leaf',
+            'powertrain_type' => Vehicle::POWERTRAIN_ELECTRIC,
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-06-01',
+            'odometer_km' => 1000,
+            'energy_kwh' => 20,
+            'total_cost' => 8,
+        ]);
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-06-02',
+            'odometer_km' => 990,
+            'energy_kwh' => 18,
+            'total_cost' => 7,
+        ]);
+
+        $this->actingAs($user)
+            ->get(ListFuelLogs::getUrl(['vehicle_id' => $vehicle->id]))
+            ->assertOk()
+            ->assertSeeText('Registreer laadmomenten om inzicht te krijgen in kWh/100 km en kosten per kilometer.');
     }
 }

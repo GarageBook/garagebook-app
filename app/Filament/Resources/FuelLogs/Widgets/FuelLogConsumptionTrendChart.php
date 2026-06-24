@@ -2,14 +2,16 @@
 
 namespace App\Filament\Resources\FuelLogs\Widgets;
 
+use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
 use App\Services\FuelConsumptionService;
+use Carbon\CarbonImmutable;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 
 class FuelLogConsumptionTrendChart extends ChartWidget
 {
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     protected ?string $maxHeight = '320px';
 
@@ -25,6 +27,45 @@ class FuelLogConsumptionTrendChart extends ChartWidget
             return [
                 'datasets' => [],
                 'labels' => [],
+            ];
+        }
+
+        $vehicle = Vehicle::query()
+            ->where('user_id', auth()->id())
+            ->with('fuelLogs')
+            ->find($this->vehicleId);
+
+        if (! $vehicle) {
+            return [
+                'datasets' => [],
+                'labels' => [],
+            ];
+        }
+
+        if ($vehicle->isElectric()) {
+            $intervals = app(FuelConsumptionService::class)->getElectricIntervalsForVehicle($vehicle);
+
+            if ($intervals->count() < 2) {
+                return [
+                    'datasets' => [],
+                    'labels' => [],
+                ];
+            }
+
+            return [
+                'datasets' => [[
+                    'label' => 'kWh/100 km',
+                    'data' => $intervals->map(fn (array $interval): float => round(((float) $interval['energy_kwh'] / (float) $interval['distance_km']) * 100, 2))->all(),
+                    'borderColor' => '#0f766e',
+                    'backgroundColor' => 'rgba(15, 118, 110, 0.12)',
+                    'pointBackgroundColor' => '#0f766e',
+                    'pointBorderColor' => '#ffffff',
+                    'pointRadius' => 3,
+                    'fill' => true,
+                    'tension' => 0.35,
+                    'yAxisID' => 'y',
+                ]],
+                'labels' => $intervals->map(fn (array $interval): string => CarbonImmutable::parse($interval['date'])->translatedFormat('d M'))->all(),
             ];
         }
 
@@ -83,6 +124,14 @@ class FuelLogConsumptionTrendChart extends ChartWidget
             return __('fuel.chart.empty');
         }
 
+        $vehicle = Vehicle::query()->where('user_id', auth()->id())->with('fuelLogs')->find($this->vehicleId);
+
+        if ($vehicle?->isElectric()) {
+            return app(FuelConsumptionService::class)->getElectricIntervalsForVehicle($vehicle)->count() >= 2
+                ? __('fuel.chart.description_ev')
+                : __('fuel.chart.empty_ev');
+        }
+
         $points = app(FuelConsumptionService::class)->getConsumptionTrendForVehicle(auth()->id(), $this->vehicleId);
 
         if (! $points['has_enough_points']) {
@@ -96,7 +145,7 @@ class FuelLogConsumptionTrendChart extends ChartWidget
         return __('fuel.chart.description_metric');
     }
 
-    protected function getOptions(): array | RawJs | null
+    protected function getOptions(): array|RawJs|null
     {
         return [
             'plugins' => [

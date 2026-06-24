@@ -113,4 +113,55 @@ class FuelConsumptionServiceTest extends TestCase
         $this->assertSame(['01 mei', '06 mei'], $trend['labels']);
         $this->assertSame([20.0, 20.0], $trend['averages']);
     }
+
+    public function test_it_calculates_electric_consumption_from_valid_odometer_intervals(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Hyundai',
+            'model' => 'Kona Electric',
+            'powertrain_type' => Vehicle::POWERTRAIN_ELECTRIC,
+        ]);
+
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-01-01',
+            'odometer_km' => 10000,
+            'energy_kwh' => 30,
+            'total_cost' => 12,
+        ]);
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-01-10',
+            'odometer_km' => 10200,
+            'energy_kwh' => 40,
+            'total_cost' => 16,
+        ]);
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-01-12',
+            'odometer_km' => 10190,
+            'energy_kwh' => 50,
+            'total_cost' => 20,
+        ]);
+        FuelLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'entry_type' => FuelLog::ENTRY_TYPE_CHARGE,
+            'fuel_date' => '2026-07-01',
+            'odometer_km' => 10400,
+            'energy_kwh' => 31.5,
+            'total_cost' => 10.5,
+        ]);
+
+        $stats = app(FuelConsumptionService::class)->getElectricStatsForVehicle($vehicle->fresh(['fuelLogs']));
+
+        $this->assertEqualsWithDelta(17.875, $stats['average_kwh_per_100_km'], 0.000001);
+        $this->assertEqualsWithDelta(0.06625, $stats['cost_per_km'], 0.000001);
+        $this->assertEqualsWithDelta(20.0, $stats['seasonal']['winter_kwh_per_100_km'], 0.000001);
+        $this->assertEqualsWithDelta(15.75, $stats['seasonal']['summer_kwh_per_100_km'], 0.000001);
+    }
 }

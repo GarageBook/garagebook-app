@@ -123,4 +123,42 @@ class VehicleResourceTest extends TestCase
         $this->assertSame($user->id, $events[0]['params']['demo_user_id'] ?? null);
         $this->assertSame('vehicle_create', $events[0]['params']['intended'] ?? null);
     }
+
+    public function test_vehicle_can_store_electric_hybrid_and_phev_powertrain_types(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([Vehicle::POWERTRAIN_ELECTRIC, Vehicle::POWERTRAIN_HYBRID, Vehicle::POWERTRAIN_PHEV] as $powertrainType) {
+            Livewire::actingAs($user)
+                ->test(CreateVehicle::class)
+                ->fillForm([
+                    'brand' => 'Test',
+                    'model' => $powertrainType,
+                    'current_km' => 1000,
+                    'distance_unit' => 'km',
+                    'powertrain_type' => $powertrainType,
+                    'home_kwh_rate' => in_array($powertrainType, [Vehicle::POWERTRAIN_ELECTRIC, Vehicle::POWERTRAIN_PHEV], true) ? 0.30 : null,
+                ])
+                ->call('create')
+                ->assertHasNoErrors();
+        }
+
+        $this->assertDatabaseHas('vehicles', [
+            'user_id' => $user->id,
+            'model' => Vehicle::POWERTRAIN_ELECTRIC,
+            'powertrain_type' => Vehicle::POWERTRAIN_ELECTRIC,
+            'home_kwh_rate' => 0.30,
+        ]);
+        $this->assertDatabaseHas('vehicles', [
+            'user_id' => $user->id,
+            'model' => Vehicle::POWERTRAIN_HYBRID,
+            'powertrain_type' => Vehicle::POWERTRAIN_HYBRID,
+        ]);
+        $this->assertDatabaseHas('vehicles', [
+            'user_id' => $user->id,
+            'model' => Vehicle::POWERTRAIN_PHEV,
+            'powertrain_type' => Vehicle::POWERTRAIN_PHEV,
+            'home_kwh_rate' => 0.30,
+        ]);
+    }
 }

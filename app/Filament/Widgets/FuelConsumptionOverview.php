@@ -9,7 +9,7 @@ class FuelConsumptionOverview extends Widget
 {
     protected string $view = 'filament.widgets.fuel-consumption-overview';
 
-    protected int | string | array $columnSpan = 1;
+    protected int|string|array $columnSpan = 1;
 
     public string $consumptionUnit = FuelConsumptionService::UNIT_L_PER_100_KM;
 
@@ -33,11 +33,16 @@ class FuelConsumptionOverview extends Widget
         $service = app(FuelConsumptionService::class);
         $vehicles = $service->getVehiclesForUserWithFuelStats(auth()->id())
             ->map(function ($vehicle) use ($service) {
-                $vehicle->fuel_average_label = $service->formatAverage(
-                    (float) $vehicle->fuel_logs_sum_distance_km,
-                    (float) $vehicle->fuel_logs_sum_fuel_liters,
-                    $this->consumptionUnit
-                );
+                $summary = $service->getVehicleSummary($vehicle, $this->consumptionUnit);
+                $vehicle->fuel_average_label = $vehicle->isElectric()
+                    ? ($summary['average_kwh_per_100_km'] !== null
+                        ? number_format((float) $summary['average_kwh_per_100_km'], 2, ',', '.').' kWh/100 km'
+                        : 'Onbekend')
+                    : $service->formatAverage(
+                        (float) $vehicle->fuel_logs_sum_distance_km,
+                        (float) $vehicle->fuel_logs_sum_fuel_liters,
+                        $this->consumptionUnit
+                    );
 
                 return $vehicle;
             });

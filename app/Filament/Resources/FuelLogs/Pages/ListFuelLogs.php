@@ -139,8 +139,9 @@ class ListFuelLogs extends ListRecords
             ->where('user_id', auth()->id())
             ->withSum('fuelLogs', 'distance_km')
             ->withSum('fuelLogs', 'fuel_liters')
+            ->withSum('fuelLogs', 'energy_kwh')
             ->with(['fuelLogs' => fn ($query) => $query
-                ->select('id', 'vehicle_id', 'fuel_liters', 'price_per_liter')
+                ->select('id', 'vehicle_id', 'entry_type', 'fuel_date', 'odometer_km', 'distance_km', 'fuel_liters', 'energy_kwh', 'price_per_liter', 'price_per_kwh', 'total_cost', 'charge_type')
                 ->latest('fuel_date')
                 ->latest('id')])
             ->latest()

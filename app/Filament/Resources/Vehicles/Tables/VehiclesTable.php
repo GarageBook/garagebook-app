@@ -36,6 +36,11 @@ class VehiclesTable
                 Tables\Columns\TextColumn::make('license_plate')
                     ->label(__('vehicles.table.license_plate')),
 
+                Tables\Columns\TextColumn::make('powertrain_type')
+                    ->label(__('vehicles.table.powertrain_type'))
+                    ->formatStateUsing(fn ($state): string => Vehicle::powertrainOptions()[$state] ?? Vehicle::powertrainOptions()[Vehicle::POWERTRAIN_PETROL])
+                    ->badge(),
+
                 Tables\Columns\TextColumn::make('current_km')
                     ->label(__('vehicles.table.distance'))
                     ->formatStateUsing(fn ($state, Vehicle $record) => app(DistanceUnitService::class)->formatFromKilometers(

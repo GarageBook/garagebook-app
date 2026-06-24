@@ -17,8 +17,12 @@ class VehicleCostService
             ->where('user_id', $userId)
             ->withSum('maintenanceLogs as maintenance_costs_total', 'cost')
             ->with(['fuelLogs' => fn ($query) => $query
-                ->select('id', 'vehicle_id', 'fuel_date', 'fuel_liters', 'price_per_liter')
-                ->whereNotNull('price_per_liter')
+                ->select('id', 'vehicle_id', 'fuel_date', 'entry_type', 'fuel_liters', 'energy_kwh', 'price_per_liter', 'price_per_kwh', 'total_cost')
+                ->where(function ($fuelQuery): void {
+                    $fuelQuery->whereNotNull('total_cost')
+                        ->orWhereNotNull('price_per_liter')
+                        ->orWhereNotNull('price_per_kwh');
+                })
                 ->orderBy('fuel_date')])
             ->latest()
             ->get()
@@ -42,7 +46,7 @@ class VehicleCostService
 
         return [
             'labels' => $vehicles
-                ->map(fn (Vehicle $vehicle) => $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model))
+                ->map(fn (Vehicle $vehicle) => $vehicle->nickname ?: ($vehicle->brand.' '.$vehicle->model))
                 ->all(),
             'purchase' => $vehicles
                 ->map(fn (Vehicle $vehicle) => round((float) ($vehicle->purchase_price ?? 0), 2))
@@ -52,7 +56,7 @@ class VehicleCostService
                 ->all(),
             'fuel' => $vehicles
                 ->map(fn (Vehicle $vehicle) => round($vehicle->fuelLogs->sum(
-                    fn ($fuelLog) => (float) $fuelLog->fuel_liters * (float) $fuelLog->price_per_liter
+                    fn ($fuelLog) => (float) ($fuelLog->knownTotalCost() ?? 0)
                 ), 2))
                 ->all(),
         ];
@@ -108,12 +112,16 @@ class VehicleCostService
 
         $fuelTotals = FuelLog::query()
             ->whereIn('vehicle_id', $vehicleIds)
-            ->whereNotNull('price_per_liter')
+            ->where(function ($fuelQuery): void {
+                $fuelQuery->whereNotNull('total_cost')
+                    ->orWhereNotNull('price_per_liter')
+                    ->orWhereNotNull('price_per_kwh');
+            })
             ->whereDate('fuel_date', '>=', $start->toDateString())
-            ->get(['fuel_date', 'fuel_liters', 'price_per_liter'])
+            ->get(['fuel_date', 'entry_type', 'fuel_liters', 'energy_kwh', 'price_per_liter', 'price_per_kwh', 'total_cost'])
             ->groupBy(fn (FuelLog $log) => CarbonImmutable::parse($log->fuel_date)->format('Y-m'))
             ->map(fn (Collection $logs) => round($logs->sum(
-                fn (FuelLog $log) => (float) $log->fuel_liters * (float) $log->price_per_liter
+                fn (FuelLog $log) => (float) ($log->knownTotalCost() ?? 0)
             ), 2));
 
         $maintenance = $monthBuckets
@@ -170,12 +178,16 @@ class VehicleCostService
 
         $fuelTotals = FuelLog::query()
             ->whereIn('vehicle_id', $vehicleIds)
-            ->whereNotNull('price_per_liter')
+            ->where(function ($fuelQuery): void {
+                $fuelQuery->whereNotNull('total_cost')
+                    ->orWhereNotNull('price_per_liter')
+                    ->orWhereNotNull('price_per_kwh');
+            })
             ->whereDate('fuel_date', '>=', $start->toDateString())
-            ->get(['fuel_date', 'fuel_liters', 'price_per_liter'])
+            ->get(['fuel_date', 'entry_type', 'fuel_liters', 'energy_kwh', 'price_per_liter', 'price_per_kwh', 'total_cost'])
             ->groupBy(fn (FuelLog $log) => CarbonImmutable::parse($log->fuel_date)->format('Y-m'))
             ->map(fn (Collection $logs) => round($logs->sum(
-                fn (FuelLog $log) => (float) $log->fuel_liters * (float) $log->price_per_liter
+                fn (FuelLog $log) => (float) ($log->knownTotalCost() ?? 0)
             ), 2));
 
         $monthlyTotals = $monthBuckets->map(
@@ -209,7 +221,7 @@ class VehicleCostService
         $purchasePrice = (float) ($vehicle->purchase_price ?? 0);
         $maintenanceTotal = (float) ($vehicle->maintenance_costs_total ?? 0);
         $fuelTotal = $vehicle->fuelLogs->sum(
-            fn ($fuelLog) => (float) $fuelLog->fuel_liters * (float) $fuelLog->price_per_liter
+            fn ($fuelLog) => (float) ($fuelLog->knownTotalCost() ?? 0)
         );
 
         $vehicle->dashboard_total_cost = round($purchasePrice + $maintenanceTotal + $fuelTotal, 2);
@@ -233,7 +245,7 @@ class VehicleCostService
         $lastDate = Carbon::parse($fuelLogs->last()->fuel_date)->startOfMonth();
         $monthSpan = max(1, $firstDate->diffInMonths($lastDate) + 1);
         $totalFuelCost = $fuelLogs->sum(
-            fn ($fuelLog) => (float) $fuelLog->fuel_liters * (float) $fuelLog->price_per_liter
+            fn ($fuelLog) => (float) ($fuelLog->knownTotalCost() ?? 0)
         );
 
         return round($totalFuelCost / $monthSpan, 2);

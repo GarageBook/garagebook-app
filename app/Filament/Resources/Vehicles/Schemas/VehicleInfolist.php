@@ -40,6 +40,10 @@ class VehicleInfolist
                         TextEntry::make('license_plate')
                             ->label(__('vehicles.fields.license_plate'))
                             ->placeholder('-'),
+                        TextEntry::make('powertrain_type')
+                            ->label(__('vehicles.fields.powertrain_type'))
+                            ->formatStateUsing(fn ($state): string => Vehicle::powertrainOptions()[$state] ?? Vehicle::powertrainOptions()[Vehicle::POWERTRAIN_PETROL])
+                            ->placeholder('-'),
                         TextEntry::make('current_km')
                             ->label(__('vehicles.fields.current_km'))
                             ->state(fn (Vehicle $record) => app(DistanceUnitService::class)->formatFromKilometers(
@@ -50,6 +54,10 @@ class VehicleInfolist
                         TextEntry::make('year')
                             ->label(__('vehicles.fields.year'))
                             ->placeholder('-'),
+                        TextEntry::make('home_kwh_rate')
+                            ->label(__('vehicles.fields.home_kwh_rate'))
+                            ->formatStateUsing(fn ($state): string => $state !== null ? 'EUR '.number_format((float) $state, 3, ',', '.').' / kWh' : '-')
+                            ->visible(fn (Vehicle $record): bool => $record->supportsChargingEntries()),
                         TextEntry::make('notes')
                             ->label(__('vehicles.fields.notes'))
                             ->placeholder('-')

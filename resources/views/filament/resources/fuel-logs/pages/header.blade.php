@@ -109,7 +109,7 @@
                         {{ $activeVehicle->nickname ?: ($activeVehicle->brand . ' ' . $activeVehicle->model) }}
                     </div>
                     <div style="margin-top:10px; max-width:44rem; color:rgba(255,255,255,0.74); font-size:0.98rem; line-height:1.6;">
-                        {{ __('fuel.header.description') }}
+                        {{ $activeVehicle->supportsChargingEntries() ? __('fuel.header.ev_description') : __('fuel.header.description') }}
                     </div>
                 </div>
             </div>
@@ -119,18 +119,44 @@
                     <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_distance') }}</div>
                     <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['distance_label'] }}</div>
                 </div>
-                <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_liters') }}</div>
-                    <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ number_format((float) $summary['fuel_liters'], 2, ',', '.') }} L</div>
-                </div>
-                <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.fuel_costs') }}</div>
-                    <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">EUR {{ number_format((float) $summary['total_cost'], 2, ',', '.') }}</div>
-                </div>
-                <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
-                    <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.average_consumption') }}</div>
-                    <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['average_label'] }}</div>
-                </div>
+
+                @if($activeVehicle->usesFuelFlow())
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_liters') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ number_format((float) $summary['fuel_liters'], 2, ',', '.') }} L</div>
+                    </div>
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.fuel_costs') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">EUR {{ number_format((float) $summary['fuel_cost'], 2, ',', '.') }}</div>
+                    </div>
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.average_consumption') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ $summary['average_label'] }}</div>
+                    </div>
+                @endif
+
+                @if($activeVehicle->supportsChargingEntries())
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.total_kwh') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">{{ number_format((float) $summary['energy_kwh'], 2, ',', '.') }} kWh</div>
+                    </div>
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.charge_costs') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">EUR {{ number_format((float) $summary['charge_cost'], 2, ',', '.') }}</div>
+                    </div>
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.average_kwh') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">
+                            {{ $summary['average_kwh_per_100_km'] !== null ? number_format((float) $summary['average_kwh_per_100_km'], 2, ',', '.') . ' kWh/100 km' : __('fuel.table.not_filled') }}
+                        </div>
+                    </div>
+                    <div style="padding:16px 18px; border-radius:18px; background:rgba(255,255,255,0.08);">
+                        <div style="color:rgba(255,255,255,0.62); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;">{{ __('fuel.header.cost_per_km') }}</div>
+                        <div style="margin-top:6px; font-size:1.35rem; font-weight:700;">
+                            {{ $summary['cost_per_km'] !== null ? 'EUR ' . number_format((float) $summary['cost_per_km'], 3, ',', '.') : __('fuel.table.not_filled') }}
+                        </div>
+                    </div>
+                @endif
             </div>
         </section>
     @endif

@@ -46,10 +46,16 @@ class FuelLogsTable
                     ->html()
                     ->extraAttributes(self::cellAttributes()),
 
+                Tables\Columns\TextColumn::make('entry_type')
+                    ->label(__('fuel.table.entry_type'))
+                    ->formatStateUsing(fn ($state): string => FuelLog::entryTypeOptions()[$state] ?? FuelLog::entryTypeOptions()[FuelLog::ENTRY_TYPE_FUEL])
+                    ->badge()
+                    ->extraAttributes(self::cellAttributes()),
+
                 Tables\Columns\TextColumn::make('fuel_liters')
                     ->label(__('fuel.table.fueled'))
                     ->formatStateUsing(fn ($state, FuelLog $record): HtmlString => self::renderMeasurementCell(
-                        ...self::fuelDisplay((float) $state, $record)
+                        ...self::energyDisplay($record)
                     ))
                     ->html()
                     ->extraAttributes(self::cellAttributes()),
@@ -60,10 +66,16 @@ class FuelLogsTable
                     ->html()
                     ->extraAttributes(self::cellAttributes()),
 
-                Tables\Columns\TextColumn::make('price_per_liter')
-                    ->label(__('fuel.table.price_per_liter'))
-                    ->formatStateUsing(fn ($state) => $state !== null ? 'EUR ' . number_format((float) $state, 3, ',', '.') : __('fuel.table.not_filled'))
+                Tables\Columns\TextColumn::make('total_cost')
+                    ->label(__('fuel.table.costs'))
+                    ->state(fn (FuelLog $record): string => self::costDisplay($record))
                     ->toggleable()
+                    ->extraAttributes(self::cellAttributes()),
+
+                Tables\Columns\TextColumn::make('charge_type')
+                    ->label(__('fuel.table.charge_type'))
+                    ->formatStateUsing(fn ($state): string => $state ? (FuelLog::chargeTypeOptions()[$state] ?? __('fuel.table.not_filled')) : __('fuel.table.not_filled'))
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->extraAttributes(self::cellAttributes()),
 
                 Tables\Columns\TextColumn::make('station_location')
@@ -98,31 +110,62 @@ class FuelLogsTable
 
         $fuelConsumption = app(FuelConsumptionService::class);
         $miles = $fuelConsumption->convertKilometersToMiles($kilometers);
+
         return [
-            number_format((float) $miles, 0, ',', '.') . ' mi',
-            number_format(round($kilometers), 0, ',', '.') . ' km',
+            number_format((float) $miles, 0, ',', '.').' mi',
+            number_format(round($kilometers), 0, ',', '.').' km',
         ];
     }
 
-    private static function fuelDisplay(?float $liters, FuelLog $record): array
+    private static function energyDisplay(FuelLog $record): array
     {
-        if ($liters === null || $liters <= 0) {
+        $parts = [];
+
+        if ($record->fuel_liters !== null && (float) $record->fuel_liters > 0) {
+            $parts[] = number_format((float) $record->fuel_liters, 2, ',', '.').' L';
+        }
+
+        if ($record->energy_kwh !== null && (float) $record->energy_kwh > 0) {
+            $parts[] = number_format((float) $record->energy_kwh, 2, ',', '.').' kWh';
+        }
+
+        if ($parts === []) {
             return [__('fuel.table.not_filled'), null];
         }
 
-        $primary = number_format($liters, 2, ',', '.') . ' L';
         $usesMiles = app(DistanceUnitService::class)->normalizeUnit($record->vehicle?->distance_unit) === DistanceUnitService::UNIT_MILES;
 
-        if (! $usesMiles) {
-            return [$primary, null];
+        if (! $usesMiles || $record->fuel_liters === null || (float) $record->fuel_liters <= 0) {
+            return [implode(' + ', $parts), null];
         }
 
-        $gallons = app(FuelConsumptionService::class)->convertLitersToUsGallons($liters);
+        $gallons = app(FuelConsumptionService::class)->convertLitersToUsGallons((float) $record->fuel_liters);
 
         return [
-            $primary,
-            number_format((float) $gallons, 2, ',', '.') . ' gal (US)',
+            implode(' + ', $parts),
+            number_format((float) $gallons, 2, ',', '.').' gal (US)',
         ];
+    }
+
+    private static function costDisplay(FuelLog $record): string
+    {
+        $total = $record->knownTotalCost();
+
+        if ($total === null) {
+            return __('fuel.table.not_filled');
+        }
+
+        $label = 'EUR '.number_format($total, 2, ',', '.');
+
+        if ($record->price_per_liter !== null) {
+            $label .= ' (EUR '.number_format((float) $record->price_per_liter, 3, ',', '.').'/L)';
+        }
+
+        if ($record->price_per_kwh !== null) {
+            $label .= ' (EUR '.number_format((float) $record->price_per_kwh, 3, ',', '.').'/kWh)';
+        }
+
+        return $label;
     }
 
     private static function renderMeasurementCell(string $primary, ?string $secondary = null, string $align = 'start'): HtmlString
@@ -139,18 +182,33 @@ class FuelLogsTable
         $fuelConsumption = app(FuelConsumptionService::class);
         $distanceUnit = app(DistanceUnitService::class);
         $usesMiles = $distanceUnit->normalizeUnit($record->vehicle?->distance_unit) === DistanceUnitService::UNIT_MILES;
-        $litersPer100Km = $fuelConsumption->calculateLitersPer100Km((float) $record->distance_km, (float) $record->fuel_liters);
-        $ratio = $fuelConsumption->calculateRoundedKilometersPerLiterRatio((float) $record->distance_km, (float) $record->fuel_liters);
-        $mpg = $usesMiles ? $fuelConsumption->calculateMilesPerUsGallon((float) $record->distance_km, (float) $record->fuel_liters) : null;
+        $distanceKm = $record->distance_km !== null ? (float) $record->distance_km : null;
+        $labels = [];
 
-        return new HtmlString((string) view('filament.resources.fuel-logs.tables.consumption-cell', [
-            'mpgLabel' => $mpg !== null ? number_format($mpg, 1, ',', '.') : null,
-            'litersPer100KmLabel' => $litersPer100Km !== null
-                ? number_format($litersPer100Km, 2, ',', '.') . ' L/100 km'
-                : __('fuel.table.not_filled'),
-            'ratioLabel' => $ratio !== null ? '1:' . $ratio : null,
-            'distanceLabel' => number_format(round((float) $record->distance_km), 0, ',', '.') . ' km',
-        ]));
+        if ($record->fuel_liters !== null && (float) $record->fuel_liters > 0) {
+            $litersPer100Km = $fuelConsumption->calculateLitersPer100Km($distanceKm, (float) $record->fuel_liters);
+            $ratio = $fuelConsumption->calculateRoundedKilometersPerLiterRatio($distanceKm, (float) $record->fuel_liters);
+            $mpg = $usesMiles ? $fuelConsumption->calculateMilesPerUsGallon($distanceKm, (float) $record->fuel_liters) : null;
+            $labels[] = $litersPer100Km !== null ? number_format($litersPer100Km, 2, ',', '.').' L/100 km' : __('fuel.table.not_filled');
+
+            if ($ratio !== null) {
+                $labels[] = '1:'.$ratio;
+            }
+
+            if ($mpg !== null) {
+                $labels[] = number_format($mpg, 1, ',', '.').' MPG';
+            }
+        }
+
+        if ($record->energy_kwh !== null && (float) $record->energy_kwh > 0) {
+            $kwhPer100Km = $fuelConsumption->calculateKwhPer100Km($distanceKm, (float) $record->energy_kwh);
+            $labels[] = $kwhPer100Km !== null ? number_format($kwhPer100Km, 2, ',', '.').' kWh/100 km' : __('fuel.table.not_filled');
+        }
+
+        return self::renderMeasurementCell(
+            $labels !== [] ? implode(' / ', $labels) : __('fuel.table.not_filled'),
+            $distanceKm !== null && $distanceKm > 0 ? number_format(round($distanceKm), 0, ',', '.').' km' : null
+        );
     }
 
     private static function cellAttributes(): array

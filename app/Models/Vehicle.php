@@ -9,6 +9,20 @@ use Illuminate\Support\Facades\Schema;
 
 class Vehicle extends Model
 {
+    public const POWERTRAIN_PETROL = 'petrol';
+
+    public const POWERTRAIN_DIESEL = 'diesel';
+
+    public const POWERTRAIN_HYBRID = 'hybrid';
+
+    public const POWERTRAIN_PHEV = 'phev';
+
+    public const POWERTRAIN_ELECTRIC = 'electric';
+
+    public const POWERTRAIN_LPG = 'lpg';
+
+    public const POWERTRAIN_OTHER = 'other';
+
     protected $fillable = [
         'user_id',
         'airtable_record_id',
@@ -20,6 +34,7 @@ class Vehicle extends Model
         'license_plate',
         'current_km',
         'distance_unit',
+        'powertrain_type',
         'year',
         'public_slug',
         'is_public',
@@ -28,6 +43,7 @@ class Vehicle extends Model
         'purchase_price',
         'insurance_cost_per_month',
         'road_tax_cost_per_month',
+        'home_kwh_rate',
         'notes',
         'photo',
         'photos',
@@ -44,6 +60,7 @@ class Vehicle extends Model
         'share_costs_publicly' => 'boolean',
         'insurance_cost_per_month' => 'decimal:2',
         'road_tax_cost_per_month' => 'decimal:2',
+        'home_kwh_rate' => 'decimal:3',
     ];
 
     protected static function booted(): void
@@ -95,7 +112,59 @@ class Vehicle extends Model
         $this->attributes['road_tax_cost_per_month'] = self::normalizeDecimal($value);
     }
 
-    private static function normalizeDecimal(mixed $value): ?string
+    public function setHomeKwhRateAttribute(mixed $value): void
+    {
+        $this->attributes['home_kwh_rate'] = self::normalizeDecimal($value, 3);
+    }
+
+    public function setPowertrainTypeAttribute(mixed $value): void
+    {
+        $this->attributes['powertrain_type'] = self::normalizePowertrainType($value);
+    }
+
+    public function isElectric(): bool
+    {
+        return $this->powertrain_type === self::POWERTRAIN_ELECTRIC;
+    }
+
+    public function isPhev(): bool
+    {
+        return $this->powertrain_type === self::POWERTRAIN_PHEV;
+    }
+
+    public function supportsChargingEntries(): bool
+    {
+        return $this->isElectric() || $this->isPhev();
+    }
+
+    public function usesFuelFlow(): bool
+    {
+        return ! $this->isElectric();
+    }
+
+    public static function powertrainOptions(): array
+    {
+        return [
+            self::POWERTRAIN_PETROL => 'Benzine',
+            self::POWERTRAIN_DIESEL => 'Diesel',
+            self::POWERTRAIN_HYBRID => 'Hybride',
+            self::POWERTRAIN_PHEV => 'Plug-in hybride',
+            self::POWERTRAIN_ELECTRIC => 'Elektrisch',
+            self::POWERTRAIN_LPG => 'LPG',
+            self::POWERTRAIN_OTHER => 'Overig',
+        ];
+    }
+
+    public static function normalizePowertrainType(mixed $value): string
+    {
+        $value = is_string($value) ? $value : null;
+
+        return array_key_exists($value, self::powertrainOptions())
+            ? $value
+            : self::POWERTRAIN_PETROL;
+    }
+
+    private static function normalizeDecimal(mixed $value, int $precision = 2): ?string
     {
         if ($value === null) {
             return null;
@@ -120,6 +189,6 @@ class Vehicle extends Model
             return null;
         }
 
-        return number_format((float) $value, 2, '.', '');
+        return number_format((float) $value, $precision, '.', '');
     }
 }

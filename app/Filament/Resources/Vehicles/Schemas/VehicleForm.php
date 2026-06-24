@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Vehicles\Schemas;
 
+use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
 use Filament\Forms;
 use Filament\Schemas\Components\Utilities\Get;
@@ -74,6 +75,14 @@ class VehicleForm
                     ->selectablePlaceholder(false)
                     ->live(),
 
+                Forms\Components\Select::make('powertrain_type')
+                    ->label(__('vehicles.fields.powertrain_type'))
+                    ->options(Vehicle::powertrainOptions())
+                    ->default(Vehicle::POWERTRAIN_PETROL)
+                    ->required()
+                    ->selectablePlaceholder(false)
+                    ->live(),
+
                 Forms\Components\TextInput::make('current_km')
                     ->label(__('vehicles.fields.current_km'))
                     ->numeric()
@@ -101,6 +110,14 @@ class VehicleForm
                     ->numeric()
                     ->inputMode('decimal')
                     ->prefix('EUR'),
+
+                Forms\Components\TextInput::make('home_kwh_rate')
+                    ->label(__('vehicles.fields.home_kwh_rate'))
+                    ->numeric()
+                    ->inputMode('decimal')
+                    ->prefix('EUR')
+                    ->suffix(__('vehicles.fields.per_kwh'))
+                    ->visible(fn (Get $get): bool => in_array($get('powertrain_type'), [Vehicle::POWERTRAIN_ELECTRIC, Vehicle::POWERTRAIN_PHEV], true)),
 
                 Forms\Components\Textarea::make('notes')
                     ->label(__('vehicles.fields.notes')),
