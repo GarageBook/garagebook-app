@@ -3,16 +3,16 @@
 namespace App\Filament\Widgets;
 
 use App\Models\AnalyticsTopPage;
+use App\Support\AnalyticsDataWindow;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 class TopVisitedPagesWidget extends TableWidget
 {
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public static function canView(): bool
     {
@@ -32,7 +32,8 @@ class TopVisitedPagesWidget extends TableWidget
             ->defaultKeySort(false)
             ->defaultPaginationPageOption(10)
             ->paginated(false)
-            ->emptyStateHeading('Nog geen analyticsdata beschikbaar.')
+            ->description($this->tableDescription())
+            ->emptyStateHeading('Nog geen gesynchroniseerde analyticsdata beschikbaar.')
             ->emptyStateDescription('Draai eerst php artisan garagebook:sync-ga4-analytics en php artisan garagebook:sync-search-console.')
             ->columns([
                 TextColumn::make('page_path')
@@ -54,10 +55,13 @@ class TopVisitedPagesWidget extends TableWidget
 
     protected function getTableQuery(): Builder
     {
-        $fromDate = Carbon::today()->subDays(29)->toDateString();
+        $window = AnalyticsDataWindow::forTable('analytics_top_pages');
 
         return AnalyticsTopPage::query()
-            ->whereDate('date', '>=', $fromDate)
+            ->when($window['has_data'], fn ($query) => $query
+                ->where('date', '>=', $window['start_at'])
+                ->where('date', '<=', $window['end_at']))
+            ->when(! $window['has_data'], fn ($query) => $query->whereRaw('1 = 0'))
             ->selectRaw('MIN(id) as id')
             ->selectRaw('page_path')
             ->selectRaw('MAX(page_title) as page_title')
@@ -66,5 +70,18 @@ class TopVisitedPagesWidget extends TableWidget
             ->groupBy('page_path')
             ->orderByDesc('views')
             ->limit(10);
+    }
+
+    private function tableDescription(): ?string
+    {
+        $window = AnalyticsDataWindow::forTable('analytics_top_pages');
+
+        if (! $window['has_data']) {
+            return null;
+        }
+
+        return collect([$window['label'], $window['warning']])
+            ->filter()
+            ->implode(' · ');
     }
 }

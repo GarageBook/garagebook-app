@@ -9,6 +9,7 @@ use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\AnalyticsDataWindow;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -70,21 +71,25 @@ class GrowthDashboardData
 
         return [
             'is_analytics_incomplete' => $isAnalyticsIncomplete,
+            'analytics_window' => $visitorCounts['window'] ?? AnalyticsDataWindow::forTable('analytics_daily_summaries'),
             'cards' => [
                 [
                     'label' => 'Bezoekers vandaag',
                     'value' => $visitorCounts['today'],
                     'is_available' => $visitorCounts['today'] !== null,
+                    'meta' => collect([$visitorCounts['window']['label'] ?? null, $visitorCounts['window']['warning'] ?? null])->filter()->implode(' · ') ?: null,
                 ],
                 [
                     'label' => 'Bezoekers laatste 7 dagen',
                     'value' => $visitorCounts['seven_days'],
                     'is_available' => $visitorCounts['seven_days'] !== null,
+                    'meta' => collect([$visitorCounts['window']['label'] ?? null, $visitorCounts['window']['warning'] ?? null])->filter()->implode(' · ') ?: null,
                 ],
                 [
                     'label' => 'Bezoekers laatste 30 dagen',
                     'value' => $visitorCounts['thirty_days'],
                     'is_available' => $visitorCounts['thirty_days'] !== null,
+                    'meta' => collect([$visitorCounts['window']['label'] ?? null, $visitorCounts['window']['warning'] ?? null])->filter()->implode(' · ') ?: null,
                 ],
                 [
                     'label' => 'Registraties vandaag',
@@ -219,6 +224,8 @@ class GrowthDashboardData
         return [
             'has_queries' => $this->hasTable('search_console_queries'),
             'has_pages' => $this->hasTable('search_console_pages'),
+            'query_window' => AnalyticsDataWindow::forTable('search_console_queries'),
+            'page_window' => AnalyticsDataWindow::forTable('search_console_pages'),
             'top_queries_by_clicks' => $this->searchConsoleQueryRows('clicks'),
             'top_queries_by_impressions' => $this->searchConsoleQueryRows('impressions'),
             'high_impression_low_ctr_queries' => $this->searchConsoleQueryRows('impressions', fn ($query) => $query
@@ -241,6 +248,7 @@ class GrowthDashboardData
         if ($rows->isEmpty()) {
             return [
                 'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+                'analytics_window' => AnalyticsDataWindow::forTable('analytics_top_pages'),
                 'rows' => [],
             ];
         }
@@ -293,10 +301,10 @@ class GrowthDashboardData
 
         return [
             'disclaimer' => 'Gebaseerd op beschikbare attribution data',
+            'analytics_window' => AnalyticsDataWindow::forTable('analytics_top_pages'),
             'rows' => $result,
         ];
     }
-
 
     public function weeklyGrowthReport(): array
     {
@@ -334,6 +342,7 @@ class GrowthDashboardData
                 'users_with_maintenance' => $stats['users_with_maintenance'],
                 'users_with_active_reminder' => $stats['users_with_active_reminder'],
                 'users_with_booklet_download' => $stats['users_with_booklet_download'],
+                'public_vehicles' => $stats['public_vehicles'],
                 'active_last_7_days' => $stats['active_last_7_days'],
                 'active_last_30_days' => $stats['active_last_30_days'],
             ],
@@ -366,6 +375,7 @@ class GrowthDashboardData
             'users_with_fuel_entries' => $hasVehicles && $hasFuelLogs ? User::query()->whereHas('vehicles.fuelLogs')->count() : null,
             'users_with_active_reminder' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithActiveReminder() : null,
             'users_with_booklet_download' => $hasBookletDownloads ? User::query()->whereNotNull('first_booklet_downloaded_at')->count() : null,
+            'public_vehicles' => $hasVehicles && $this->hasColumn('vehicles', 'is_public') ? Vehicle::query()->where('is_public', true)->count() : null,
             'active_last_7_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(7))->count() : null,
             'active_last_30_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(30))->count() : null,
         ];
@@ -491,24 +501,35 @@ class GrowthDashboardData
 
     private function visitorCounts(Carbon $today, Carbon $sevenDayStart, Carbon $thirtyDayStart): array
     {
-        if (! $this->hasTable('analytics_daily_summaries')) {
+        $window = AnalyticsDataWindow::forTable('analytics_daily_summaries');
+
+        if (! $window['has_data']) {
             return [
                 'today' => null,
                 'seven_days' => null,
                 'thirty_days' => null,
+                'window' => $window,
             ];
         }
 
+        $endDate = Carbon::parse($window['end_at']);
+        $sevenDayStart = $endDate->copy()->subDays(6)->toDateString();
+        $thirtyDayStart = $endDate->copy()->subDays(29)->toDateString();
+
         return [
             'today' => (int) (AnalyticsDailySummary::query()
-                ->whereDate('date', $today->toDateString())
+                ->where('date', '>=', $window['end_date'].' 00:00:00')
+                ->where('date', '<=', $window['end_at'])
                 ->sum('users')),
             'seven_days' => (int) (AnalyticsDailySummary::query()
-                ->whereDate('date', '>=', $sevenDayStart->toDateString())
+                ->where('date', '>=', $sevenDayStart)
+                ->where('date', '<=', $window['end_at'])
                 ->sum('users')),
             'thirty_days' => (int) (AnalyticsDailySummary::query()
-                ->whereDate('date', '>=', $thirtyDayStart->toDateString())
+                ->where('date', '>=', $thirtyDayStart)
+                ->where('date', '<=', $window['end_at'])
                 ->sum('users')),
+            'window' => $window,
         ];
     }
 
@@ -568,8 +589,15 @@ class GrowthDashboardData
             return [];
         }
 
+        $window = AnalyticsDataWindow::forTable('analytics_top_pages');
+
+        if (! $window['has_data']) {
+            return [];
+        }
+
         return AnalyticsTopPage::query()
-            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->where('date', '>=', $window['start_at'])
+            ->where('date', '<=', $window['end_at'])
             ->selectRaw('page_path')
             ->selectRaw('SUM(users) as users')
             ->groupBy('page_path')
@@ -584,8 +612,15 @@ class GrowthDashboardData
             return [];
         }
 
+        $window = AnalyticsDataWindow::forTable('search_console_queries');
+
+        if (! $window['has_data']) {
+            return [];
+        }
+
         $query = SearchConsoleQuery::query()
-            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->where('date', '>=', $window['start_at'])
+            ->where('date', '<=', $window['end_at'])
             ->selectRaw('MIN(id) as id')
             ->selectRaw('query')
             ->selectRaw('SUM(clicks) as clicks')
@@ -623,8 +658,15 @@ class GrowthDashboardData
             return [];
         }
 
+        $window = AnalyticsDataWindow::forTable('search_console_pages');
+
+        if (! $window['has_data']) {
+            return [];
+        }
+
         $query = SearchConsolePage::query()
-            ->whereDate('date', '>=', Carbon::today()->subDays(29)->toDateString())
+            ->where('date', '>=', $window['start_at'])
+            ->where('date', '<=', $window['end_at'])
             ->selectRaw('MIN(id) as id')
             ->selectRaw('page')
             ->selectRaw('SUM(clicks) as clicks')

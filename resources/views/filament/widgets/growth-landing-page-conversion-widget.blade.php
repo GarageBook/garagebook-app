@@ -12,9 +12,23 @@
                     </div>
                 </div>
 
-                <span class="inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                    Alleen betrouwbare koppelingen
-                </span>
+                <div class="flex flex-col items-start gap-2 sm:items-end">
+                    @if (($analytics_window['label'] ?? null))
+                        <span class="inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 sm:self-end">
+                            {{ $analytics_window['label'] }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 sm:self-end">
+                            Geen gesynchroniseerde analyticsdata
+                        </span>
+                    @endif
+
+                    @if (($analytics_window['warning'] ?? null))
+                        <span class="inline-flex items-center self-start rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 sm:self-end">
+                            {{ $analytics_window['warning'] }}
+                        </span>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -23,7 +37,7 @@
                 <div class="flex min-h-[16rem] items-center justify-center rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
                     <div>
                         <p class="text-sm font-semibold text-slate-700">Nog geen data beschikbaar</p>
-                        <p class="mt-2 text-sm text-slate-500">Landingpageconversie wordt zichtbaar zodra landing pages in attribution data zijn opgeslagen.</p>
+                        <p class="mt-2 text-sm text-slate-500">Landingpageconversie wordt zichtbaar zodra landing pages in attribution data zijn opgeslagen; visits worden aangevuld uit gesynchroniseerde analyticsdata zodra die beschikbaar is.</p>
                     </div>
                 </div>
             @else

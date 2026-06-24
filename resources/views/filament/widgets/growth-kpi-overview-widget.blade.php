@@ -52,15 +52,15 @@
                 </div>
 
                 <div class="flex items-center gap-4">
-                    @if ($is_analytics_incomplete)
+                    @if (($analytics_window['warning'] ?? null) || $is_analytics_incomplete)
                         <div class="flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
                             <x-filament::icon icon="heroicon-o-exclamation-triangle" class="h-4 w-4" />
-                            <span>Analytics data mogelijk incompleet</span>
+                            <span>{{ $analytics_window['warning'] ?? 'Analytics data mogelijk incompleet' }}</span>
                         </div>
                     @endif
 
                     <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
-                        Laatste 30 dagen
+                        {{ $analytics_window['label'] ?? 'Laatste 30 dagen' }}
                     </span>
                 </div>
             </div>

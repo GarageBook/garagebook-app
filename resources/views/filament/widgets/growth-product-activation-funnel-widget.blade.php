@@ -7,6 +7,7 @@
         ['label' => '≥3 logs', 'legacy_label' => 'Users met minimaal 3 maintenance logs', 'value' => $stats['users_with_three_maintenance']],
         ['label' => 'Reminder actief', 'value' => $stats['users_with_active_reminder']],
         ['label' => 'Boekje gedownload', 'value' => $stats['users_with_booklet_download']],
+        ['label' => 'Publieke voertuigen', 'value' => $stats['public_vehicles']],
         ['label' => 'Actief 7 dagen', 'legacy_label' => 'Teruggekomen na 7 dagen', 'value' => $stats['active_last_7_days']],
         ['label' => 'Actief 30 dagen', 'legacy_label' => 'Teruggekomen na 30 dagen', 'value' => $stats['active_last_30_days']],
     ];

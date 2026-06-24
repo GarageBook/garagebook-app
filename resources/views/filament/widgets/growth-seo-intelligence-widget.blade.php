@@ -66,9 +66,23 @@
                     </div>
                 </div>
 
-                <span class="inline-flex items-center self-start rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                    Search Console snapshots
-                </span>
+                <div class="flex flex-col items-start gap-2 lg:items-end">
+                    @if (($query_window['label'] ?? null) || ($page_window['label'] ?? null))
+                        <span class="inline-flex items-center self-start rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 lg:self-end">
+                            {{ $query_window['label'] ?? $page_window['label'] }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:self-end">
+                            Geen gesynchroniseerde Search Console data
+                        </span>
+                    @endif
+
+                    @if (($query_window['warning'] ?? null) || ($page_window['warning'] ?? null))
+                        <span class="inline-flex items-center self-start rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 lg:self-end">
+                            {{ $query_window['warning'] ?? $page_window['warning'] }}
+                        </span>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -85,7 +99,7 @@
                             <div class="flex min-h-[16rem] items-center justify-center px-5 py-10 text-center">
                                 <div>
                                     <p class="text-sm font-semibold text-slate-700">Nog geen data beschikbaar</p>
-                                    <p class="mt-2 text-sm text-slate-500">Deze sectie wordt gevuld zodra er Search Console snapshots zijn opgeslagen.</p>
+                                    <p class="mt-2 text-sm text-slate-500">Deze sectie wordt gevuld zodra er gesynchroniseerde Search Console data is opgeslagen.</p>
                                 </div>
                             </div>
                         @else

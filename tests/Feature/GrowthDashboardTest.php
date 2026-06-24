@@ -63,6 +63,55 @@ class GrowthDashboardTest extends TestCase
             ->assertSee('Nog geen attributionregistraties beschikbaar.');
     }
 
+    public function test_growth_kpis_show_clear_unavailable_state_when_analytics_summaries_are_empty(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        Livewire::test(GrowthKpiOverviewWidget::class)
+            ->assertSeeText('Bezoekers vandaag')
+            ->assertSeeText('niet beschikbaar')
+            ->assertSeeText('Registraties laatste 30 dagen');
+    }
+
+    public function test_growth_kpis_use_stale_latest_available_analytics_window_with_warning(): void
+    {
+        Carbon::setTestNow('2026-06-24 12:00:00');
+
+        try {
+            $admin = User::factory()->admin()->create();
+
+            AnalyticsDailySummary::query()->create([
+                'date' => '2026-05-18',
+                'users' => 21,
+                'sessions' => 25,
+                'screen_page_views' => 60,
+                'event_count' => 100,
+                'conversions' => 0,
+            ]);
+
+            AnalyticsDailySummary::query()->create([
+                'date' => '2026-04-18',
+                'users' => 999,
+                'sessions' => 999,
+                'screen_page_views' => 999,
+                'event_count' => 999,
+                'conversions' => 0,
+            ]);
+
+            $this->actingAs($admin);
+
+            Livewire::test(GrowthKpiOverviewWidget::class)
+                ->assertSeeText('Data t/m 18-05-2026')
+                ->assertSeeText('Analytics-sync lijkt achter te lopen')
+                ->assertSeeText('21')
+                ->assertDontSeeText('999');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_growth_dashboard_shows_registration_kpis_with_existing_users(): void
     {
         $admin = User::factory()->admin()->create([
@@ -122,6 +171,7 @@ class GrowthDashboardTest extends TestCase
                 'user_id' => $userWithEverything->id,
                 'brand' => 'Honda',
                 'model' => 'CB500',
+                'is_public' => true,
             ]);
             MaintenanceLog::query()->create([
                 'vehicle_id' => $vehicleOne->id,
@@ -189,6 +239,7 @@ class GrowthDashboardTest extends TestCase
                 ->assertSeeText('Reminder actief')
                 ->assertSeeText('1')
                 ->assertSeeText('Boekje gedownload')
+                ->assertSeeText('Publieke voertuigen')
                 ->assertSeeText('Kernconversies')
                 ->assertSeeText('Registratie → voertuig')
                 ->assertSeeText('Voertuig → eerste onderhoudslog')

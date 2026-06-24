@@ -14,9 +14,9 @@ class GrowthKpiOverviewWidget extends StatsOverviewWidget
 
     protected ?string $description = 'Bezoekers- en registratiecijfers uit lokaal opgeslagen analytics- en gebruikersdata.';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
-    protected int | array | null $columns = [
+    protected int|array|null $columns = [
         'md' => 2,
         'xl' => 4,
     ];
@@ -32,6 +32,7 @@ class GrowthKpiOverviewWidget extends StatsOverviewWidget
 
         return [
             'is_analytics_incomplete' => $data['is_analytics_incomplete'] ?? false,
+            'analytics_window' => $data['analytics_window'] ?? null,
         ];
     }
 
