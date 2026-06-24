@@ -39,6 +39,10 @@ class VehicleResource extends Resource
 
     public static function getRelations(): array
     {
+        if (request()->routeIs('filament.admin.resources.vehicles.edit')) {
+            return [];
+        }
+
         return [
             TripLogsRelationManager::class,
         ];

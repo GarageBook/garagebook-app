@@ -200,8 +200,8 @@ class TripLogResourceTest extends TestCase
         $this->actingAs($owner)
             ->get(VehicleResource::getUrl('edit', ['record' => $ownerVehicle]))
             ->assertOk()
-            ->assertSeeText('Recente trips')
-            ->assertSeeText($ownerTrip->title)
+            ->assertDontSeeText('Recente trips')
+            ->assertDontSeeText($ownerTrip->title)
             ->assertDontSeeText('Verborgen trip');
     }
 
