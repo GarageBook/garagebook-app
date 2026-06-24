@@ -109,6 +109,8 @@ class GoogleApiServiceOAuthTest extends TestCase
         $output = Artisan::output();
 
         $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('Client ID suffix: rcontent.com', $output);
+        $this->assertStringContainsString('Refresh token lengte: 19', $output);
         $this->assertStringContainsString('Google error: invalid_grant', $output);
         $this->assertStringContainsString('Google error_description: Token has been expired or revoked.', $output);
         $this->assertStringNotContainsString('client-secret-value', $output);

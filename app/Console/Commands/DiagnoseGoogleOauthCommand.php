@@ -27,6 +27,8 @@ class DiagnoseGoogleOauthCommand extends Command
             $this->line('Auth mode: '.($diagnostics['auth_mode'] ?? 'unknown'));
             $this->line('Supports OAuth: '.$this->yesNo((bool) ($diagnostics['supports_oauth'] ?? false)));
             $this->line('Token endpoint: '.($diagnostics['token_uri'] ?? 'unknown'));
+            $this->line('Client ID suffix: '.(($diagnostics['client_id_suffix'] ?? null) ?: 'niet beschikbaar'));
+            $this->line('Refresh token lengte: '.(($diagnostics['refresh_token_length'] ?? null) ?: 'niet beschikbaar'));
             $this->line('Scopes: '.implode(', ', $diagnostics['scopes'] ?? []));
 
             $this->line('Config aanwezig:');

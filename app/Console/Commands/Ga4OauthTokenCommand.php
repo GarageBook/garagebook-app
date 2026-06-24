@@ -28,6 +28,14 @@ class Ga4OauthTokenCommand extends Command
             return self::FAILURE;
         }
 
+        if (! $this->searchConsoleClientMatchesAnalytics($clientId, $clientSecret)) {
+            $this->error('garagebook:ga4-oauth-token gebruikt de GA4 OAuth client. Search Console gebruikt een andere OAuth client; gebruik php artisan garagebook:generate-google-refresh-token --service=ga4 en --service=search-console, of maak de client_id/client_secret env keys gelijk.');
+
+            return self::FAILURE;
+        }
+
+        $this->line('OAuth client suffix: '.substr($clientId, -12));
+
         $client = $this->makeGoogleClient($clientId, $clientSecret);
         $consentUrl = $client->createAuthUrl();
 
@@ -48,14 +56,14 @@ class Ga4OauthTokenCommand extends Command
         try {
             $token = $client->fetchAccessTokenWithAuthCode($authorizationCode);
         } catch (\Throwable $exception) {
-            $this->error('Kon authorization code niet omwisselen voor tokens: ' . $exception->getMessage());
+            $this->error('Kon authorization code niet omwisselen voor tokens: '.$exception->getMessage());
 
             return self::FAILURE;
         }
 
         if (isset($token['error'])) {
             $description = $token['error_description'] ?? $token['error'];
-            $this->error('Google OAuth gaf een fout terug: ' . $description);
+            $this->error('Google OAuth gaf een fout terug: '.$description);
 
             return self::FAILURE;
         }
@@ -110,5 +118,21 @@ class Ga4OauthTokenCommand extends Command
         return is_string($clientSecret) && trim($clientSecret) !== ''
             ? trim($clientSecret)
             : null;
+    }
+
+    private function searchConsoleClientMatchesAnalytics(string $clientId, string $clientSecret): bool
+    {
+        $searchClientId = config('services.search_console.client_id');
+        $searchClientSecret = config('services.search_console.client_secret');
+
+        if ((! is_string($searchClientId) || trim($searchClientId) === '')
+            && (! is_string($searchClientSecret) || trim($searchClientSecret) === '')) {
+            return true;
+        }
+
+        return is_string($searchClientId)
+            && is_string($searchClientSecret)
+            && hash_equals($clientId, trim($searchClientId))
+            && hash_equals($clientSecret, trim($searchClientSecret));
     }
 }

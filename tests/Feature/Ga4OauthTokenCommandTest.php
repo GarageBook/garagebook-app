@@ -20,11 +20,27 @@ class Ga4OauthTokenCommandTest extends TestCase
             ->assertExitCode(1);
     }
 
+    public function test_command_fails_when_search_console_client_differs_from_analytics_client(): void
+    {
+        config([
+            'services.google_analytics.client_id' => 'analytics-client-id.apps.googleusercontent.com',
+            'services.google_analytics.client_secret' => 'analytics-client-secret',
+            'services.search_console.client_id' => 'search-console-client-id.apps.googleusercontent.com',
+            'services.search_console.client_secret' => 'search-console-client-secret',
+        ]);
+
+        $this->artisan('garagebook:ga4-oauth-token')
+            ->expectsOutput('garagebook:ga4-oauth-token gebruikt de GA4 OAuth client. Search Console gebruikt een andere OAuth client; gebruik php artisan garagebook:generate-google-refresh-token --service=ga4 en --service=search-console, of maak de client_id/client_secret env keys gelijk.')
+            ->assertExitCode(1);
+    }
+
     public function test_command_prints_refresh_token_after_successful_exchange(): void
     {
         config([
             'services.google_analytics.client_id' => 'client-id.apps.googleusercontent.com',
             'services.google_analytics.client_secret' => 'client-secret',
+            'services.search_console.client_id' => 'client-id.apps.googleusercontent.com',
+            'services.search_console.client_secret' => 'client-secret',
         ]);
 
         $client = Mockery::mock(GoogleClient::class);
@@ -60,6 +76,8 @@ class Ga4OauthTokenCommandTest extends TestCase
         config([
             'services.google_analytics.client_id' => 'client-id.apps.googleusercontent.com',
             'services.google_analytics.client_secret' => 'client-secret',
+            'services.search_console.client_id' => 'client-id.apps.googleusercontent.com',
+            'services.search_console.client_secret' => 'client-secret',
         ]);
 
         $client = Mockery::mock(GoogleClient::class);

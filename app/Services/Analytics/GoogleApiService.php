@@ -51,6 +51,8 @@ abstract class GoogleApiService
             'token_uri' => $this->oauthTokenUri(),
             'scopes' => $this->scopes(),
             'config_present' => $this->oauthConfigPresence(),
+            'client_id_suffix' => $this->clientIdSuffix(),
+            'refresh_token_length' => $this->refreshTokenLength(),
             'configuration_error' => $this->configurationError(),
             'token_endpoint_reachable' => null,
             'token_exchange_success' => false,
@@ -263,6 +265,28 @@ abstract class GoogleApiService
         return is_string($value) && trim($value) !== '';
     }
 
+    private function clientIdSuffix(): ?string
+    {
+        $clientId = config('services.'.$this->configPrefix().'.client_id');
+
+        if (! is_string($clientId) || trim($clientId) === '') {
+            return null;
+        }
+
+        return substr(trim($clientId), -12);
+    }
+
+    private function refreshTokenLength(): ?int
+    {
+        $refreshToken = config('services.'.$this->configPrefix().'.refresh_token');
+
+        if (! is_string($refreshToken) || trim($refreshToken) === '') {
+            return null;
+        }
+
+        return strlen(trim($refreshToken));
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -274,6 +298,8 @@ abstract class GoogleApiService
             'token_uri' => $this->oauthTokenUri(),
             'scopes' => $this->scopes(),
             'config_present' => $this->oauthConfigPresence(),
+            'client_id_suffix' => $this->clientIdSuffix(),
+            'refresh_token_length' => $this->refreshTokenLength(),
             'token_endpoint_reachable' => null,
             'token_exchange_success' => false,
             'http_status' => null,
