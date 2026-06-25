@@ -15,10 +15,11 @@ class SubscribeUserToMailerLite implements ShouldQueue
     public function __construct(
         public string $email,
         public ?string $name = null,
+        public array $groups = [],
     ) {}
 
     public function handle(MailerLiteClient $mailerLite): void
     {
-        $mailerLite->subscribe($this->email, $this->name);
+        $mailerLite->subscribe($this->email, $this->name, $this->groups);
     }
 }

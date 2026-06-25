@@ -11,11 +11,16 @@ class MailerLiteClient
         private readonly HttpFactory $http,
     ) {}
 
-    public function subscribe(string $email, ?string $name = null): void
+    /**
+     * @param  array<int, string>  $groups
+     */
+    public function subscribe(string $email, ?string $name = null, array $groups = []): void
     {
-        $groupId = config('services.mailerlite.group_id');
+        $groups = array_values(array_filter(
+            array_map(fn (mixed $groupId): ?string => filled($groupId) ? (string) $groupId : null, $groups),
+        ));
 
-        if (blank($groupId)) {
+        if ($groups === []) {
             throw new RuntimeException('MAILERLITE_GROUP_ID is niet ingesteld.');
         }
 
@@ -24,7 +29,7 @@ class MailerLiteClient
             'fields' => [
                 'name' => $name,
             ],
-            'groups' => [(string) $groupId],
+            'groups' => $groups,
         ])->throw();
     }
 
