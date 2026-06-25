@@ -8,7 +8,6 @@ use Filament\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -30,15 +29,15 @@ class MailerLiteRegistrationTest extends TestCase
         Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job) use ($user): bool {
             return $job->email === $user->email
                 && $job->name === $user->name
-                && $job->groups === ['182049396278428795'];
+                && $job->groups === ['182049396278428795']
+                && $job->fields === [];
         });
     }
 
-    public function test_geratel_registered_event_queues_default_and_geratel_mailerlite_groups(): void
+    public function test_geratel_registered_event_queues_default_mailerlite_group_and_registration_source_field(): void
     {
         config()->set('services.mailerlite.token', 'test-token');
         config()->set('services.mailerlite.group_id', '182049396278428795');
-        config()->set('services.mailerlite.geratel_group_id', '182049396278428796');
 
         Queue::fake();
 
@@ -51,7 +50,8 @@ class MailerLiteRegistrationTest extends TestCase
         Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job) use ($user): bool {
             return $job->email === $user->email
                 && $job->name === $user->name
-                && $job->groups === ['182049396278428795', '182049396278428796'];
+                && $job->groups === ['182049396278428795']
+                && $job->fields === ['registration_source' => 'geratel'];
         });
     }
 
@@ -67,34 +67,6 @@ class MailerLiteRegistrationTest extends TestCase
         Event::dispatch(new Registered($user));
 
         Queue::assertNothingPushed();
-    }
-
-    public function test_geratel_registered_event_logs_warning_without_geratel_group_and_still_queues_default_group(): void
-    {
-        config()->set('services.mailerlite.token', 'test-token');
-        config()->set('services.mailerlite.group_id', '182049396278428795');
-        config()->set('services.mailerlite.geratel_group_id', null);
-
-        Log::spy();
-        Queue::fake();
-
-        $user = User::factory()->create([
-            'registration_source' => 'geratel',
-        ]);
-
-        Event::dispatch(new Registered($user));
-
-        Log::shouldHaveReceived('warning')
-            ->with('Geratel registration missing MailerLite Geratel group ID.', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ])
-            ->atLeast()
-            ->once();
-
-        Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job): bool {
-            return $job->groups === ['182049396278428795'];
-        });
     }
 
     public function test_mailerlite_job_posts_expected_payload(): void
@@ -150,7 +122,8 @@ class MailerLiteRegistrationTest extends TestCase
         app(SubscribeUserToMailerLite::class, [
             'email' => 'existing@example.com',
             'name' => 'Existing Subscriber',
-            'groups' => ['182049396278428795', '182049396278428796'],
+            'groups' => ['182049396278428795'],
+            'fields' => ['registration_source' => 'geratel'],
         ])->handle(app(\App\Services\MailerLite\MailerLiteClient::class));
 
         Http::assertSent(function ($request): bool {
@@ -158,7 +131,8 @@ class MailerLiteRegistrationTest extends TestCase
                 && $request->url() === 'https://connect.mailerlite.com/api/subscribers'
                 && $request['email'] === 'existing@example.com'
                 && $request['fields']['name'] === 'Existing Subscriber'
-                && $request['groups'] === ['182049396278428795', '182049396278428796'];
+                && $request['fields']['registration_source'] === 'geratel'
+                && $request['groups'] === ['182049396278428795'];
         });
     }
 }

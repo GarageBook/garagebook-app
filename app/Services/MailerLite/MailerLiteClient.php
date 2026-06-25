@@ -13,12 +13,17 @@ class MailerLiteClient
 
     /**
      * @param  array<int, string>  $groups
+     * @param  array<string, string>  $fields
      */
-    public function subscribe(string $email, ?string $name = null, array $groups = []): void
+    public function subscribe(string $email, ?string $name = null, array $groups = [], array $fields = []): void
     {
         $groups = array_values(array_filter(
             array_map(fn (mixed $groupId): ?string => filled($groupId) ? (string) $groupId : null, $groups),
         ));
+        $fields = array_filter([
+            'name' => $name,
+            ...$fields,
+        ], fn (mixed $value): bool => filled($value));
 
         if ($groups === []) {
             throw new RuntimeException('MAILERLITE_GROUP_ID is niet ingesteld.');
@@ -26,9 +31,7 @@ class MailerLiteClient
 
         $this->request()->post('/subscribers', [
             'email' => $email,
-            'fields' => [
-                'name' => $name,
-            ],
+            'fields' => $fields,
             'groups' => $groups,
         ])->throw();
     }

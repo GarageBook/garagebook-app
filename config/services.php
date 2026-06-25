@@ -39,7 +39,6 @@ return [
         'base_url' => env('MAILERLITE_BASE_URL', 'https://connect.mailerlite.com/api'),
         'token' => env('MAILERLITE_API_TOKEN'),
         'group_id' => env('MAILERLITE_GROUP_ID'),
-        'geratel_group_id' => env('MAILERLITE_GERATEL_GROUP_ID'),
     ],
 
     'google_analytics' => [
