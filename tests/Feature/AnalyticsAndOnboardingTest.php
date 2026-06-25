@@ -52,6 +52,36 @@ class AnalyticsAndOnboardingTest extends TestCase
             ]);
     }
 
+    public function test_growth_attribution_parameters_are_persisted_after_registration(): void
+    {
+        session()->start();
+
+        $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026')
+            ->assertRedirect('/admin/register?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+
+        Livewire::test(Register::class)
+            ->fillForm([
+                'name' => 'Growth Signup',
+                'email' => 'growth-signup@example.com',
+                'password' => 'password',
+                'passwordConfirmation' => 'password',
+            ])
+            ->call('register');
+
+        $user = User::query()->where('email', 'growth-signup@example.com')->firstOrFail();
+
+        $this->assertDatabaseHas('user_attributions', [
+            'user_id' => $user->id,
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+            'utm_source' => 'motorclub-x',
+            'utm_medium' => 'partner',
+            'utm_campaign' => 'club2026',
+            'landing_page' => '/start',
+        ]);
+    }
+
     public function test_outreach_demo_registration_query_parameters_are_captured_and_persisted(): void
     {
         session()->start();

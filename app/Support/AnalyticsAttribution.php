@@ -63,6 +63,8 @@ class AnalyticsAttribution
 
         $payload = $this->sanitizePayload([
             'source' => $request->query('source'),
+            'campaign_slug' => $request->query('campaign_slug'),
+            'partner_slug' => $request->query('partner_slug'),
             'demo_user_id' => $request->query('demo_user_id'),
             'outreach_prospect_id' => $request->query('outreach_prospect_id'),
             'intended' => $request->query('intended'),
@@ -84,6 +86,8 @@ class AnalyticsAttribution
             'utm_term',
             'gclid',
             'source',
+            'campaign_slug',
+            'partner_slug',
             'demo_user_id',
             'outreach_prospect_id',
             'intended',

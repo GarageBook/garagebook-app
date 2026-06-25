@@ -39,6 +39,22 @@ class AnalyticsAttributionTest extends TestCase
         ], session(AnalyticsAttribution::SESSION_KEY));
     }
 
+    public function test_growth_parameters_are_forwarded_and_captured_from_start(): void
+    {
+        $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026')
+            ->assertRedirect('/admin/register?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+
+        $this->assertSame([
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+            'utm_source' => 'motorclub-x',
+            'utm_medium' => 'partner',
+            'utm_campaign' => 'club2026',
+            'landing_page' => '/start',
+        ], session(AnalyticsAttribution::SESSION_KEY));
+    }
+
     public function test_existing_first_touch_attribution_is_not_overwritten(): void
     {
         session()->start();

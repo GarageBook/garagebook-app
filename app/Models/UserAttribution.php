@@ -10,6 +10,8 @@ class UserAttribution extends Model
     protected $fillable = [
         'user_id',
         'source',
+        'campaign_slug',
+        'partner_slug',
         'demo_user_id',
         'outreach_prospect_id',
         'intended',

@@ -14,6 +14,9 @@ class StartRedirectController extends Controller
         'utm_campaign',
         'utm_content',
         'utm_term',
+        'source',
+        'campaign_slug',
+        'partner_slug',
         'gclid',
         '_gl',
     ];

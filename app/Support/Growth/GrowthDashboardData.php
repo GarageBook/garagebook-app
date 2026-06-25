@@ -548,7 +548,7 @@ class GrowthDashboardData
         if ($this->hasTable('user_attributions')) {
             $query->leftJoin('user_attributions as ua', 'ua.user_id', '=', 'users.id');
 
-            foreach (['utm_source', 'utm_medium', 'utm_campaign', 'landing_page', 'referrer'] as $column) {
+            foreach (['source', 'campaign_slug', 'partner_slug', 'utm_source', 'utm_medium', 'utm_campaign', 'landing_page', 'referrer'] as $column) {
                 if ($this->hasColumn('user_attributions', $column)) {
                     $query->addSelect('ua.'.$column);
                 }
@@ -563,6 +563,9 @@ class GrowthDashboardData
                     'id' => (int) $row->id,
                     'created_at' => Carbon::parse($row->created_at),
                     'registration_source' => $row->registration_source ?? null,
+                    'source' => $row->source ?? null,
+                    'campaign_slug' => $row->campaign_slug ?? null,
+                    'partner_slug' => $row->partner_slug ?? null,
                     'utm_source' => $row->utm_source ?? null,
                     'utm_medium' => $row->utm_medium ?? null,
                     'utm_campaign' => $row->utm_campaign ?? null,
@@ -579,6 +582,9 @@ class GrowthDashboardData
             ->filter(fn (array $row) => filled($row['utm_source'])
                 || filled($row['utm_medium'])
                 || filled($row['utm_campaign'])
+                || filled($row['source'])
+                || filled($row['campaign_slug'])
+                || filled($row['partner_slug'])
                 || filled($row['registration_source'])
                 || filled($row['referrer_host']));
     }
@@ -750,6 +756,14 @@ class GrowthDashboardData
             return (string) $row['utm_source'];
         }
 
+        if (filled($row['source'])) {
+            return (string) $row['source'];
+        }
+
+        if (filled($row['partner_slug'])) {
+            return (string) $row['partner_slug'];
+        }
+
         if (filled($row['registration_source'])) {
             return (string) $row['registration_source'];
         }
@@ -780,6 +794,10 @@ class GrowthDashboardData
 
     private function campaignLabel(array $row): string
     {
+        if (filled($row['campaign_slug'])) {
+            return (string) $row['campaign_slug'];
+        }
+
         return filled($row['utm_campaign']) ? (string) $row['utm_campaign'] : '—';
     }
 
@@ -788,6 +806,9 @@ class GrowthDashboardData
         $needles = array_filter([
             mb_strtolower((string) ($row['utm_source'] ?? '')),
             mb_strtolower((string) ($row['utm_campaign'] ?? '')),
+            mb_strtolower((string) ($row['source'] ?? '')),
+            mb_strtolower((string) ($row['campaign_slug'] ?? '')),
+            mb_strtolower((string) ($row['partner_slug'] ?? '')),
             mb_strtolower((string) ($row['registration_source'] ?? '')),
             mb_strtolower((string) ($row['referrer_host'] ?? '')),
         ]);
