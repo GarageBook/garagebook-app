@@ -4,14 +4,17 @@ namespace Tests\Feature;
 
 use App\Filament\Widgets\GrowthKpiOverviewWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
+use App\Filament\Widgets\GrowthSourceActivationWidget;
 use App\Models\AnalyticsDailySummary;
 use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
+use App\Support\Growth\GrowthDashboardData;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -31,7 +34,8 @@ class GrowthDashboardTest extends TestCase
             ->assertSee('KPI-overzicht')
             ->assertSee('Acquisitie')
             ->assertSee('SEO intelligence')
-            ->assertSee('Funnel / activatie');
+            ->assertSee('Funnel / activatie')
+            ->assertSee('Activatie per bron');
     }
 
     public function test_non_admin_cannot_open_growth_dashboard(): void
@@ -295,6 +299,80 @@ class GrowthDashboardTest extends TestCase
         Livewire::test(GrowthProductActivationFunnelWidget::class)
             ->assertSeeText('Users met minimaal 3 maintenance logs')
             ->assertSeeText('1');
+    }
+
+    public function test_growth_dashboard_reports_activation_metrics_per_registration_source(): void
+    {
+        User::factory()->create([
+            'registration_source' => null,
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $geratelUser = User::factory()->create([
+            'registration_source' => 'geratel',
+            'created_at' => now()->subDays(2),
+        ]);
+        $geratelVehicle = Vehicle::query()->create([
+            'user_id' => $geratelUser->id,
+            'brand' => 'Honda',
+            'model' => 'CB500',
+        ]);
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $geratelVehicle->id,
+            'description' => 'Geratel service',
+            'maintenance_date' => today(),
+            'km_reading' => 1000,
+        ]);
+
+        $partnerUser = User::factory()->create([
+            'registration_source' => null,
+            'created_at' => now()->subDay(),
+        ]);
+        Vehicle::query()->create([
+            'user_id' => $partnerUser->id,
+            'brand' => 'Yamaha',
+            'model' => 'MT-07',
+        ]);
+        DB::table('user_attributions')->insert([
+            'user_id' => $partnerUser->id,
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+            'landing_page' => '/start',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $data = app(GrowthDashboardData::class)->sourceActivation();
+        $rows = collect($data['rows'])->keyBy('source');
+
+        $this->assertSame(3, $data['totals']['registrations']);
+        $this->assertSame(2, $data['totals']['users_with_vehicle']);
+        $this->assertSame(1, $data['totals']['users_with_maintenance_log']);
+
+        $this->assertSame(1, $rows['direct']['registrations']);
+        $this->assertSame(0, $rows['direct']['users_with_vehicle']);
+        $this->assertSame(0.0, $rows['direct']['activation_percentage']);
+
+        $this->assertSame(1, $rows['geratel']['registrations']);
+        $this->assertSame(1, $rows['geratel']['users_with_vehicle']);
+        $this->assertSame(1, $rows['geratel']['users_with_maintenance_log']);
+        $this->assertSame(100.0, $rows['geratel']['activation_percentage']);
+
+        $this->assertSame(1, $rows['partner']['registrations']);
+        $this->assertSame(1, $rows['partner']['users_with_vehicle']);
+        $this->assertSame('club2026', $rows['partner']['campaigns']);
+        $this->assertSame('motorclub-x', $rows['partner']['partners']);
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        Livewire::test(GrowthSourceActivationWidget::class)
+            ->assertSeeText('Activatie per bron')
+            ->assertSeeText('geratel')
+            ->assertSeeText('direct')
+            ->assertSeeText('partner')
+            ->assertSeeText('club2026');
     }
 
     public function test_existing_analytics_dashboard_remains_reachable(): void

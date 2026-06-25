@@ -219,6 +219,84 @@ class GrowthDashboardData
         ];
     }
 
+    public function sourceActivation(): array
+    {
+        $rows = $this->registrationAttributionRecords();
+        $vehicleUserIds = $this->userIdsWithVehicles();
+        $maintenanceUserIds = $this->userIdsWithMaintenanceLogs();
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $source = $this->activationSourceLabel($row);
+
+            if (! array_key_exists($source, $grouped)) {
+                $grouped[$source] = [
+                    'source' => $source,
+                    'registrations' => 0,
+                    'users_with_vehicle' => 0,
+                    'users_with_maintenance_log' => 0,
+                    'activation_percentage' => 0.0,
+                    'maintenance_activation_percentage' => 0.0,
+                    'latest_registration_at' => null,
+                    'source_values' => [],
+                    'campaign_values' => [],
+                    'partner_values' => [],
+                ];
+            }
+
+            $grouped[$source]['registrations']++;
+
+            if ($vehicleUserIds->has($row['id'])) {
+                $grouped[$source]['users_with_vehicle']++;
+            }
+
+            if ($maintenanceUserIds->has($row['id'])) {
+                $grouped[$source]['users_with_maintenance_log']++;
+            }
+
+            if ($grouped[$source]['latest_registration_at'] === null || $row['created_at']->gt($grouped[$source]['latest_registration_at'])) {
+                $grouped[$source]['latest_registration_at'] = $row['created_at'];
+            }
+
+            foreach (['source' => 'source_values', 'campaign_slug' => 'campaign_values', 'partner_slug' => 'partner_values'] as $field => $target) {
+                if (filled($row[$field])) {
+                    $grouped[$source][$target][(string) $row[$field]] = true;
+                }
+            }
+        }
+
+        $result = collect($grouped)
+            ->map(function (array $row): array {
+                $registrations = max(1, $row['registrations']);
+
+                return [
+                    'source' => $row['source'],
+                    'registrations' => $row['registrations'],
+                    'users_with_vehicle' => $row['users_with_vehicle'],
+                    'users_with_maintenance_log' => $row['users_with_maintenance_log'],
+                    'activation_percentage' => round(($row['users_with_vehicle'] / $registrations) * 100, 1),
+                    'maintenance_activation_percentage' => round(($row['users_with_maintenance_log'] / $registrations) * 100, 1),
+                    'latest_registration' => $row['latest_registration_at']?->format('d-m-Y H:i') ?? '—',
+                    'sources' => $this->compactValues($row['source_values']),
+                    'campaigns' => $this->compactValues($row['campaign_values']),
+                    'partners' => $this->compactValues($row['partner_values']),
+                ];
+            })
+            ->sortByDesc(fn (array $row) => [$row['registrations'], $row['activation_percentage'], $row['source']])
+            ->values()
+            ->all();
+
+        return [
+            'disclaimer' => 'Gebaseerd op lokale registratie-, voertuig- en onderhoudsdata.',
+            'rows' => $result,
+            'totals' => [
+                'registrations' => $rows->count(),
+                'users_with_vehicle' => $vehicleUserIds->count(),
+                'users_with_maintenance_log' => $maintenanceUserIds->count(),
+            ],
+        ];
+    }
+
     public function seoIntelligence(): array
     {
         return [
@@ -738,6 +816,35 @@ class GrowthDashboardData
             ->count();
     }
 
+    private function userIdsWithVehicles(): Collection
+    {
+        if (! $this->hasTable('vehicles')) {
+            return collect();
+        }
+
+        return Vehicle::query()
+            ->whereNotNull('user_id')
+            ->distinct()
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->flip();
+    }
+
+    private function userIdsWithMaintenanceLogs(): Collection
+    {
+        if (! $this->hasTable('vehicles') || ! $this->hasTable('maintenance_logs')) {
+            return collect();
+        }
+
+        return MaintenanceLog::query()
+            ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
+            ->whereNotNull('vehicles.user_id')
+            ->distinct()
+            ->pluck('vehicles.user_id')
+            ->map(fn ($id) => (int) $id)
+            ->flip();
+    }
+
     private function buildConversion(string $label, ?int $from, ?int $to): array
     {
         return [
@@ -773,6 +880,39 @@ class GrowthDashboardData
         }
 
         return 'direct/unknown';
+    }
+
+    private function activationSourceLabel(array $row): string
+    {
+        if (filled($row['registration_source'])) {
+            return (string) $row['registration_source'];
+        }
+
+        if (filled($row['source'])) {
+            return (string) $row['source'];
+        }
+
+        if (filled($row['partner_slug'])) {
+            return (string) $row['partner_slug'];
+        }
+
+        if (filled($row['utm_source'])) {
+            return (string) $row['utm_source'];
+        }
+
+        if (filled($row['referrer_host'])) {
+            return (string) $row['referrer_host'];
+        }
+
+        return 'direct';
+    }
+
+    private function compactValues(array $values): string
+    {
+        $labels = array_keys($values);
+        sort($labels);
+
+        return $labels === [] ? '—' : implode(', ', array_slice($labels, 0, 3));
     }
 
     private function mediumLabel(array $row): string

@@ -9,6 +9,7 @@ use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
+use App\Filament\Widgets\GrowthSourceActivationWidget;
 use App\Filament\Widgets\LifecycleEmailStatsWidget;
 use App\Filament\Widgets\LifecycleOverviewWidget;
 use App\Support\AnalyticsEventTracker;
@@ -73,6 +74,11 @@ class GrowthDashboard extends Page
                             fputcsv($handle, ['activation_funnel', $row['step'], "Count: {$row['count']}, Percentage: {$row['percentage']}%", '']);
                         }
 
+                        $sourceActivation = $data->sourceActivation();
+                        foreach ($sourceActivation['rows'] as $row) {
+                            fputcsv($handle, ['source_activation', $row['source'], "Registrations: {$row['registrations']}, Vehicles: {$row['users_with_vehicle']}, Maintenance logs: {$row['users_with_maintenance_log']}, Activation: {$row['activation_percentage']}%", $row['latest_registration']]);
+                        }
+
                         fclose($handle);
                     }, 'growth-export-'.now()->format('Y-m-d').'.csv', [
                         'Content-Type' => 'text/csv; charset=UTF-8',
@@ -127,6 +133,7 @@ class GrowthDashboard extends Page
             GrowthSeoIntelligenceWidget::class,
             GrowthLandingPageConversionWidget::class,
             GrowthProductActivationFunnelWidget::class,
+            GrowthSourceActivationWidget::class,
             GrowthRecentActivityWidget::class,
         ];
     }
