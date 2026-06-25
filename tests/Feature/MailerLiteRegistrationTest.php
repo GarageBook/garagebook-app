@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SubscribeUserToMailerLite;
 use App\Models\User;
+use App\Support\AnalyticsAttribution;
 use Filament\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -52,6 +53,67 @@ class MailerLiteRegistrationTest extends TestCase
                 && $job->name === $user->name
                 && $job->groups === ['182049396278428795']
                 && $job->fields === ['registration_source' => 'geratel'];
+        });
+    }
+
+    public function test_registered_event_queues_growth_attribution_fields_when_available(): void
+    {
+        config()->set('services.mailerlite.token', 'test-token');
+        config()->set('services.mailerlite.group_id', '182049396278428795');
+
+        session()->start();
+        session()->put(AnalyticsAttribution::SESSION_KEY, [
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+        ]);
+        Queue::fake();
+
+        $user = User::factory()->create();
+
+        Event::dispatch(new Registered($user));
+
+        Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job) use ($user): bool {
+            return $job->email === $user->email
+                && $job->name === $user->name
+                && $job->groups === ['182049396278428795']
+                && $job->fields === [
+                    'source' => 'partner',
+                    'campaign' => 'club2026',
+                    'partner_slug' => 'motorclub-x',
+                ];
+        });
+    }
+
+    public function test_geratel_registered_event_merges_registration_source_and_growth_attribution_fields(): void
+    {
+        config()->set('services.mailerlite.token', 'test-token');
+        config()->set('services.mailerlite.group_id', '182049396278428795');
+
+        session()->start();
+        session()->put(AnalyticsAttribution::SESSION_KEY, [
+            'source' => 'geratel',
+            'campaign_slug' => 'training2026',
+            'partner_slug' => 'geratel',
+        ]);
+        Queue::fake();
+
+        $user = User::factory()->create([
+            'registration_source' => 'geratel',
+        ]);
+
+        Event::dispatch(new Registered($user));
+
+        Queue::assertPushed(SubscribeUserToMailerLite::class, function (SubscribeUserToMailerLite $job) use ($user): bool {
+            return $job->email === $user->email
+                && $job->name === $user->name
+                && $job->groups === ['182049396278428795']
+                && $job->fields === [
+                    'registration_source' => 'geratel',
+                    'source' => 'geratel',
+                    'campaign' => 'training2026',
+                    'partner_slug' => 'geratel',
+                ];
         });
     }
 
@@ -123,7 +185,12 @@ class MailerLiteRegistrationTest extends TestCase
             'email' => 'existing@example.com',
             'name' => 'Existing Subscriber',
             'groups' => ['182049396278428795'],
-            'fields' => ['registration_source' => 'geratel'],
+            'fields' => [
+                'registration_source' => 'geratel',
+                'source' => 'geratel',
+                'campaign' => 'training2026',
+                'partner_slug' => 'geratel',
+            ],
         ])->handle(app(\App\Services\MailerLite\MailerLiteClient::class));
 
         Http::assertSent(function ($request): bool {
@@ -132,6 +199,9 @@ class MailerLiteRegistrationTest extends TestCase
                 && $request['email'] === 'existing@example.com'
                 && $request['fields']['name'] === 'Existing Subscriber'
                 && $request['fields']['registration_source'] === 'geratel'
+                && $request['fields']['source'] === 'geratel'
+                && $request['fields']['campaign'] === 'training2026'
+                && $request['fields']['partner_slug'] === 'geratel'
                 && $request['groups'] === ['182049396278428795'];
         });
     }
