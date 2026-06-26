@@ -4,6 +4,7 @@ namespace App\Support\Growth;
 
 use App\Models\AnalyticsDailySummary;
 use App\Models\AnalyticsTopPage;
+use App\Models\GrowthCampaign;
 use App\Models\MaintenanceLog;
 use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
@@ -294,6 +295,62 @@ class GrowthDashboardData
                 'users_with_vehicle' => $vehicleUserIds->count(),
                 'users_with_maintenance_log' => $maintenanceUserIds->count(),
             ],
+        ];
+    }
+
+    public function campaignPerformance(): array
+    {
+        if (! $this->hasTable('growth_campaigns')) {
+            return [
+                'disclaimer' => 'Gebaseerd op bestaande growth-attributie.',
+                'rows' => [],
+            ];
+        }
+
+        $campaigns = GrowthCampaign::query()
+            ->select(['id', 'name', 'slug', 'status'])
+            ->orderByRaw("case when status = 'active' then 0 else 1 end")
+            ->orderBy('name')
+            ->get();
+
+        if ($campaigns->isEmpty()) {
+            return [
+                'disclaimer' => 'Gebaseerd op bestaande growth-attributie.',
+                'rows' => [],
+            ];
+        }
+
+        $rows = $this->registrationAttributionRecords();
+        $vehicleUserIds = $this->userIdsWithVehicles();
+        $maintenanceUserIds = $this->userIdsWithMaintenanceLogs();
+
+        $result = $campaigns
+            ->map(function (GrowthCampaign $campaign) use ($rows, $vehicleUserIds, $maintenanceUserIds): array {
+                $matchingRows = $rows->filter(fn (array $row): bool => $this->matchesCampaign($campaign->slug, $row));
+                $registrations = $matchingRows->count();
+                $usersWithVehicle = $matchingRows->filter(fn (array $row): bool => $vehicleUserIds->has($row['id']))->count();
+                $usersWithMaintenanceLog = $matchingRows->filter(fn (array $row): bool => $maintenanceUserIds->has($row['id']))->count();
+                $latestRegistrationAt = $matchingRows->max('created_at');
+
+                return [
+                    'name' => $campaign->name,
+                    'slug' => $campaign->slug,
+                    'status' => $campaign->status,
+                    'registrations' => $registrations,
+                    'users_with_vehicle' => $usersWithVehicle,
+                    'users_with_maintenance_log' => $usersWithMaintenanceLog,
+                    'activation_percentage' => $registrations > 0 ? round(($usersWithVehicle / $registrations) * 100, 1) : 0.0,
+                    'maintenance_activation_percentage' => $registrations > 0 ? round(($usersWithMaintenanceLog / $registrations) * 100, 1) : 0.0,
+                    'latest_registration' => $latestRegistrationAt instanceof Carbon ? $latestRegistrationAt->format('d-m-Y H:i') : '—',
+                ];
+            })
+            ->sortByDesc(fn (array $row) => [$row['registrations'], $row['activation_percentage'], $row['name']])
+            ->values()
+            ->all();
+
+        return [
+            'disclaimer' => 'Gebaseerd op growth_campaigns.slug met user_attributions.campaign_slug en fallback utm_campaign.',
+            'rows' => $result,
         ];
     }
 
@@ -960,6 +1017,15 @@ class GrowthDashboardData
         }
 
         return false;
+    }
+
+    private function matchesCampaign(string $campaignSlug, array $row): bool
+    {
+        if (filled($row['campaign_slug']) && mb_strtolower((string) $row['campaign_slug']) === mb_strtolower($campaignSlug)) {
+            return true;
+        }
+
+        return filled($row['utm_campaign']) && mb_strtolower((string) $row['utm_campaign']) === mb_strtolower($campaignSlug);
     }
 
     private function referrerHost(?string $referrer): ?string

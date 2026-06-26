@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Widgets\GrowthCampaignPerformanceWidget;
 use App\Filament\Widgets\GrowthKpiOverviewWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthSourceActivationWidget;
 use App\Models\AnalyticsDailySummary;
 use App\Models\FuelLog;
+use App\Models\GrowthCampaign;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -373,6 +375,102 @@ class GrowthDashboardTest extends TestCase
             ->assertSeeText('direct')
             ->assertSeeText('partner')
             ->assertSeeText('club2026');
+    }
+
+    public function test_growth_dashboard_reports_performance_per_growth_campaign(): void
+    {
+        Carbon::setTestNow('2026-06-26 12:00:00');
+
+        try {
+            GrowthCampaign::factory()->create([
+                'name' => 'Club2026',
+                'slug' => 'club2026',
+                'status' => GrowthCampaign::STATUS_ACTIVE,
+            ]);
+            GrowthCampaign::factory()->create([
+                'name' => 'Classic2026',
+                'slug' => 'classic2026',
+                'status' => GrowthCampaign::STATUS_ACTIVE,
+            ]);
+            GrowthCampaign::factory()->create([
+                'name' => 'Event2026',
+                'slug' => 'event2026',
+                'status' => GrowthCampaign::STATUS_ACTIVE,
+            ]);
+
+            $clubUser = User::factory()->create([
+                'created_at' => now()->subDays(2),
+            ]);
+            $clubVehicle = Vehicle::query()->create([
+                'user_id' => $clubUser->id,
+                'brand' => 'Honda',
+                'model' => 'CB500',
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $clubVehicle->id,
+                'description' => 'Club service',
+                'maintenance_date' => today(),
+                'km_reading' => 1000,
+            ]);
+            DB::table('user_attributions')->insert([
+                'user_id' => $clubUser->id,
+                'campaign_slug' => 'club2026',
+                'utm_campaign' => 'ignored-fallback',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $classicUser = User::factory()->create([
+                'created_at' => now()->subDay(),
+            ]);
+            Vehicle::query()->create([
+                'user_id' => $classicUser->id,
+                'brand' => 'BMW',
+                'model' => 'R 100 RS',
+            ]);
+            DB::table('user_attributions')->insert([
+                'user_id' => $classicUser->id,
+                'utm_campaign' => 'classic2026',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $data = app(GrowthDashboardData::class)->campaignPerformance();
+            $rows = collect($data['rows'])->keyBy('slug');
+
+            $this->assertSame(1, $rows['club2026']['registrations']);
+            $this->assertSame(1, $rows['club2026']['users_with_vehicle']);
+            $this->assertSame(1, $rows['club2026']['users_with_maintenance_log']);
+            $this->assertSame(100.0, $rows['club2026']['activation_percentage']);
+            $this->assertSame(100.0, $rows['club2026']['maintenance_activation_percentage']);
+            $this->assertSame('24-06-2026 12:00', $rows['club2026']['latest_registration']);
+
+            $this->assertSame(1, $rows['classic2026']['registrations']);
+            $this->assertSame(1, $rows['classic2026']['users_with_vehicle']);
+            $this->assertSame(0, $rows['classic2026']['users_with_maintenance_log']);
+            $this->assertSame(100.0, $rows['classic2026']['activation_percentage']);
+            $this->assertSame(0.0, $rows['classic2026']['maintenance_activation_percentage']);
+
+            $this->assertSame(0, $rows['event2026']['registrations']);
+            $this->assertSame(0, $rows['event2026']['users_with_vehicle']);
+            $this->assertSame(0, $rows['event2026']['users_with_maintenance_log']);
+            $this->assertSame(0.0, $rows['event2026']['activation_percentage']);
+            $this->assertSame('—', $rows['event2026']['latest_registration']);
+
+            $admin = User::factory()->admin()->create();
+            $this->actingAs($admin);
+
+            Livewire::test(GrowthCampaignPerformanceWidget::class)
+                ->assertSeeText('Campaign performance')
+                ->assertSeeText('Club2026')
+                ->assertSeeText('club2026')
+                ->assertSeeText('Classic2026')
+                ->assertSeeText('classic2026')
+                ->assertSeeText('Event2026')
+                ->assertSeeText('event2026');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_existing_analytics_dashboard_remains_reachable(): void

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\GrowthAcquisitionPerformanceWidget;
+use App\Filament\Widgets\GrowthCampaignPerformanceWidget;
 use App\Filament\Widgets\GrowthKpiOverviewWidget;
 use App\Filament\Widgets\GrowthLandingPageConversionWidget;
 use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
@@ -130,6 +131,7 @@ class GrowthDashboard extends Page
             LifecycleEmailStatsWidget::class,
             GrowthAcquisitionPerformanceWidget::class,
             GrowthPartnerPerformanceWidget::class,
+            GrowthCampaignPerformanceWidget::class,
             GrowthSeoIntelligenceWidget::class,
             GrowthLandingPageConversionWidget::class,
             GrowthProductActivationFunnelWidget::class,
