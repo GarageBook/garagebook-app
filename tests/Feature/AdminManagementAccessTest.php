@@ -40,16 +40,18 @@ class AdminManagementAccessTest extends TestCase
         $urls = [
             '/admin/users',
             '/admin/users/create',
-            '/admin/users/' . $managedUser->id,
-            '/admin/users/' . $managedUser->id . '/edit',
+            '/admin/users/'.$managedUser->id,
+            '/admin/users/'.$managedUser->id.'/edit',
             '/admin/blogs',
             '/admin/blogs/create',
-            '/admin/blogs/' . $blog->id . '/edit',
+            '/admin/blogs/'.$blog->id.'/edit',
             '/admin/pages',
             '/admin/pages/create',
-            '/admin/pages/' . $page->id . '/edit',
+            '/admin/pages/'.$page->id.'/edit',
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
+            '/admin/growth-campaigns',
+            '/admin/growth-campaigns/create',
             '/admin/localization-overview',
             '/admin/outreach-campaigns',
             '/admin/outreach-campaigns/create',
@@ -83,16 +85,18 @@ class AdminManagementAccessTest extends TestCase
         $urls = [
             '/admin/users',
             '/admin/users/create',
-            '/admin/users/' . $managedUser->id,
-            '/admin/users/' . $managedUser->id . '/edit',
+            '/admin/users/'.$managedUser->id,
+            '/admin/users/'.$managedUser->id.'/edit',
             '/admin/blogs',
             '/admin/blogs/create',
-            '/admin/blogs/' . $blog->id . '/edit',
+            '/admin/blogs/'.$blog->id.'/edit',
             '/admin/pages',
             '/admin/pages/create',
-            '/admin/pages/' . $page->id . '/edit',
+            '/admin/pages/'.$page->id.'/edit',
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
+            '/admin/growth-campaigns',
+            '/admin/growth-campaigns/create',
             '/admin/localization-overview',
             '/admin/outreach-campaigns',
             '/admin/outreach-campaigns/create',
@@ -111,6 +115,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/growth-campaigns', false)
             ->assertSee('/admin/localization-overview', false)
             ->assertSee('/admin/outreach-campaigns', false)
             ->assertSee('/admin/outreach-prospects', false);
@@ -137,6 +142,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/growth-campaigns', false)
             ->assertSee('/admin/localization-overview', false)
             ->assertSee('/admin/outreach-campaigns', false)
             ->assertSee('/admin/outreach-prospects', false);
@@ -179,6 +185,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/growth-campaigns', false)
             ->assertDontSee('/admin/localization-overview', false)
             ->assertDontSee('/admin/outreach-campaigns', false)
             ->assertDontSee('/admin/outreach-prospects', false);
@@ -194,6 +201,7 @@ class AdminManagementAccessTest extends TestCase
         $this->get('/admin/pages')->assertForbidden();
         $this->get('/admin/analytics-dashboard')->assertForbidden();
         $this->get('/admin/growth-dashboard')->assertForbidden();
+        $this->get('/admin/growth-campaigns')->assertForbidden();
         $this->get('/admin/localization-overview')->assertForbidden();
         $this->get('/admin/outreach-campaigns')->assertForbidden();
         $this->get('/admin/outreach-prospects')->assertForbidden();
@@ -222,6 +230,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/growth-campaigns', false)
             ->assertDontSee('/admin/localization-overview', false)
             ->assertDontSee('/admin/outreach-campaigns', false)
             ->assertDontSee('/admin/outreach-prospects', false);
@@ -238,7 +247,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertOk();
 
         $this->actingAs($user)
-            ->get('/admin/documentkluis?vehicle_id=' . $vehicle->id)
+            ->get('/admin/documentkluis?vehicle_id='.$vehicle->id)
             ->assertOk();
 
         $this->actingAs($user)
