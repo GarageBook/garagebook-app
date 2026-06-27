@@ -17,6 +17,7 @@ use App\Models\LifecycleEmailTemplate;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\LifecycleMailHealth;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,8 @@ use Throwable;
 
 class LifecycleEmailService
 {
+    public function __construct(private readonly LifecycleMailHealth $mailHealth) {}
+
     public function retryableEmailKeys(): array
     {
         return [
@@ -351,14 +354,7 @@ class LifecycleEmailService
 
     public function assertMailDeliveryStackReady(): void
     {
-        $this->assertMailConfigurationIsUsable();
-
-        $defaultMailer = (string) config('mail.default');
-        $transport = (string) config("mail.mailers.{$defaultMailer}.transport");
-
-        if ($transport === 'resend' && ! class_exists('Resend', false)) {
-            throw new RuntimeException('Mailconfig resend is actief maar resend/resend-php ontbreekt. Draai composer install of composer require resend/resend-php.');
-        }
+        $this->mailHealth->assertReadyForLifecycleDelivery();
     }
 
     public function retryStatusForLog(LifecycleEmailLog $log, ?User $user, bool $ignoreEligibility = false): string
@@ -437,6 +433,7 @@ class LifecycleEmailService
             $retryLog = LifecycleEmailLog::query()->create(
                 $this->lifecycleLogAttributes($user, $template, LifecycleEmailLog::STATUS_QUEUED, [
                     'email_key' => $this->makeRetryEmailKey($lockedLog),
+                    'retry_of_log_id' => $lockedLog->getKey(),
                 ]),
             );
 
@@ -682,7 +679,7 @@ class LifecycleEmailService
     ): LifecycleEmailLog {
         try {
             $this->assertMailDeliveryStackReady();
-            Mail::to($user->email)->send($this->makeMailable($user, $template, $log));
+            $sentMessage = Mail::to($user->email)->send($this->makeMailable($user, $template, $log));
 
             $log->forceFill([
                 'subject' => $template->subject,
@@ -692,6 +689,9 @@ class LifecycleEmailService
                 'skipped_at' => null,
                 'reason_skipped' => null,
                 'error_message' => null,
+                ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext(
+                    resendMessageId: $this->resolveSentMessageId($sentMessage),
+                )),
             ])->save();
 
             return $log->fresh() ?? $log;
@@ -707,26 +707,12 @@ class LifecycleEmailService
                     'skipped_at' => null,
                     'reason_skipped' => null,
                     'error_message' => Str::limit($message, 65535, ''),
+                    ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext()),
                 ])->save(),
                 report: false,
             );
 
             throw new RuntimeException($message, previous: $exception);
-        }
-    }
-
-    private function assertMailConfigurationIsUsable(): void
-    {
-        $defaultMailer = config('mail.default');
-
-        if (blank($defaultMailer)) {
-            throw new RuntimeException('Mailconfig ontbreekt: mail.default is niet ingesteld.');
-        }
-
-        $transport = config("mail.mailers.{$defaultMailer}.transport");
-
-        if (blank($transport)) {
-            throw new RuntimeException("Mailconfig ontbreekt: mailer [{$defaultMailer}] heeft geen transport.");
         }
     }
 
@@ -833,7 +819,17 @@ class LifecycleEmailService
             'clicked_at' => null,
             'goal_completed_at' => null,
             ...$this->lifecycleLogContext($user),
+            ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext()),
         ], $overrides);
+    }
+
+    private function resolveSentMessageId(mixed $sentMessage): ?string
+    {
+        if (is_object($sentMessage) && method_exists($sentMessage, 'getMessageId')) {
+            return $sentMessage->getMessageId();
+        }
+
+        return null;
     }
 
     private function lifecycleLogContext(User $user): array

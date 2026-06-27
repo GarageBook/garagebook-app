@@ -9,6 +9,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\LifecycleEmailService;
+use App\Support\LifecycleEmailRetryThrottle;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Transport\ArrayTransport;
@@ -114,7 +115,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertNotNull($originalLog->retry_log_id);
 
         $retryLog = LifecycleEmailLog::query()->findOrFail($originalLog->retry_log_id);
-        $this->assertStringStartsWith('retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_', $retryLog->email_key);
+        $this->assertStringStartsWith('retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_', $retryLog->email_key);
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $retryLog->status);
 
         $this->assertSame(1, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_%')->count());
@@ -143,12 +144,12 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
     }
 
-    public function test_execute_throttles_retry_sends_to_four_per_second(): void
+    public function test_execute_throttles_retry_sends_to_one_per_second(): void
     {
         Mail::fake();
 
         $sleepCalls = [];
-        $this->app->instance(\App\Support\LifecycleEmailRetryThrottle::class, new \App\Support\LifecycleEmailRetryThrottle(function (int $microseconds) use (&$sleepCalls): void {
+        $this->app->instance(LifecycleEmailRetryThrottle::class, new LifecycleEmailRetryThrottle(function (int $microseconds) use (&$sleepCalls): void {
             $sleepCalls[] = $microseconds;
         }));
 
@@ -172,7 +173,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         ]);
 
         Mail::assertSent(NoMaintenanceLogDay14Mail::class, 3);
-        $this->assertSame([250000, 250000], $sleepCalls);
+        $this->assertSame([1000000, 1000000], $sleepCalls);
     }
 
     public function test_execute_with_resend_mailer_uses_global_sdk_class_without_redeclare(): void
@@ -245,7 +246,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
 
         LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
-            'email_key' => 'test_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_20260612110000',
+            'email_key' => 'test_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_20260612110000',
             'subject' => 'Test log',
             'status' => LifecycleEmailLog::STATUS_SENT,
             'sent_at' => now()->subHour(),
@@ -361,7 +362,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $originalLog->retry_status);
         $this->assertNull($originalLog->retry_error_message);
         $this->assertSame(1, $transport->messages()->count());
-        $this->assertSame(2, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_%')->count());
+        $this->assertSame(2, LifecycleEmailLog::query()->where('email_key', 'like', 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_%')->count());
     }
 
     public function test_dry_run_includes_logs_with_failed_retry_status_and_failed_retry_log_id(): void
@@ -371,7 +372,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
 
         $failedRetryLog = LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
-            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_previous_failed',
+            'email_key' => 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_previous_failed',
             'subject' => 'Vorige retry',
             'status' => LifecycleEmailLog::STATUS_FAILED,
             'failed_at' => now()->subMinutes(20),
@@ -405,7 +406,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
 
         $successfulRetryLog = LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
-            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_previous_sent',
+            'email_key' => 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_previous_sent',
             'subject' => 'Vorige succesvolle retry',
             'status' => LifecycleEmailLog::STATUS_SENT,
             'sent_at' => now()->subMinutes(20),
@@ -427,7 +428,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
         $output = Artisan::output();
 
         $this->assertStringContainsString('Geselecteerde logs: 0', $output);
-        $this->assertStringNotContainsString('| ' . $originalLog->id . '               |', $output);
+        $this->assertStringNotContainsString('| '.$originalLog->id.'               |', $output);
     }
 
     public function test_reset_failed_retries_makes_failed_origins_eligible_again(): void
@@ -437,7 +438,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
 
         $failedRetryLog = LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
-            'email_key' => 'retry_' . LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 . '_failed_reset',
+            'email_key' => 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14.'_failed_reset',
             'subject' => 'Gefaalde retry',
             'status' => LifecycleEmailLog::STATUS_FAILED,
             'failed_at' => now()->subMinutes(20),
@@ -578,7 +579,7 @@ class RetryLifecycleEmailsCommandTest extends TestCase
     {
         $user = User::factory()->create(array_merge([
             'name' => 'Lifecycle User',
-            'email' => 'lifecycle-' . str()->uuid() . '@example.com',
+            'email' => 'lifecycle-'.str()->uuid().'@example.com',
             'created_at' => now()->subDays(20),
         ], $attributes));
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Services\LifecycleEmailService;
+use App\Support\LifecycleMailHealth;
 use Illuminate\Console\Command;
 
 class SendLifecycleEmailsCommand extends Command
@@ -12,8 +13,16 @@ class SendLifecycleEmailsCommand extends Command
 
     protected $description = 'Selecteert lifecycle-mails en queued verzendingen voor relevante GarageBook-users.';
 
-    public function handle(LifecycleEmailService $service): int
+    public function handle(LifecycleEmailService $service, LifecycleMailHealth $health): int
     {
+        try {
+            $health->assertReadyForLifecycleDelivery();
+        } catch (\RuntimeException $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
         $queued = 0;
 
         User::query()
@@ -27,7 +36,7 @@ class SendLifecycleEmailsCommand extends Command
                 }
             });
 
-        $this->info('Lifecycle e-mails gequeued: ' . $queued);
+        $this->info('Lifecycle e-mails gequeued: '.$queued);
 
         return self::SUCCESS;
     }

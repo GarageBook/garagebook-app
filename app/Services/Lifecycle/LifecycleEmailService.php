@@ -6,10 +6,13 @@ use App\Jobs\SendLifecycleEmailJob;
 use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\User;
+use App\Support\LifecycleMailHealth;
 use Illuminate\Database\QueryException;
 
 class LifecycleEmailService
 {
+    public function __construct(private ?LifecycleMailHealth $mailHealth = null) {}
+
     public function queueNoVehicleUsers(): array
     {
         $found = 0;
@@ -83,6 +86,7 @@ class LifecycleEmailService
                 'maintenance_logs_count' => 0,
                 'documents_count' => 0,
                 'last_login_at' => $user->last_login_at,
+                ...LifecycleEmailLog::existingColumnAttributes(($this->mailHealth ?? app(LifecycleMailHealth::class))->logContext()),
             ]);
         } catch (QueryException) {
             return null;

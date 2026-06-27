@@ -62,7 +62,27 @@ class LifecycleEmailLogResource extends Resource
             return null;
         }
 
-        return (string) static::getModel()::query()->count();
+        $count = static::unresolvedFailedCount();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return static::unresolvedFailedCount() > 0 ? 'danger' : null;
+    }
+
+    public static function unresolvedFailedCount(): int
+    {
+        if (! static::hasBackingTable()) {
+            return 0;
+        }
+
+        return static::getModel()::query()
+            ->where('status', LifecycleEmailLog::STATUS_FAILED)
+            ->get()
+            ->reject(fn (LifecycleEmailLog $log): bool => $log->isResolvedFailure())
+            ->count();
     }
 
     public static function canCreate(): bool
@@ -120,11 +140,12 @@ class LifecycleEmailLogResource extends Resource
                     ->searchable(),
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
+                    ->state(fn (LifecycleEmailLog $record): string => $record->deliveryResolutionStatus())
                     ->colors([
                         'gray' => LifecycleEmailLog::STATUS_QUEUED,
                         'info' => LifecycleEmailLog::STATUS_PROCESSING,
                         'warning' => LifecycleEmailLog::STATUS_SKIPPED,
-                        'success' => LifecycleEmailLog::STATUS_SENT,
+                        'success' => [LifecycleEmailLog::STATUS_SENT, 'resolved'],
                         'danger' => LifecycleEmailLog::STATUS_FAILED,
                     ]),
                 Tables\Columns\TextColumn::make('reason_skipped')

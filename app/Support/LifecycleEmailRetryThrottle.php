@@ -4,8 +4,9 @@ namespace App\Support;
 
 class LifecycleEmailRetryThrottle
 {
-    public const MAX_REQUESTS_PER_SECOND = 4;
-    public const INTERVAL_MICROSECONDS = 250000;
+    public const MAX_REQUESTS_PER_SECOND = 1;
+
+    public const INTERVAL_MICROSECONDS = 1000000;
 
     /**
      * @var callable(int): void

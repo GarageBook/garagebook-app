@@ -50,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(VehicleDocument::class, VehicleDocumentPolicy::class);
 
         RateLimiter::for('outreach-email', fn () => Limit::perSecond(4)->by('resend-outreach-email'));
+        RateLimiter::for('lifecycle-email', fn () => Limit::perSecond(1)->by('resend-lifecycle-email'));
 
         Event::listen(Login::class, TrackSuccessfulLogin::class);
         Event::listen(Registered::class, QueueMailerLiteSubscription::class);

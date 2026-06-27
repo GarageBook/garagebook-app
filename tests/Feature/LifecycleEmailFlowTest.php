@@ -18,6 +18,7 @@ use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -52,6 +53,24 @@ class LifecycleEmailFlowTest extends TestCase
             return $job->userId === $user->id
                 && $job->emailKey === LifecycleEmailTemplate::NO_VEHICLE_ADDED;
         });
+    }
+
+    public function test_lifecycle_command_refuses_to_queue_when_production_mail_config_is_unhealthy(): void
+    {
+        Bus::fake();
+
+        Config::set('app.env', 'production');
+        Config::set('mail.default', 'log');
+
+        User::factory()->create([
+            'created_at' => now()->subDays(3),
+        ]);
+
+        $exitCode = Artisan::call('garagebook:send-lifecycle-emails');
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('Lifecycle mailconfig is ongezond', Artisan::output());
+        Bus::assertNotDispatched(SendLifecycleEmailJob::class);
     }
 
     public function test_user_with_vehicle_but_without_maintenance_gets_no_maintenance_key(): void

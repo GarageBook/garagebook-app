@@ -44,6 +44,12 @@ class LifecycleEmailLog extends Model
         'retry_status',
         'retry_log_id',
         'retry_error_message',
+        'mailer',
+        'mail_transport',
+        'release_path',
+        'queue_job_id',
+        'retry_of_log_id',
+        'resend_message_id',
     ];
 
     protected $casts = [
@@ -66,6 +72,72 @@ class LifecycleEmailLog extends Model
             'name' => 'Onbekende gebruiker',
             'email' => '-',
         ]);
+    }
+
+    public function retryLog(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'retry_log_id');
+    }
+
+    public function retryOfLog(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'retry_of_log_id');
+    }
+
+    public static function existingColumnAttributes(array $attributes): array
+    {
+        if (! SchemaFacade::hasTable('lifecycle_email_logs')) {
+            return [];
+        }
+
+        return collect($attributes)
+            ->filter(fn (mixed $value, string $key): bool => SchemaFacade::hasColumn('lifecycle_email_logs', $key))
+            ->all();
+    }
+
+    public function deliveryResolutionStatus(): string
+    {
+        if ($this->status !== self::STATUS_FAILED) {
+            return $this->status;
+        }
+
+        return $this->isResolvedFailure() ? 'resolved' : 'unresolved';
+    }
+
+    public function isResolvedFailure(): bool
+    {
+        if ($this->status !== self::STATUS_FAILED) {
+            return false;
+        }
+
+        if ($this->retry_status === self::STATUS_SENT) {
+            return true;
+        }
+
+        if ($this->retry_log_id && self::query()
+            ->whereKey($this->retry_log_id)
+            ->where('status', self::STATUS_SENT)
+            ->exists()) {
+            return true;
+        }
+
+        $query = self::query()
+            ->where('user_id', $this->user_id)
+            ->where('status', self::STATUS_SENT)
+            ->whereKeyNot($this->getKey())
+            ->where('created_at', '>=', $this->created_at);
+
+        if (SchemaFacade::hasColumn('lifecycle_email_logs', 'retry_of_log_id')) {
+            $query->where(function ($query): void {
+                $query
+                    ->where('email_key', $this->email_key)
+                    ->orWhere('retry_of_log_id', $this->getKey());
+            });
+        } else {
+            $query->where('email_key', $this->email_key);
+        }
+
+        return $query->exists();
     }
 
     public function userDisplayName(): string

@@ -11,8 +11,10 @@ use App\Services\Lifecycle\LifecycleEmailService as NoVehicleLifecycleEmailServi
 use App\Services\LifecycleEmailService;
 use App\Support\AnalyticsEventTracker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class LifecycleNoVehicleDay2Test extends TestCase
@@ -140,6 +142,32 @@ class LifecycleNoVehicleDay2Test extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
         $this->assertNotNull($log->sent_at);
         $this->assertNull($log->error);
+    }
+
+    public function test_lifecycle_job_rate_limiter_releases_second_job_without_running_handler(): void
+    {
+        RateLimiter::clear(md5('lifecycle-email'.'resend-lifecycle-email'));
+
+        $middleware = (new RateLimited('lifecycle-email'))->releaseAfter(1);
+        $job = new class
+        {
+            public array $released = [];
+
+            public function release(int $delay): void
+            {
+                $this->released[] = $delay;
+            }
+        };
+        $handled = 0;
+
+        for ($i = 0; $i < 2; $i++) {
+            $middleware->handle($job, function () use (&$handled): void {
+                $handled++;
+            });
+        }
+
+        $this->assertSame(1, $handled);
+        $this->assertSame([1], $job->released);
     }
 
     private function queuedLogFor(User $user): LifecycleEmailLog

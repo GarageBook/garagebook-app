@@ -108,7 +108,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_FAILED, $log->status);
         $this->assertNull($log->sent_at);
         $this->assertNotNull($log->failed_at);
-        $this->assertStringContainsString('Mailconfig ontbreekt', (string) $log->error_message);
+        $this->assertStringContainsString('Lifecycle mailconfig is ongezond', (string) $log->error_message);
     }
 
     public function test_admin_can_open_lifecycle_email_logs_page_when_logs_table_is_missing(): void
@@ -155,6 +155,34 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             ->assertSeeText('Rijder Test')
             ->assertSeeText('rijder@example.com')
             ->assertSeeText('Onderwerp lifecycle');
+    }
+
+    public function test_failed_lifecycle_log_is_resolved_when_later_sent_log_exists(): void
+    {
+        $user = User::factory()->create();
+
+        $failedLog = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Eerder mislukt',
+            'status' => LifecycleEmailLog::STATUS_FAILED,
+            'failed_at' => now()->subHour(),
+            'error_message' => 'Tijdelijke mailfout',
+            'created_at' => now()->subHour(),
+            'updated_at' => now()->subHour(),
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3.'_later_sent',
+            'subject' => 'Later verzonden',
+            'retry_of_log_id' => $failedLog->id,
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $this->assertSame('resolved', $failedLog->fresh()->deliveryResolutionStatus());
+        $this->assertSame(0, LifecycleEmailLogResource::unresolvedFailedCount());
     }
 
     public function test_admin_can_export_lifecycle_email_logs_from_filament(): void

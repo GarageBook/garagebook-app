@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Lifecycle\LifecycleEmailService;
+use App\Support\LifecycleMailHealth;
 use Illuminate\Console\Command;
 
 class QueueNoVehicleLifecycleEmailsCommand extends Command
@@ -11,8 +12,16 @@ class QueueNoVehicleLifecycleEmailsCommand extends Command
 
     protected $description = 'Queue lifecycle-mails voor geverifieerde gebruikers zonder voertuig na dag 2.';
 
-    public function handle(LifecycleEmailService $service): int
+    public function handle(LifecycleEmailService $service, LifecycleMailHealth $health): int
     {
+        try {
+            $health->assertReadyForLifecycleDelivery();
+        } catch (\RuntimeException $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
         $result = $service->queueNoVehicleUsers();
 
         $this->line('Gevonden: '.$result['found']);
