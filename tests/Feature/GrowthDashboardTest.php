@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Filament\Widgets\GrowthCampaignPerformanceWidget;
 use App\Filament\Widgets\GrowthKpiOverviewWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
+use App\Filament\Widgets\GrowthProspectFollowUpWidget;
 use App\Filament\Widgets\GrowthSourceActivationWidget;
 use App\Models\AnalyticsDailySummary;
 use App\Models\FuelLog;
 use App\Models\GrowthCampaign;
+use App\Models\GrowthProspect;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -468,6 +470,97 @@ class GrowthDashboardTest extends TestCase
                 ->assertSeeText('classic2026')
                 ->assertSeeText('Event2026')
                 ->assertSeeText('event2026');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+
+    public function test_growth_dashboard_reports_prospect_follow_up_workload(): void
+    {
+        Carbon::setTestNow('2026-07-10 10:00:00');
+
+        try {
+            $campaign = GrowthCampaign::factory()->create([
+                'name' => 'Club2026',
+                'slug' => 'club2026',
+            ]);
+
+            $todayProspect = GrowthProspect::factory()->create([
+                'name' => 'Vandaag opvolgen',
+                'campaign_id' => $campaign->id,
+                'status' => 'contacted',
+                'priority' => 'high',
+                'warmth' => 'warm',
+                'score' => 88,
+                'last_contacted_at' => now()->subDays(2),
+                'next_follow_up_at' => today()->setTime(14, 0),
+            ]);
+
+            GrowthProspect::factory()->create([
+                'name' => 'Achterstallige prospect',
+                'campaign_id' => $campaign->id,
+                'status' => 'contacted',
+                'priority' => 'medium',
+                'warmth' => 'hot',
+                'score' => 91,
+                'last_contacted_at' => now()->subDays(8),
+                'next_follow_up_at' => today()->subDay()->setTime(9, 0),
+            ]);
+
+            GrowthProspect::factory()->create([
+                'name' => 'Interested zonder datum',
+                'campaign_id' => $campaign->id,
+                'status' => 'interested',
+                'priority' => 'high',
+                'warmth' => 'hot',
+                'score' => 95,
+                'last_contacted_at' => now()->subDays(1),
+                'next_follow_up_at' => null,
+            ]);
+
+            GrowthProspect::factory()->create([
+                'name' => 'Archived niet tonen',
+                'campaign_id' => $campaign->id,
+                'status' => 'archived',
+                'priority' => 'high',
+                'warmth' => 'hot',
+                'score' => 100,
+                'next_follow_up_at' => today()->subDays(3),
+            ]);
+
+            GrowthProspect::factory()->create([
+                'name' => 'Later opvolgen',
+                'campaign_id' => $campaign->id,
+                'status' => 'contacted',
+                'priority' => 'low',
+                'warmth' => 'cold',
+                'score' => 20,
+                'next_follow_up_at' => today()->addDays(3),
+            ]);
+
+            $data = app(GrowthDashboardData::class)->prospectFollowUps();
+
+            $this->assertSame(1, $data['today_count']);
+            $this->assertSame(1, $data['overdue_count']);
+            $this->assertSame(1, $data['interested_without_follow_up_count']);
+            $this->assertSame([
+                'Achterstallige prospect',
+                'Vandaag opvolgen',
+                'Interested zonder datum',
+            ], collect($data['rows'])->pluck('name')->all());
+            $this->assertStringContainsString('/admin/growth-prospects/'.$todayProspect->id.'/edit', collect($data['rows'])->firstWhere('name', 'Vandaag opvolgen')['edit_url']);
+
+            $admin = User::factory()->admin()->create();
+            $this->actingAs($admin);
+
+            Livewire::test(GrowthProspectFollowUpWidget::class)
+                ->assertSeeText('Prospect follow-up')
+                ->assertSeeText('Vandaag opvolgen')
+                ->assertSeeText('Achterstallige prospect')
+                ->assertSeeText('Interested zonder datum')
+                ->assertDontSeeText('Archived niet tonen')
+                ->assertDontSeeText('Later opvolgen');
         } finally {
             Carbon::setTestNow();
         }

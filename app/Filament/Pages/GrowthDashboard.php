@@ -7,6 +7,7 @@ use App\Filament\Widgets\GrowthCampaignPerformanceWidget;
 use App\Filament\Widgets\GrowthKpiOverviewWidget;
 use App\Filament\Widgets\GrowthLandingPageConversionWidget;
 use App\Filament\Widgets\GrowthPartnerPerformanceWidget;
+use App\Filament\Widgets\GrowthProspectFollowUpWidget;
 use App\Filament\Widgets\GrowthProductActivationFunnelWidget;
 use App\Filament\Widgets\GrowthRecentActivityWidget;
 use App\Filament\Widgets\GrowthSeoIntelligenceWidget;
@@ -132,6 +133,7 @@ class GrowthDashboard extends Page
             GrowthAcquisitionPerformanceWidget::class,
             GrowthPartnerPerformanceWidget::class,
             GrowthCampaignPerformanceWidget::class,
+            GrowthProspectFollowUpWidget::class,
             GrowthSeoIntelligenceWidget::class,
             GrowthLandingPageConversionWidget::class,
             GrowthProductActivationFunnelWidget::class,

@@ -5,6 +5,7 @@ namespace App\Support\Growth;
 use App\Models\AnalyticsDailySummary;
 use App\Models\AnalyticsTopPage;
 use App\Models\GrowthCampaign;
+use App\Models\GrowthProspect;
 use App\Models\MaintenanceLog;
 use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
@@ -351,6 +352,86 @@ class GrowthDashboardData
         return [
             'disclaimer' => 'Gebaseerd op growth_campaigns.slug met user_attributions.campaign_slug en fallback utm_campaign.',
             'rows' => $result,
+        ];
+    }
+
+
+    public function prospectFollowUps(): array
+    {
+        if (! $this->hasTable('growth_prospects')) {
+            return [
+                'today_count' => 0,
+                'overdue_count' => 0,
+                'interested_without_follow_up_count' => 0,
+                'rows' => [],
+            ];
+        }
+
+        $today = Carbon::today();
+        $activeProspects = GrowthProspect::query()
+            ->where(fn ($query) => $query
+                ->whereNull('status')
+                ->orWhere('status', '!=', 'archived'));
+
+        $todayCount = (clone $activeProspects)
+            ->whereDate('next_follow_up_at', $today->toDateString())
+            ->count();
+
+        $overdueCount = (clone $activeProspects)
+            ->whereNotNull('next_follow_up_at')
+            ->where('next_follow_up_at', '<', $today->copy()->startOfDay())
+            ->count();
+
+        $interestedWithoutFollowUpCount = (clone $activeProspects)
+            ->where('status', 'interested')
+            ->whereNull('next_follow_up_at')
+            ->count();
+
+        $rows = (clone $activeProspects)
+            ->with('campaign')
+            ->where(function ($query) use ($today): void {
+                $query
+                    ->whereDate('next_follow_up_at', '<=', $today->toDateString())
+                    ->orWhere(fn ($query) => $query
+                        ->where('status', 'interested')
+                        ->whereNull('next_follow_up_at'));
+            })
+            ->orderByRaw('case when next_follow_up_at is null then 1 else 0 end')
+            ->orderBy('next_follow_up_at')
+            ->orderByRaw("case priority when 'high' then 0 when 'medium' then 1 when 'low' then 2 else 3 end")
+            ->orderByDesc('score')
+            ->limit(10)
+            ->get()
+            ->map(function (GrowthProspect $prospect) use ($today): array {
+                $nextFollowUpAt = $prospect->next_follow_up_at;
+
+                $followUpState = match (true) {
+                    $nextFollowUpAt === null => 'Geen opvolgdatum',
+                    $nextFollowUpAt->lt($today->copy()->startOfDay()) => 'Achterstallig',
+                    $nextFollowUpAt->isSameDay($today) => 'Vandaag',
+                    default => 'Later',
+                };
+
+                return [
+                    'name' => $prospect->name,
+                    'campaign' => $prospect->campaign?->name ?? '—',
+                    'status' => $prospect->status ?: '—',
+                    'priority' => $prospect->priority ?: '—',
+                    'warmth' => $prospect->warmth ?: '—',
+                    'score' => $prospect->score,
+                    'last_contacted_at' => $prospect->last_contacted_at?->format('d-m-Y H:i') ?? '—',
+                    'next_follow_up_at' => $nextFollowUpAt?->format('d-m-Y H:i') ?? '—',
+                    'follow_up_state' => $followUpState,
+                    'edit_url' => route('filament.admin.resources.growth-prospects.edit', ['record' => $prospect]),
+                ];
+            })
+            ->all();
+
+        return [
+            'today_count' => $todayCount,
+            'overdue_count' => $overdueCount,
+            'interested_without_follow_up_count' => $interestedWithoutFollowUpCount,
+            'rows' => $rows,
         ];
     }
 

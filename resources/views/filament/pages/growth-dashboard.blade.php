@@ -39,6 +39,8 @@
                 @livewire(\App\Filament\Widgets\GrowthPartnerPerformanceWidget::class)
             </div>
 
+            @livewire(\App\Filament\Widgets\GrowthProspectFollowUpWidget::class)
+
             @livewire(\App\Filament\Widgets\GrowthSeoIntelligenceWidget::class)
 
             <div class="grid gap-8 xl:grid-cols-[1.05fr,0.95fr]">
