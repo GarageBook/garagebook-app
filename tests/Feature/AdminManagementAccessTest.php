@@ -54,6 +54,7 @@ class AdminManagementAccessTest extends TestCase
             '/admin/growth-campaigns/create',
             '/admin/growth-prospects',
             '/admin/growth-prospects/create',
+            '/admin/growth-prospects/import',
             '/admin/localization-overview',
             '/admin/outreach-campaigns',
             '/admin/outreach-campaigns/create',
@@ -101,6 +102,7 @@ class AdminManagementAccessTest extends TestCase
             '/admin/growth-campaigns/create',
             '/admin/growth-prospects',
             '/admin/growth-prospects/create',
+            '/admin/growth-prospects/import',
             '/admin/localization-overview',
             '/admin/outreach-campaigns',
             '/admin/outreach-campaigns/create',
@@ -210,6 +212,7 @@ class AdminManagementAccessTest extends TestCase
         $this->get('/admin/growth-dashboard')->assertForbidden();
         $this->get('/admin/growth-campaigns')->assertForbidden();
         $this->get('/admin/growth-prospects')->assertForbidden();
+        $this->get('/admin/growth-prospects/import')->assertForbidden();
         $this->get('/admin/localization-overview')->assertForbidden();
         $this->get('/admin/outreach-campaigns')->assertForbidden();
         $this->get('/admin/outreach-prospects')->assertForbidden();

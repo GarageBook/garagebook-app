@@ -4,6 +4,7 @@ namespace App\Filament\Resources\GrowthProspects;
 
 use App\Filament\Resources\GrowthProspects\Pages\CreateGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
+use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Models\GrowthProspect;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
@@ -259,6 +260,7 @@ class GrowthProspectResource extends Resource
         return [
             'index' => ListGrowthProspects::route('/'),
             'create' => CreateGrowthProspect::route('/create'),
+            'import' => ImportGrowthProspects::route('/import'),
             'edit' => EditGrowthProspect::route('/{record}/edit'),
         ];
     }
