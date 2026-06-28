@@ -18,7 +18,8 @@ class ListGrowthProspects extends ListRecords
                 ->label('Import prospects')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->url(static::getResource()::getUrl('import')),
-            CreateAction::make(),
+            CreateAction::make()
+                ->label('Create Prospect'),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\GrowthProspects\GrowthProspectResource;
 use App\Filament\Resources\GrowthProspects\Pages\CreateGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
@@ -241,6 +242,75 @@ class GrowthProspectResourceTest extends TestCase
                 ->get());
     }
 
+    public function test_growth_prospect_table_has_edit_action(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $prospect = GrowthProspect::factory()->create([
+            'name' => 'Te beheren prospect',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->assertTableActionExists('edit', null, $prospect);
+    }
+
+    public function test_growth_prospect_index_searches_name_website_and_email(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $nameMatch = GrowthProspect::factory()->create([
+            'name' => 'Alpha Motorclub',
+            'website' => 'https://alpha.example',
+            'email' => 'info@alpha.example',
+        ]);
+        $websiteMatch = GrowthProspect::factory()->create([
+            'name' => 'Website Match',
+            'website' => 'https://zoekbaar.example',
+            'email' => 'info@website.example',
+        ]);
+        $emailMatch = GrowthProspect::factory()->create([
+            'name' => 'Email Match',
+            'website' => 'https://email.example',
+            'email' => 'contact@vindbaar.example',
+        ]);
+        $other = GrowthProspect::factory()->create([
+            'name' => 'Andere prospect',
+            'website' => 'https://ander.example',
+            'email' => 'info@ander.example',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->searchTable('Alpha Motorclub')
+            ->assertCanSeeTableRecords([$nameMatch])
+            ->assertCanNotSeeTableRecords([$websiteMatch, $emailMatch, $other]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->searchTable('zoekbaar.example')
+            ->assertCanSeeTableRecords([$websiteMatch])
+            ->assertCanNotSeeTableRecords([$nameMatch, $emailMatch, $other]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->searchTable('contact@vindbaar.example')
+            ->assertCanSeeTableRecords([$emailMatch])
+            ->assertCanNotSeeTableRecords([$nameMatch, $websiteMatch, $other]);
+    }
+
+    public function test_growth_prospect_index_sorts_by_name_by_default(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $charlie = GrowthProspect::factory()->create(['name' => 'Charlie Club']);
+        $alpha = GrowthProspect::factory()->create(['name' => 'Alpha Club']);
+        $bravo = GrowthProspect::factory()->create(['name' => 'Bravo Club']);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->assertCanSeeTableRecords([$alpha, $bravo, $charlie], inOrder: true);
+    }
+
     public function test_admin_can_open_growth_prospect_import_page(): void
     {
         $admin = User::factory()->admin()->create();
@@ -270,6 +340,30 @@ class GrowthProspectResourceTest extends TestCase
             ->assertSet('summary.update', 0)
             ->assertSet('summary.skipped', 0)
             ->assertSee('Motorclub Noord');
+    }
+
+    public function test_growth_prospect_csv_import_redirects_to_index_after_success(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->admin()->create();
+        $csv = UploadedFile::fake()->createWithContent('prospects.csv', implode("\n", [
+            'name,website,email',
+            'Redirect Partner,https://redirect.example,redirect@example.com',
+        ]));
+
+        Livewire::actingAs($admin)
+            ->test(ImportGrowthProspects::class)
+            ->set('csvFile', $csv)
+            ->call('uploadCsv')
+            ->call('import')
+            ->assertNotified('Prospects geimporteerd')
+            ->assertRedirect(GrowthProspectResource::getUrl('index'));
+
+        $this->assertDatabaseHas('growth_prospects', [
+            'name' => 'Redirect Partner',
+            'email' => 'redirect@example.com',
+        ]);
     }
 
     public function test_growth_prospect_csv_preview_is_limited_to_first_twenty_rows(): void

@@ -171,17 +171,26 @@ class GrowthProspectResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('campaign')->latest('id'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('campaign'))
+            ->defaultSort('name')
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Naam')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('website')
+                    ->label('Website')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('category')
                     ->label('Categorie')
                     ->searchable()
                     ->sortable()
                     ->placeholder('-'),
+                Tables\Columns\TextColumn::make('email')
+                    ->label('E-mail')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('campaign.name')
                     ->label('Campagne')
                     ->searchable()

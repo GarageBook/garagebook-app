@@ -103,5 +103,7 @@ class ImportGrowthProspects extends Page
             ))
             ->success()
             ->send();
+
+        $this->redirect(static::getResource()::getUrl('index'));
     }
 }
