@@ -6,6 +6,7 @@ use App\Filament\Resources\GrowthProspects\Pages\CreateGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Models\GrowthProspect;
+use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Forms;
@@ -137,6 +138,16 @@ class GrowthProspectResource extends Resource
                         ->relationship('campaign', 'name')
                         ->searchable()
                         ->preload(),
+                    Forms\Components\TextInput::make('tracking_url')
+                        ->label('Tracking URL')
+                        ->readOnly()
+                        ->dehydrated(false)
+                        ->afterStateHydrated(fn (Forms\Components\TextInput $component, ?GrowthProspect $record) => $component->state(
+                            $record ? app(GrowthProspectTrackingUrlGenerator::class)->generate($record) : null
+                        ))
+                        ->copyable()
+                        ->placeholder('Beschikbaar zodra partner slug en campagne zijn ingevuld')
+                        ->columnSpanFull(),
                 ]),
             Section::make('Notities')
                 ->schema([

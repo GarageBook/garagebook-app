@@ -8,6 +8,7 @@ use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Models\GrowthCampaign;
 use App\Models\GrowthProspect;
 use App\Models\User;
+use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -142,6 +143,46 @@ class GrowthProspectResourceTest extends TestCase
         ]);
 
         $this->assertTrue($prospect->campaign->is($campaign));
+    }
+
+
+    public function test_growth_prospect_tracking_url_uses_partner_and_campaign_slugs(): void
+    {
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'motorclub-noord',
+        ]);
+
+        $this->assertSame(
+            url('/start?utm_source=motorclub-noord&utm_medium=partner&utm_campaign=club2026&partner_slug=motorclub-noord&campaign_slug=club2026'),
+            app(GrowthProspectTrackingUrlGenerator::class)->generate($prospect),
+        );
+    }
+
+    public function test_growth_prospect_tracking_url_is_null_without_partner_slug(): void
+    {
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'campaign_id' => $campaign->id,
+            'partner_slug' => null,
+        ]);
+
+        $this->assertNull(app(GrowthProspectTrackingUrlGenerator::class)->generate($prospect));
+    }
+
+    public function test_growth_prospect_tracking_url_is_null_without_campaign(): void
+    {
+        $prospect = GrowthProspect::factory()->create([
+            'campaign_id' => null,
+            'partner_slug' => 'motorclub-noord',
+        ]);
+
+        $this->assertNull(app(GrowthProspectTrackingUrlGenerator::class)->generate($prospect));
     }
 
     public function test_growth_prospect_partner_slug_must_be_unique(): void
