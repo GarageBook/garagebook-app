@@ -86,6 +86,18 @@ class GrowthCampaignResource extends Resource
                 ->label('Startdatum'),
             Forms\Components\DateTimePicker::make('ends_at')
                 ->label('Einddatum'),
+            Forms\Components\Textarea::make('stop_criteria')
+                ->label('Stopcriteria')
+                ->rows(4)
+                ->columnSpanFull(),
+            Forms\Components\Textarea::make('scale_criteria')
+                ->label('Opschaalcriteria')
+                ->rows(4)
+                ->columnSpanFull(),
+            Forms\Components\Textarea::make('kpi_notes')
+                ->label('KPI-notities')
+                ->rows(4)
+                ->columnSpanFull(),
         ]);
     }
 

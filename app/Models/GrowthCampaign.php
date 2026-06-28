@@ -35,6 +35,9 @@ class GrowthCampaign extends Model
         'status',
         'starts_at',
         'ends_at',
+        'stop_criteria',
+        'scale_criteria',
+        'kpi_notes',
     ];
 
     protected function casts(): array

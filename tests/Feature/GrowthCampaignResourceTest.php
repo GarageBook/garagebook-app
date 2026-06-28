@@ -41,6 +41,9 @@ class GrowthCampaignResourceTest extends TestCase
                 'status' => GrowthCampaign::STATUS_ACTIVE,
                 'starts_at' => '2026-07-01 09:00:00',
                 'ends_at' => null,
+                'stop_criteria' => 'Stop als CPA boven 25 euro blijft na 50 leads.',
+                'scale_criteria' => 'Opschalen bij minimaal 10 betaalde accounts met CPA onder 12 euro.',
+                'kpi_notes' => 'Meet op activatie, betaalde conversie en demo-aanvragen.',
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -49,6 +52,9 @@ class GrowthCampaignResourceTest extends TestCase
             'name' => 'Event2026',
             'slug' => 'event2026',
             'status' => GrowthCampaign::STATUS_ACTIVE,
+            'stop_criteria' => 'Stop als CPA boven 25 euro blijft na 50 leads.',
+            'scale_criteria' => 'Opschalen bij minimaal 10 betaalde accounts met CPA onder 12 euro.',
+            'kpi_notes' => 'Meet op activatie, betaalde conversie en demo-aanvragen.',
         ]);
     }
 
@@ -69,6 +75,9 @@ class GrowthCampaignResourceTest extends TestCase
                 'status' => GrowthCampaign::STATUS_PAUSED,
                 'starts_at' => null,
                 'ends_at' => null,
+                'stop_criteria' => 'Pauzeren als er drie dagen geen activaties volgen.',
+                'scale_criteria' => 'Budget verhogen bij stabiele activatiekosten onder 8 euro.',
+                'kpi_notes' => 'Controleer wekelijkse cohort-retentie naast registraties.',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -77,6 +86,9 @@ class GrowthCampaignResourceTest extends TestCase
 
         $this->assertSame('Workshop2026 bijgewerkt', $campaign->name);
         $this->assertSame(GrowthCampaign::STATUS_PAUSED, $campaign->status);
+        $this->assertSame('Pauzeren als er drie dagen geen activaties volgen.', $campaign->stop_criteria);
+        $this->assertSame('Budget verhogen bij stabiele activatiekosten onder 8 euro.', $campaign->scale_criteria);
+        $this->assertSame('Controleer wekelijkse cohort-retentie naast registraties.', $campaign->kpi_notes);
     }
 
     public function test_admin_can_delete_growth_campaign(): void
