@@ -7,10 +7,13 @@ use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Models\GrowthProspect;
+use App\Services\Growth\GrowthProspectOutreachService;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
 use BackedEnum;
+use Filament\Actions\BulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -19,6 +22,7 @@ use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
@@ -261,7 +265,23 @@ class GrowthProspectResource extends Resource
             ->recordActions([
                 EditAction::make(),
             ])
-            ->toolbarActions([]);
+            ->toolbarActions([
+                BulkAction::make('sendClub2026Outreach')
+                    ->label('Verstuur Club2026 outreach')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->requiresConfirmation()
+                    ->modalHeading('Club2026 outreach versturen')
+                    ->modalSubmitActionLabel('Versturen')
+                    ->action(function (Collection $records, GrowthProspectOutreachService $service): void {
+                        $result = $service->sendClub2026Bulk($records);
+
+                        Notification::make()
+                            ->title('Club2026 outreach verwerkt')
+                            ->body('Verzonden: '.$result['sent'].'. Overgeslagen: '.$result['skipped'].'.')
+                            ->success()
+                            ->send();
+                    }),
+            ]);
     }
 
     public static function getPages(): array

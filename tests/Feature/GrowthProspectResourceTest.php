@@ -7,6 +7,7 @@ use App\Filament\Resources\GrowthProspects\Pages\CreateGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
+use App\Mail\GrowthProspectOutreachMail;
 use App\Models\GrowthCampaign;
 use App\Models\GrowthProspect;
 use App\Models\User;
@@ -14,6 +15,8 @@ use App\Services\Growth\GrowthProspectCsvImportService;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -296,6 +299,200 @@ class GrowthProspectResourceTest extends TestCase
             ->searchTable('contact@vindbaar.example')
             ->assertCanSeeTableRecords([$emailMatch])
             ->assertCanNotSeeTableRecords([$nameMatch, $websiteMatch, $other]);
+    }
+
+    public function test_admin_can_send_club2026_outreach_to_growth_prospect_with_email(): void
+    {
+        Mail::fake();
+        Carbon::setTestNow('2026-07-01 09:30:00');
+
+        try {
+            $admin = User::factory()->admin()->create();
+            $campaign = GrowthCampaign::factory()->create([
+                'slug' => 'club2026',
+            ]);
+            $prospect = GrowthProspect::factory()->create([
+                'name' => 'Motorclub Noord',
+                'contact_name' => 'Jan Noord',
+                'email' => 'info@motorclub-noord.example',
+                'campaign_id' => $campaign->id,
+                'partner_slug' => 'motorclub-noord',
+                'status' => 'new',
+                'last_contacted_at' => null,
+                'next_follow_up_at' => null,
+            ]);
+
+            Livewire::actingAs($admin)
+                ->test(ListGrowthProspects::class)
+                ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+                ->assertHasNoTableBulkActionErrors()
+                ->assertNotified('Club2026 outreach verwerkt');
+
+            Mail::assertSent(GrowthProspectOutreachMail::class, function (GrowthProspectOutreachMail $mail): bool {
+                return $mail->hasTo('info@motorclub-noord.example')
+                    && $mail->recipientName === 'Jan Noord'
+                    && str_contains($mail->bodyText(), 'GarageBook: een gratis digitaal onderhoudsboekje')
+                    && str_contains($mail->trackingUrl, 'utm_campaign=club2026')
+                    && str_contains($mail->trackingUrl, 'partner_slug=motorclub-noord');
+            });
+
+            $prospect->refresh();
+
+            $this->assertSame('contacted', $prospect->status);
+            $this->assertSame('2026-07-01 09:30:00', $prospect->last_contacted_at->format('Y-m-d H:i:s'));
+            $this->assertSame('2026-07-08 09:30:00', $prospect->next_follow_up_at->format('Y-m-d H:i:s'));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_club2026_outreach_skips_prospect_without_email(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => null,
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'zonder-email',
+            'status' => 'new',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Club2026 outreach verwerkt');
+
+        Mail::assertNothingSent();
+
+        $this->assertSame('new', $prospect->fresh()->status);
+        $this->assertNull($prospect->fresh()->last_contacted_at);
+        $this->assertNull($prospect->fresh()->next_follow_up_at);
+    }
+
+    public function test_club2026_outreach_skips_archived_prospect(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'archief@example.com',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'archief-club',
+            'status' => 'archived',
+            'last_contacted_at' => null,
+            'next_follow_up_at' => null,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Club2026 outreach verwerkt');
+
+        Mail::assertNothingSent();
+
+        $this->assertSame('archived', $prospect->fresh()->status);
+        $this->assertNull($prospect->fresh()->last_contacted_at);
+        $this->assertNull($prospect->fresh()->next_follow_up_at);
+    }
+
+    public function test_club2026_outreach_uses_fallback_campaign_for_tracking_url(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'fallback@example.com',
+            'campaign_id' => null,
+            'partner_slug' => 'fallback-club',
+            'status' => 'new',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors();
+
+        Mail::assertSent(GrowthProspectOutreachMail::class, function (GrowthProspectOutreachMail $mail): bool {
+            return $mail->hasTo('fallback@example.com')
+                && str_contains($mail->bodyText(), url('/start?'))
+                && str_contains($mail->trackingUrl, 'utm_campaign=club2026')
+                && str_contains($mail->trackingUrl, 'partner_slug=fallback-club');
+        });
+    }
+
+    public function test_club2026_outreach_skips_when_tracking_url_cannot_be_created(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'geen-link@example.com',
+            'campaign_id' => null,
+            'partner_slug' => null,
+            'status' => 'new',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Club2026 outreach verwerkt');
+
+        Mail::assertNothingSent();
+
+        $this->assertSame('new', $prospect->fresh()->status);
+    }
+
+    public function test_club2026_outreach_bulk_notification_counts_sent_and_skipped_records(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $sendable = GrowthProspect::factory()->create([
+            'email' => 'sendable@example.com',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'sendable-club',
+            'status' => 'new',
+        ]);
+        $withoutEmail = GrowthProspect::factory()->create([
+            'email' => null,
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'zonder-email-count',
+            'status' => 'new',
+        ]);
+        $archived = GrowthProspect::factory()->create([
+            'email' => 'archived-count@example.com',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'archived-count',
+            'status' => 'archived',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$sendable, $withoutEmail, $archived])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Club2026 outreach verwerkt');
+
+        Mail::assertSent(GrowthProspectOutreachMail::class, 1);
+        Mail::assertSent(GrowthProspectOutreachMail::class, fn (GrowthProspectOutreachMail $mail): bool => $mail->hasTo('sendable@example.com'));
+        $this->assertSame('contacted', $sendable->fresh()->status);
+        $this->assertSame('new', $withoutEmail->fresh()->status);
+        $this->assertSame('archived', $archived->fresh()->status);
     }
 
     public function test_growth_prospect_index_sorts_by_name_by_default(): void
