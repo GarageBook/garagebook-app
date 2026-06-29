@@ -301,6 +301,53 @@ class GrowthProspectResourceTest extends TestCase
             ->assertCanNotSeeTableRecords([$nameMatch, $websiteMatch, $other]);
     }
 
+    public function test_admin_can_bulk_assign_growth_prospects_to_campaign(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create([
+            'name' => 'Club2026',
+        ]);
+        $selectedA = GrowthProspect::factory()->create(['campaign_id' => null]);
+        $selectedB = GrowthProspect::factory()->create(['campaign_id' => null]);
+        $unselected = GrowthProspect::factory()->create(['campaign_id' => null]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('bulkAssignCampaign', [$selectedA, $selectedB], [
+                'campaign_id' => $campaign->id,
+            ])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Prospects gekoppeld aan campagne');
+
+        $this->assertSame($campaign->id, $selectedA->fresh()->campaign_id);
+        $this->assertSame($campaign->id, $selectedB->fresh()->campaign_id);
+        $this->assertNull($unselected->fresh()->campaign_id);
+    }
+
+    public function test_admin_can_bulk_overwrite_growth_prospect_campaign(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $oldCampaign = GrowthCampaign::factory()->create([
+            'name' => 'Oude campagne',
+        ]);
+        $newCampaign = GrowthCampaign::factory()->create([
+            'name' => 'Club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'campaign_id' => $oldCampaign->id,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('bulkAssignCampaign', [$prospect], [
+                'campaign_id' => $newCampaign->id,
+            ])
+            ->assertHasNoTableBulkActionErrors()
+            ->assertNotified('Prospects gekoppeld aan campagne');
+
+        $this->assertSame($newCampaign->id, $prospect->fresh()->campaign_id);
+    }
+
     public function test_admin_can_send_club2026_outreach_to_growth_prospect_with_email(): void
     {
         Mail::fake();

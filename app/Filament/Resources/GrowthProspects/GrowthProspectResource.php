@@ -6,6 +6,7 @@ use App\Filament\Resources\GrowthProspects\Pages\CreateGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
+use App\Models\GrowthCampaign;
 use App\Models\GrowthProspect;
 use App\Services\Growth\GrowthProspectOutreachService;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
@@ -266,6 +267,33 @@ class GrowthProspectResource extends Resource
                 EditAction::make(),
             ])
             ->toolbarActions([
+                BulkAction::make('bulkAssignCampaign')
+                    ->label('Koppel aan campagne')
+                    ->icon('heroicon-o-megaphone')
+                    ->form([
+                        Forms\Components\Select::make('campaign_id')
+                            ->label('Campagne')
+                            ->options(fn (): array => GrowthCampaign::query()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $campaign = GrowthCampaign::query()->findOrFail($data['campaign_id']);
+
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'campaign_id' => $campaign->id,
+                        ]));
+
+                        Notification::make()
+                            ->title('Prospects gekoppeld aan campagne')
+                            ->body($records->count().' prospects gekoppeld aan '.$campaign->name.'.')
+                            ->success()
+                            ->send();
+                    }),
                 BulkAction::make('sendClub2026Outreach')
                     ->label('Verstuur Club2026 outreach')
                     ->icon('heroicon-o-paper-airplane')
