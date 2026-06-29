@@ -348,6 +348,41 @@ class GrowthProspectResourceTest extends TestCase
         $this->assertSame($newCampaign->id, $prospect->fresh()->campaign_id);
     }
 
+    public function test_admin_can_preview_club2026_outreach_requires_confirmation_before_sending(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create([
+            'slug' => 'club2026',
+        ]);
+        $prospect = GrowthProspect::factory()->create([
+            'name' => 'Motorclub Noord',
+            'contact_name' => 'Jan Noord',
+            'email' => 'info@motorclub-noord.example',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'motorclub-noord',
+            'status' => 'new',
+        ]);
+
+        $preview = GrowthProspectResource::club2026OutreachPreviewData([$prospect]);
+        $html = view('filament.resources.growth-prospects.bulk-club2026-outreach-preview', $preview)->render();
+
+        $this->assertStringContainsString('Gratis digitaal onderhoudsboekje voor jullie leden', $html);
+        $this->assertStringContainsString('Hoi {{contact_name_or_name}},', $html);
+        $this->assertStringContainsString('{{tracking_url}}', $html);
+        $this->assertStringContainsString('Aantal geselecteerde prospects:', $html);
+        $this->assertStringContainsString('<strong>Aantal geselecteerde prospects:</strong> 1', $html);
+        $this->assertStringContainsString('Elke geselecteerde prospect krijgt een unieke tracking URL.', $html);
+        $this->assertStringContainsString('Prospects zonder e-mailadres:', $html);
+        $this->assertStringContainsString('Archived prospects:', $html);
+        $this->assertStringContainsString('Prospects zonder tracking URL:', $html);
+
+        $this->assertStringContainsString('Deze bulk actie verstuurt echte e-mails pas na bevestigen.', $html);
+
+        Mail::assertNothingSent();
+    }
+
     public function test_admin_can_send_club2026_outreach_to_growth_prospect_with_email(): void
     {
         Mail::fake();

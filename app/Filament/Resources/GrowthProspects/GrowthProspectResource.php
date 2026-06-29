@@ -22,6 +22,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -230,6 +231,17 @@ class GrowthProspectResource extends Resource
                 SelectFilter::make('campaign_id')
                     ->label('Campagne')
                     ->relationship('campaign', 'name'),
+                SelectFilter::make('email_presence')
+                    ->label('E-mailadres')
+                    ->options([
+                        'has_email' => 'Heeft e-mailadres',
+                        'missing_email' => 'Geen e-mailadres',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'has_email' => $query->whereNotNull('email')->where('email', '!=', ''),
+                        'missing_email' => $query->where(fn (Builder $query): Builder => $query->whereNull('email')->orWhere('email', '')),
+                        default => $query,
+                    }),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options(fn (): array => GrowthProspect::query()
@@ -299,7 +311,11 @@ class GrowthProspectResource extends Resource
                     ->icon('heroicon-o-paper-airplane')
                     ->requiresConfirmation()
                     ->modalHeading('Club2026 outreach versturen')
+                    ->modalDescription('Controleer de preview hieronder. De verzending start pas na bevestiging.')
                     ->modalSubmitActionLabel('Versturen')
+                    ->modalContent(function (Collection $records): View {
+                        return view('filament.resources.growth-prospects.bulk-club2026-outreach-preview', self::club2026OutreachPreviewData($records));
+                    })
                     ->action(function (Collection $records, GrowthProspectOutreachService $service): void {
                         $result = $service->sendClub2026Bulk($records);
 
@@ -310,6 +326,54 @@ class GrowthProspectResource extends Resource
                             ->send();
                     }),
             ]);
+    }
+
+    public static function club2026OutreachPreviewData(iterable $records): array
+    {
+        $records = collect($records);
+
+        $records->each(fn (GrowthProspect $record) => $record->loadMissing('campaign'));
+
+        return [
+            'count' => $records->count(),
+            'sendableCount' => $records->filter(fn (GrowthProspect $record): bool => self::isClub2026OutreachSendable($record))->count(),
+            'subject' => 'Gratis digitaal onderhoudsboekje voor jullie leden',
+            'body' => self::club2026OutreachPreviewBody(),
+            'trackingUrlNote' => 'Elke geselecteerde prospect krijgt een unieke tracking URL.',
+            'warningWithoutEmail' => $records->filter(fn (GrowthProspect $record): bool => blank($record->email))->count(),
+            'warningArchived' => $records->filter(fn (GrowthProspect $record): bool => $record->status === 'archived')->count(),
+            'warningWithoutTrackingUrl' => $records->filter(fn (GrowthProspect $record): bool => ! blank($record->email) && $record->status !== 'archived' && app(GrowthProspectTrackingUrlGenerator::class)->generate($record) === null)->count(),
+        ];
+    }
+
+    private static function club2026OutreachPreviewBody(): string
+    {
+        return implode(PHP_EOL, [
+            'Hoi {{contact_name_or_name}},',
+            '',
+            'Ik ben Willem, maker van GarageBook: een gratis digitaal onderhoudsboekje voor motoren.',
+            '',
+            'Ik denk dat dit interessant kan zijn voor jullie leden: ze kunnen onderhoud, documenten, foto’s en historie van hun motor netjes bijhouden — handig bij onderhoud, verkoop, taxatie of gewoon om de geschiedenis compleet te houden.',
+            '',
+            'Ik heb een speciale link voor jullie klaargezet:',
+            '{{tracking_url}}',
+            '',
+            'GarageBook is gratis te gebruiken voor één voertuig. Het zou mooi zijn als jullie dit eens willen bekijken en eventueel delen met leden, bijvoorbeeld in een nieuwsbrief of clubbericht.',
+            '',
+            'Geen commerciële verplichting of gedoe; vooral een handig hulpmiddel voor motorrijders die hun motor serieus nemen.',
+            '',
+            'Groet,',
+            'Willem',
+            'GarageBook',
+            'https://garagebook.nl',
+        ]);
+    }
+
+    private static function isClub2026OutreachSendable(GrowthProspect $record): bool
+    {
+        return ! blank($record->email)
+            && $record->status !== 'archived'
+            && app(GrowthProspectTrackingUrlGenerator::class)->generate($record) !== null;
     }
 
     public static function getPages(): array
