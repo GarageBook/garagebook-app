@@ -61,7 +61,7 @@ class VehicleResourceTest extends TestCase
             ->assertOk()
             ->assertSeeText('Leuk dat je een voertuig wilt toevoegen')
             ->assertSeeText('Je kijkt nu rond in een demo-account.')
-            ->assertSeeText('Gratis account aanmaken')
+            ->assertSeeText('Start gratis')
             ->assertSeeText('Terug naar demo')
             ->assertSee('href="'.url('/register?'), false)
             ->assertDontSee('href="'.url('/admin/register'), false)

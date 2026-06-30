@@ -4,6 +4,7 @@ namespace App\Services\Outreach;
 
 use App\Filament\Pages\Timeline;
 use App\Models\MaintenanceLog;
+use App\Models\OutreachCampaign;
 use App\Models\OutreachEvent;
 use App\Models\OutreachProspect;
 use App\Models\User;
@@ -22,6 +23,37 @@ use Illuminate\Support\Str;
 
 class OutreachDemoService
 {
+    public function demoRouteForGrowthPartner(string $partnerSlug, string $campaignSlug): string
+    {
+        $partnerSlug = Str::slug(Str::limit($partnerSlug, 120, '')) ?: 'partner';
+        $campaignSlug = Str::slug(Str::limit($campaignSlug, 120, '')) ?: 'campaign';
+
+        $campaign = OutreachCampaign::query()->firstOrCreate(
+            ['slug' => 'growth-'.$campaignSlug],
+            [
+                'name' => 'Growth '.$campaignSlug,
+                'description' => 'Automatisch aangemaakte demo-campagne voor growth partnerlinks.',
+            ],
+        );
+
+        $prospect = OutreachProspect::query()->firstOrCreate(
+            [
+                'outreach_campaign_id' => $campaign->id,
+                'source' => 'growth_partner',
+                'website' => 'growth-partner:'.$partnerSlug,
+            ],
+            [
+                'company_name' => $partnerSlug,
+                'contact_name' => null,
+                'email' => null,
+                'city' => null,
+                'notes' => 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
+            ],
+        );
+
+        return route('outreach.demo.login', ['token' => $prospect->token], false);
+    }
+
     public function loginFromToken(string $token, Request $request): RedirectResponse
     {
         $prospect = OutreachProspect::query()
@@ -281,8 +313,8 @@ class OutreachDemoService
 
     private function seedDemoVehicle(OutreachProspect $prospect, User $user): Vehicle
     {
-        $directory = 'outreach-demos/prospect-' . $prospect->id;
-        $reportPath = $directory . '/onderhoudsrapport.txt';
+        $directory = 'outreach-demos/prospect-'.$prospect->id;
+        $reportPath = $directory.'/onderhoudsrapport.txt';
 
         Storage::disk('local')->put($reportPath, $this->demoDocumentText($prospect->company_name));
 
@@ -291,14 +323,14 @@ class OutreachDemoService
             'brand' => 'Yamaha',
             'model' => 'MT-07',
             'display_variant' => 'Garage demo',
-            'nickname' => 'Demo motor voor ' . $prospect->company_name,
+            'nickname' => 'Demo motor voor '.$prospect->company_name,
             'current_km' => 18750,
             'distance_unit' => 'km',
             'year' => 2023,
             'is_public' => true,
             'share_costs_publicly' => true,
             'share_attachments_publicly' => true,
-            'notes' => 'Voorbeeldaccount voor outreach naar ' . $prospect->company_name . '.',
+            'notes' => 'Voorbeeldaccount voor outreach naar '.$prospect->company_name.'.',
         ]);
 
         $importResult = $this->refreshVehicleDemoImages($vehicle);
@@ -375,20 +407,20 @@ class OutreachDemoService
 
     private function resolveDemoEmail(OutreachProspect $prospect): string
     {
-        $base = 'outreach+' . $prospect->id . '@garagebook.nl';
+        $base = 'outreach+'.$prospect->id.'@garagebook.nl';
 
         if (! User::query()->where('email', $base)->exists()) {
             return $base;
         }
 
-        return 'outreach+' . $prospect->id . '-' . Str::lower(Str::random(6)) . '@garagebook.nl';
+        return 'outreach+'.$prospect->id.'-'.Str::lower(Str::random(6)).'@garagebook.nl';
     }
 
     private function demoDocumentText(string $companyName): string
     {
         return implode(PHP_EOL, [
             'GarageBook demo-onderhoudsrapport',
-            'Prospect: ' . $companyName,
+            'Prospect: '.$companyName,
             'Onderdeel: Voorjaarsservice Yamaha MT-07',
             'Werkzaamheden: olie, filters, kettingspanning, remcontrole',
             'Doel: laten zien hoe garages onderhoud, bewijs en een publieke voertuigpagina kunnen delen.',
@@ -421,7 +453,7 @@ class OutreachDemoService
 
     private function isManagedDemoImagePath(Vehicle $vehicle, string $path): bool
     {
-        return str_starts_with($path, 'vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-');
+        return str_starts_with($path, 'vehicle-photos/outreach-demo-vehicle-'.$vehicle->id.'-');
     }
 
     /**

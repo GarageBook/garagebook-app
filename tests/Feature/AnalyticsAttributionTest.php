@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\OutreachProspect;
 use App\Support\AnalyticsAttribution;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,8 +42,14 @@ class AnalyticsAttributionTest extends TestCase
 
     public function test_growth_parameters_are_forwarded_and_captured_from_start(): void
     {
-        $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026')
-            ->assertRedirect('/admin/register?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+        $response = $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+
+        $prospect = OutreachProspect::query()
+            ->where('source', 'growth_partner')
+            ->where('website', 'growth-partner:motorclub-x')
+            ->firstOrFail();
+
+        $response->assertRedirect('/demo/garage/'.$prospect->token.'?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
 
         $this->assertSame([
             'source' => 'partner',

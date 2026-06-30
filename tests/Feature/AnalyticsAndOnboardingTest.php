@@ -8,6 +8,7 @@ use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
 use App\Filament\Resources\Vehicles\Pages\CreateVehicle;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Models\MaintenanceLog;
+use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\AnalyticsAttribution;
@@ -56,8 +57,14 @@ class AnalyticsAndOnboardingTest extends TestCase
     {
         session()->start();
 
-        $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026')
-            ->assertRedirect('/admin/register?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+        $response = $this->get('/start?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
+
+        $prospect = OutreachProspect::query()
+            ->where('source', 'growth_partner')
+            ->where('website', 'growth-partner:motorclub-x')
+            ->firstOrFail();
+
+        $response->assertRedirect('/demo/garage/'.$prospect->token.'?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
 
         Livewire::test(Register::class)
             ->fillForm([

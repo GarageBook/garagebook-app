@@ -6,6 +6,7 @@ use App\Models\MaintenanceLog;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\AnalyticsAttribution;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,7 @@ class OutreachDemoFlowTest extends TestCase
         );
 
         $this->assertSame(
-            'https://app.garagebook.nl' . route('outreach.demo.login', ['token' => $prospect->token], false),
+            'https://app.garagebook.nl'.route('outreach.demo.login', ['token' => $prospect->token], false),
             $prospect->demoUrl(),
         );
     }
@@ -38,11 +39,11 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $sourceDirectory = sys_get_temp_dir() . '/outreach-demo-images-' . Str::random(8);
+        $sourceDirectory = sys_get_temp_dir().'/outreach-demo-images-'.Str::random(8);
         File::ensureDirectoryExists($sourceDirectory);
-        File::put($sourceDirectory . '/01-bike.jpg', 'demo-jpg');
-        File::put($sourceDirectory . '/02-bike.png', 'demo-png');
-        File::put($sourceDirectory . '/ignore.txt', 'not-an-image');
+        File::put($sourceDirectory.'/01-bike.jpg', 'demo-jpg');
+        File::put($sourceDirectory.'/02-bike.png', 'demo-png');
+        File::put($sourceDirectory.'/ignore.txt', 'not-an-image');
 
         config()->set('services.outreach_demo.image_source_path', $sourceDirectory);
 
@@ -51,16 +52,63 @@ class OutreachDemoFlowTest extends TestCase
             'user_id' => null,
         ]);
 
-        $this->get('/demo/garage/' . $prospect->token)->assertRedirect();
+        $this->get('/demo/garage/'.$prospect->token)->assertRedirect();
 
         $vehicle = $prospect->refresh()->user->vehicles()->firstOrFail();
 
-        $this->assertSame('vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-01-01-bike.jpg', $vehicle->photo);
-        $this->assertSame(['vehicle-photos/outreach-demo-vehicle-' . $vehicle->id . '-02-02-bike.png'], $vehicle->photos);
+        $this->assertSame('vehicle-photos/outreach-demo-vehicle-'.$vehicle->id.'-01-01-bike.jpg', $vehicle->photo);
+        $this->assertSame(['vehicle-photos/outreach-demo-vehicle-'.$vehicle->id.'-02-02-bike.png'], $vehicle->photos);
         Storage::disk('public')->assertExists($vehicle->photo);
         Storage::disk('public')->assertExists($vehicle->photos[0]);
 
         File::deleteDirectory($sourceDirectory);
+    }
+
+    public function test_growth_partner_start_url_redirects_to_existing_demo_flow_and_keeps_attribution(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $queryString = 'source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026';
+
+        $response = $this->get('/start?'.$queryString);
+
+        $prospect = OutreachProspect::query()
+            ->where('source', 'growth_partner')
+            ->where('website', 'growth-partner:motorclub-x')
+            ->firstOrFail();
+
+        $response->assertRedirect('/demo/garage/'.$prospect->token.'?'.$queryString);
+
+        $this->assertDatabaseHas('outreach_campaigns', [
+            'slug' => 'growth-club2026',
+        ]);
+        $this->assertSame('motorclub-x', $prospect->company_name);
+        $this->assertSame([
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+            'utm_source' => 'motorclub-x',
+            'utm_medium' => 'partner',
+            'utm_campaign' => 'club2026',
+            'landing_page' => '/start',
+        ], session(AnalyticsAttribution::SESSION_KEY));
+
+        $this->get('/demo/garage/'.$prospect->token.'?'.$queryString)->assertRedirect();
+
+        $vehicle = $prospect->refresh()->user?->vehicles()->firstOrFail();
+
+        $this->assertSame('Yamaha', $vehicle?->brand);
+        $this->assertSame('MT-07', $vehicle?->model);
+        $this->assertSame([
+            'source' => 'partner',
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'motorclub-x',
+            'utm_source' => 'motorclub-x',
+            'utm_medium' => 'partner',
+            'utm_campaign' => 'club2026',
+            'landing_page' => '/start',
+        ], session(AnalyticsAttribution::SESSION_KEY));
     }
 
     public function test_demo_link_marks_prospect_clicked_creates_demo_user_and_public_vehicle_page(): void
@@ -73,13 +121,13 @@ class OutreachDemoFlowTest extends TestCase
             'user_id' => null,
         ]);
 
-        $response = $this->get('/demo/garage/' . $prospect->token);
+        $response = $this->get('/demo/garage/'.$prospect->token);
 
         $prospect->refresh();
         $user = $prospect->user;
         $vehicle = $user?->vehicles()->first();
 
-        $response->assertRedirect('/admin/tijdlijn?vehicle_id=' . $vehicle?->id);
+        $response->assertRedirect('/admin/tijdlijn?vehicle_id='.$vehicle?->id);
         $this->assertNotNull($prospect->clicked_at);
         $this->assertNotNull($prospect->first_login_at);
         $this->assertSame(1, $prospect->login_count);
@@ -100,7 +148,7 @@ class OutreachDemoFlowTest extends TestCase
             'event_type' => 'demo_login_completed',
         ]);
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
             ->assertSeeText('Yamaha MT-07')
             ->assertSeeText('Voorjaarsservice met bewijsbestand');
@@ -116,14 +164,14 @@ class OutreachDemoFlowTest extends TestCase
             'user_id' => null,
         ]);
 
-        $this->get('/demo/garage/' . $prospect->token)->assertRedirect();
+        $this->get('/demo/garage/'.$prospect->token)->assertRedirect();
 
         $prospect->refresh();
         $userId = $prospect->user_id;
         $vehicleCount = $prospect->user->vehicles()->count();
         $maintenanceCount = MaintenanceLog::query()->whereHas('vehicle', fn ($query) => $query->where('user_id', $userId))->count();
 
-        $this->get('/demo/garage/' . $prospect->token)->assertRedirect();
+        $this->get('/demo/garage/'.$prospect->token)->assertRedirect();
 
         $prospect->refresh();
 
@@ -162,7 +210,7 @@ class OutreachDemoFlowTest extends TestCase
             'company_name' => 'Moto Demo Scope',
         ]);
 
-        $this->get('/demo/garage/' . $prospect->token)->assertRedirect();
+        $this->get('/demo/garage/'.$prospect->token)->assertRedirect();
 
         $this->get('/admin/vehicles')
             ->assertOk()
