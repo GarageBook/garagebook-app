@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\PublicGarageService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Schema;
 
@@ -75,6 +76,11 @@ class Vehicle extends Model
                 $vehicle->exists ? $vehicle->id : null,
             );
         });
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function maintenanceLogs(): HasMany

@@ -3,13 +3,11 @@
 namespace App\Services\Outreach;
 
 use App\Filament\Pages\Timeline;
-use App\Models\MaintenanceLog;
 use App\Models\OutreachCampaign;
 use App\Models\OutreachEvent;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\VehicleDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -20,18 +18,18 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class OutreachDemoService
 {
-    private const CLUB2026_CAMPAIGN_SLUG = 'club2026';
+    public const CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG = '2023-yamaha-mt-07';
 
-    private const CLUB2026_DEMO_WEBSITE = 'growth-partner:club2026-yamaha-mt-07';
+    public const CURRENT_PROSPECT_SESSION_KEY = 'outreach_demo.current_prospect_id';
 
     public function demoRouteForGrowthPartner(string $partnerSlug, string $campaignSlug): string
     {
         $partnerSlug = Str::slug(Str::limit($partnerSlug, 120, '')) ?: 'partner';
         $campaignSlug = Str::slug(Str::limit($campaignSlug, 120, '')) ?: 'campaign';
-        $isClub2026 = $campaignSlug === self::CLUB2026_CAMPAIGN_SLUG;
 
         $campaign = OutreachCampaign::query()->firstOrCreate(
             ['slug' => 'growth-'.$campaignSlug],
@@ -45,16 +43,14 @@ class OutreachDemoService
             [
                 'outreach_campaign_id' => $campaign->id,
                 'source' => 'growth_partner',
-                'website' => $isClub2026 ? self::CLUB2026_DEMO_WEBSITE : 'growth-partner:'.$partnerSlug,
+                'website' => 'growth-partner:'.$partnerSlug,
             ],
             [
-                'company_name' => $isClub2026 ? 'Club2026 Yamaha MT-07 demo' : $partnerSlug,
+                'company_name' => $partnerSlug,
                 'contact_name' => null,
                 'email' => null,
                 'city' => null,
-                'notes' => $isClub2026
-                    ? 'Canonieke Yamaha MT-07 demo-prospect voor Club2026 partner tracking URLs.'
-                    : 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
+                'notes' => 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
             ],
         );
 
@@ -81,16 +77,19 @@ class OutreachDemoService
                 $lockedProspect->save();
             }
 
-            $user = $lockedProspect->user;
+            $vehicle = $this->getCanonicalDemoVehicle();
+            $user = $vehicle->user;
 
             if (! $user instanceof User) {
-                $user = $this->createDemoUser($lockedProspect);
-                $vehicle = $this->seedDemoVehicle($lockedProspect, $user);
+                $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has no owner.', [
+                    'vehicle_id' => $vehicle->id,
+                    'public_slug' => $vehicle->public_slug,
+                ]);
+            }
 
+            if ((int) $lockedProspect->user_id !== (int) $user->id) {
                 $lockedProspect->user()->associate($user);
                 $lockedProspect->save();
-            } else {
-                $vehicle = $user->vehicles()->latest('id')->first();
             }
 
             $this->recordEvent($lockedProspect, 'demo_login_started', $request);
@@ -102,6 +101,7 @@ class OutreachDemoService
 
         Auth::login($user, true);
         $request->session()->regenerate();
+        $request->session()->put(self::CURRENT_PROSPECT_SESSION_KEY, $prospect->id);
 
         DB::transaction(function () use ($prospect, $request): void {
             /** @var OutreachProspect $lockedProspect */
@@ -124,6 +124,64 @@ class OutreachDemoService
         return redirect()->to(Timeline::getUrl(['vehicle_id' => $vehicle->id]));
     }
 
+    public function getCanonicalDemoVehicle(): Vehicle
+    {
+        $vehicle = Vehicle::query()
+            ->with('user')
+            ->where('public_slug', self::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG)
+            ->first();
+
+        if (! $vehicle instanceof Vehicle) {
+            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle is missing.', [
+                'public_slug' => self::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG,
+            ]);
+        }
+
+        if ($vehicle->brand !== 'Yamaha' || $vehicle->model !== 'MT-07') {
+            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has unexpected identity.', [
+                'vehicle_id' => $vehicle->id,
+                'public_slug' => $vehicle->public_slug,
+                'brand' => $vehicle->brand,
+                'model' => $vehicle->model,
+            ]);
+        }
+
+        $imagePaths = $this->currentVehicleImagePaths($vehicle);
+
+        if ($imagePaths->isEmpty()) {
+            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has no media.', [
+                'vehicle_id' => $vehicle->id,
+                'public_slug' => $vehicle->public_slug,
+            ]);
+        }
+
+        return $vehicle;
+    }
+
+    public function currentProspectForAuthenticatedDemoUser(): ?OutreachProspect
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User || ! $user->is_outreach_demo || $user->isAdmin()) {
+            return null;
+        }
+
+        $prospectId = session(self::CURRENT_PROSPECT_SESSION_KEY);
+
+        if (is_numeric($prospectId)) {
+            $prospect = OutreachProspect::query()
+                ->whereKey((int) $prospectId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($prospect instanceof OutreachProspect) {
+                return $prospect;
+            }
+        }
+
+        return $user->outreachProspect;
+    }
+
     public function shouldShowDemoIntroForAuthenticatedUser(): bool
     {
         $user = auth()->user();
@@ -132,7 +190,7 @@ class OutreachDemoService
             return false;
         }
 
-        $prospect = $user->outreachProspect;
+        $prospect = $this->currentProspectForAuthenticatedDemoUser();
 
         if (! $prospect instanceof OutreachProspect || $prospect->demo_intro_dismissed_at !== null) {
             return false;
@@ -158,7 +216,7 @@ class OutreachDemoService
             return;
         }
 
-        $prospect = $user->outreachProspect;
+        $prospect = $this->currentProspectForAuthenticatedDemoUser();
 
         if (! $prospect instanceof OutreachProspect || $prospect->demo_intro_dismissed_at !== null) {
             return;
@@ -305,106 +363,6 @@ class OutreachDemoService
         return $result;
     }
 
-    private function createDemoUser(OutreachProspect $prospect): User
-    {
-        return User::query()->create([
-            'name' => $prospect->company_name,
-            'email' => $this->resolveDemoEmail($prospect),
-            'password' => Str::random(40),
-            'email_verified_at' => now(),
-            'is_admin' => false,
-            'is_outreach_demo' => true,
-            'registration_source' => 'outreach_demo',
-        ]);
-    }
-
-    private function seedDemoVehicle(OutreachProspect $prospect, User $user): Vehicle
-    {
-        $directory = 'outreach-demos/prospect-'.$prospect->id;
-        $reportPath = $directory.'/onderhoudsrapport.txt';
-
-        Storage::disk('local')->put($reportPath, $this->demoDocumentText($prospect->company_name));
-
-        $vehicle = Vehicle::query()->create([
-            'user_id' => $user->id,
-            'brand' => 'Yamaha',
-            'model' => 'MT-07',
-            'display_variant' => 'Garage demo',
-            'nickname' => 'Demo motor voor '.$prospect->company_name,
-            'current_km' => 18750,
-            'distance_unit' => 'km',
-            'year' => 2023,
-            'is_public' => true,
-            'share_costs_publicly' => true,
-            'share_attachments_publicly' => true,
-            'notes' => 'Voorbeeldaccount voor outreach naar '.$prospect->company_name.'.',
-        ]);
-
-        $importResult = $this->shouldImportDemoImages($prospect)
-            ? $this->refreshVehicleDemoImages($vehicle)
-            : $this->emptyImageImportResult($vehicle);
-        $vehicle->refresh();
-        $primaryPhotoPath = $vehicle->photo;
-
-        $maintenanceLogs = [
-            [
-                'description' => 'Afleverbeurt en software-check',
-                'maintenance_date' => now()->subMonths(8)->toDateString(),
-                'km_reading' => 13200,
-                'cost' => '219.00',
-                'notes' => 'Klaargezet als showroomwaardige demo met aantoonbare historie.',
-            ],
-            [
-                'description' => 'Jaarbeurt met kettingsetcontrole',
-                'maintenance_date' => now()->subMonths(4)->toDateString(),
-                'km_reading' => 15980,
-                'cost' => '348.50',
-                'notes' => 'Inclusief controle op remvloeistof en bandenslijtage.',
-            ],
-            [
-                'description' => 'Voorjaarsservice met bewijsbestand',
-                'maintenance_date' => now()->subWeeks(6)->toDateString(),
-                'km_reading' => 18420,
-                'cost' => '289.95',
-                'notes' => 'Deze demo-log bevat een voorbeeldafbeelding en gekoppeld document.',
-                'attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
-                'media_attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
-                'file_attachments' => [],
-                'share_attachments_publicly' => true,
-                'hide_photos_on_public_page' => false,
-            ],
-        ];
-
-        foreach ($maintenanceLogs as $attributes) {
-            MaintenanceLog::query()->create([
-                'vehicle_id' => $vehicle->id,
-                ...$attributes,
-            ]);
-        }
-
-        VehicleDocument::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'title' => 'Voorbeeld onderhoudsrapport',
-            'document_type' => 'maintenance_report',
-            'file_path' => $reportPath,
-            'original_filename' => 'garagebook-demo-onderhoudsrapport.txt',
-            'mime_type' => 'text/plain',
-            'file_size' => Storage::disk('local')->size($reportPath),
-            'document_date' => now()->subWeeks(6)->toDateString(),
-            'notes' => 'Voorbeeldbewijsstuk voor de demo-flow.',
-        ]);
-
-        Log::info('Outreach demo vehicle seeded', [
-            'prospect_id' => $prospect->id,
-            'user_id' => $user->id,
-            'vehicle_id' => $vehicle->id,
-            'imported_count' => $importResult['imported_count'],
-            'final_image_count' => $importResult['final_image_count'],
-        ]);
-
-        return $vehicle;
-    }
-
     private function recordEvent(OutreachProspect $prospect, string $eventType, Request $request): OutreachEvent
     {
         return $prospect->events()->create([
@@ -414,58 +372,9 @@ class OutreachDemoService
         ]);
     }
 
-    private function resolveDemoEmail(OutreachProspect $prospect): string
-    {
-        $base = 'outreach+'.$prospect->id.'@garagebook.nl';
-
-        if (! User::query()->where('email', $base)->exists()) {
-            return $base;
-        }
-
-        return 'outreach+'.$prospect->id.'-'.Str::lower(Str::random(6)).'@garagebook.nl';
-    }
-
-    private function demoDocumentText(string $companyName): string
-    {
-        return implode(PHP_EOL, [
-            'GarageBook demo-onderhoudsrapport',
-            'Prospect: '.$companyName,
-            'Onderdeel: Voorjaarsservice Yamaha MT-07',
-            'Werkzaamheden: olie, filters, kettingspanning, remcontrole',
-            'Doel: laten zien hoe garages onderhoud, bewijs en een publieke voertuigpagina kunnen delen.',
-        ]);
-    }
-
     private function resolveImageSourceDirectory(?string $sourceDirectory = null): string
     {
         return trim((string) ($sourceDirectory ?: config('services.outreach_demo.image_source_path', '/temp/3')));
-    }
-
-    private function shouldImportDemoImages(OutreachProspect $prospect): bool
-    {
-        return ! (
-            $prospect->source === 'growth_partner'
-            && $prospect->website === self::CLUB2026_DEMO_WEBSITE
-        );
-    }
-
-    /**
-     * @return array{source_path:string, source_found:bool, found_count:int, imported_count:int, final_image_count:int, source_filenames:list<string>, imported_paths:list<string>, final_paths:list<string>}
-     */
-    private function emptyImageImportResult(Vehicle $vehicle): array
-    {
-        $finalPaths = $this->currentVehicleImagePaths($vehicle);
-
-        return [
-            'source_path' => '',
-            'source_found' => false,
-            'found_count' => 0,
-            'imported_count' => 0,
-            'final_image_count' => $finalPaths->count(),
-            'source_filenames' => [],
-            'imported_paths' => [],
-            'final_paths' => $finalPaths->all(),
-        ];
     }
 
     private function demoVehicleImageTargetPath(Vehicle $vehicle, \SplFileInfo $file, int $index): string
@@ -525,5 +434,12 @@ class OutreachDemoService
             'imported_paths' => $result['imported_paths'],
             'final_paths' => $result['final_paths'],
         ]);
+    }
+
+    private function failMissingCanonicalDemoVehicle(string $message, array $context): never
+    {
+        Log::critical($message, $context);
+
+        throw new RuntimeException($message);
     }
 }

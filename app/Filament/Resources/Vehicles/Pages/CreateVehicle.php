@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Vehicles\Pages;
 use App\Filament\Resources\MaintenanceLogs\MaintenanceLogResource;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Services\DistanceUnitService;
+use App\Services\Outreach\OutreachDemoService;
 use App\Support\Analytics;
 use App\Support\AnalyticsEventTracker;
 use Filament\Resources\Pages\CreateRecord;
@@ -128,8 +129,6 @@ class CreateVehicle extends CreateRecord
 
     private function outreachProspectId(): ?int
     {
-        $prospectId = auth()->user()?->outreachProspect()->value('id');
-
-        return is_numeric($prospectId) ? (int) $prospectId : null;
+        return app(OutreachDemoService::class)->currentProspectForAuthenticatedDemoUser()?->id;
     }
 }
