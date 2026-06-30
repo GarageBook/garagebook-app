@@ -14,7 +14,7 @@ class DiscoverCommunity2026Command extends Command
     protected $signature = 'garagebook:discover-community2026
         {--file= : CSV of JSON inputbestand}
         {--url=* : Een of meer URLs om te crawlen}
-        {--urls= : Komma-gescheiden lijst met URLs om te crawlen}
+        {--urls= : Komma-gescheiden lijst, of pad naar een tekstbestand met URLs}
         {--output=storage/app/imports/community2026_discovered.csv : Output CSV pad}
         {--limit=100 : Max aantal URLs om te crawlen}';
 
@@ -61,7 +61,7 @@ class DiscoverCommunity2026Command extends Command
 
         $urls = array_merge(
             $this->stringOptionList('url'),
-            $this->csvOptionList('urls'),
+            $this->urlsOptionList(),
         );
 
         if ($urls !== []) {
@@ -97,12 +97,21 @@ class DiscoverCommunity2026Command extends Command
     /**
      * @return array<int, string>
      */
-    private function csvOptionList(string $option): array
+    private function urlsOptionList(): array
     {
-        $value = trim((string) $this->option($option));
+        $value = trim((string) $this->option('urls'));
 
         if ($value === '') {
             return [];
+        }
+
+        $path = $this->resolveInputPath($value);
+
+        if (is_file($path) && is_readable($path)) {
+            return array_values(array_filter(array_map(
+                fn (string $item): string => trim($item),
+                preg_split('/\R/', (string) file_get_contents($path)) ?: [],
+            )));
         }
 
         return array_values(array_filter(array_map(

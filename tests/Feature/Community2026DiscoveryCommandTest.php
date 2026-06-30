@@ -72,6 +72,30 @@ class Community2026DiscoveryCommandTest extends TestCase
         $this->assertSame('json', $rows[1][7]);
     }
 
+    public function test_urls_option_can_read_from_text_file(): void
+    {
+        $seed = $this->writeTempFile('community2026_seed_urls.txt', implode(PHP_EOL, [
+            'https://club.example',
+        ]));
+
+        Http::fake([
+            '*contact*' => Http::response($this->contactPageHtml(), 200),
+            '*' => Http::response($this->mainPageHtml(), 200),
+        ]);
+
+        $output = base_path('storage/app/imports/community2026_discovered.csv');
+        File::delete($output);
+
+        $this->artisan('garagebook:discover-community2026', [
+            '--urls' => $seed,
+        ])->assertSuccessful();
+
+        Http::assertSentCount(2);
+        $rows = $this->readCsv($output);
+
+        $this->assertSame('Club Voorbeeld', $rows[1][0]);
+    }
+
     public function test_website_input_extracts_contact_details(): void
     {
         Http::fake([
