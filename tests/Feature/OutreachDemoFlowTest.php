@@ -59,6 +59,71 @@ class OutreachDemoFlowTest extends TestCase
         app(OutreachDemoService::class)->getCanonicalDemoVehicle();
     }
 
+    public function test_exact_club2026_start_url_redirects_to_canonical_demo_without_500(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $queryString = 'utm_source=aprilia-riders-association&utm_medium=partner&utm_campaign=club2026&partner_slug=aprilia-riders-association&campaign_slug=club2026';
+
+        $response = $this->get('/start?'.$queryString);
+
+        $response->assertRedirect();
+        $this->assertNotSame(500, $response->getStatusCode());
+
+        $prospect = OutreachProspect::query()
+            ->where('source', 'growth_partner')
+            ->where('website', 'growth-partner:aprilia-riders-association')
+            ->firstOrFail();
+
+        $response->assertRedirect('/demo/garage/'.$prospect->token.'?'.$queryString);
+
+        $demoResponse = $this->get('/demo/garage/'.$prospect->token.'?'.$queryString);
+
+        $demoResponse->assertRedirect('/admin/tijdlijn?vehicle_id='.$canonicalVehicle->id);
+        $this->assertNotSame(500, $demoResponse->getStatusCode());
+        $this->assertSame($canonicalVehicle->user_id, $prospect->refresh()->user_id);
+        $this->assertSame($canonicalVehicle->id, $prospect->user?->vehicles()->firstOrFail()->id);
+        $this->assertSame([
+            'campaign_slug' => 'club2026',
+            'partner_slug' => 'aprilia-riders-association',
+            'utm_source' => 'aprilia-riders-association',
+            'utm_medium' => 'partner',
+            'utm_campaign' => 'club2026',
+            'landing_page' => '/start',
+        ], session(AnalyticsAttribution::SESSION_KEY));
+    }
+
+    public function test_exact_club2026_start_url_does_not_500_when_canonical_demo_vehicle_is_missing(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $queryString = 'utm_source=aprilia-riders-association&utm_medium=partner&utm_campaign=club2026&partner_slug=aprilia-riders-association&campaign_slug=club2026';
+
+        $response = $this->get('/start?'.$queryString);
+
+        $response->assertRedirect();
+        $this->assertNotSame(500, $response->getStatusCode());
+
+        $prospect = OutreachProspect::query()
+            ->where('source', 'growth_partner')
+            ->where('website', 'growth-partner:aprilia-riders-association')
+            ->firstOrFail();
+
+        $demoResponse = $this->get('/demo/garage/'.$prospect->token.'?'.$queryString);
+
+        $demoResponse->assertRedirect();
+        $this->assertNotSame(500, $demoResponse->getStatusCode());
+
+        $vehicle = $prospect->refresh()->user?->vehicles()->firstOrFail();
+
+        $this->assertSame('Yamaha', $vehicle?->brand);
+        $this->assertSame('MT-07', $vehicle?->model);
+        $this->assertCount(3, $vehicle?->maintenanceLogs ?? []);
+    }
+
     public function test_growth_partner_start_url_redirects_to_existing_demo_flow_and_keeps_attribution(): void
     {
         Storage::fake('public');
