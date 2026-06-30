@@ -23,10 +23,15 @@ use Illuminate\Support\Str;
 
 class OutreachDemoService
 {
+    private const CLUB2026_CAMPAIGN_SLUG = 'club2026';
+
+    private const CLUB2026_DEMO_WEBSITE = 'growth-partner:club2026-yamaha-mt-07';
+
     public function demoRouteForGrowthPartner(string $partnerSlug, string $campaignSlug): string
     {
         $partnerSlug = Str::slug(Str::limit($partnerSlug, 120, '')) ?: 'partner';
         $campaignSlug = Str::slug(Str::limit($campaignSlug, 120, '')) ?: 'campaign';
+        $isClub2026 = $campaignSlug === self::CLUB2026_CAMPAIGN_SLUG;
 
         $campaign = OutreachCampaign::query()->firstOrCreate(
             ['slug' => 'growth-'.$campaignSlug],
@@ -40,14 +45,16 @@ class OutreachDemoService
             [
                 'outreach_campaign_id' => $campaign->id,
                 'source' => 'growth_partner',
-                'website' => 'growth-partner:'.$partnerSlug,
+                'website' => $isClub2026 ? self::CLUB2026_DEMO_WEBSITE : 'growth-partner:'.$partnerSlug,
             ],
             [
-                'company_name' => $partnerSlug,
+                'company_name' => $isClub2026 ? 'Club2026 Yamaha MT-07 demo' : $partnerSlug,
                 'contact_name' => null,
                 'email' => null,
                 'city' => null,
-                'notes' => 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
+                'notes' => $isClub2026
+                    ? 'Canonieke Yamaha MT-07 demo-prospect voor Club2026 partner tracking URLs.'
+                    : 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
             ],
         );
 
@@ -333,7 +340,9 @@ class OutreachDemoService
             'notes' => 'Voorbeeldaccount voor outreach naar '.$prospect->company_name.'.',
         ]);
 
-        $importResult = $this->refreshVehicleDemoImages($vehicle);
+        $importResult = $this->shouldImportDemoImages($prospect)
+            ? $this->refreshVehicleDemoImages($vehicle)
+            : $this->emptyImageImportResult($vehicle);
         $vehicle->refresh();
         $primaryPhotoPath = $vehicle->photo;
 
@@ -430,6 +439,33 @@ class OutreachDemoService
     private function resolveImageSourceDirectory(?string $sourceDirectory = null): string
     {
         return trim((string) ($sourceDirectory ?: config('services.outreach_demo.image_source_path', '/temp/3')));
+    }
+
+    private function shouldImportDemoImages(OutreachProspect $prospect): bool
+    {
+        return ! (
+            $prospect->source === 'growth_partner'
+            && $prospect->website === self::CLUB2026_DEMO_WEBSITE
+        );
+    }
+
+    /**
+     * @return array{source_path:string, source_found:bool, found_count:int, imported_count:int, final_image_count:int, source_filenames:list<string>, imported_paths:list<string>, final_paths:list<string>}
+     */
+    private function emptyImageImportResult(Vehicle $vehicle): array
+    {
+        $finalPaths = $this->currentVehicleImagePaths($vehicle);
+
+        return [
+            'source_path' => '',
+            'source_found' => false,
+            'found_count' => 0,
+            'imported_count' => 0,
+            'final_image_count' => $finalPaths->count(),
+            'source_filenames' => [],
+            'imported_paths' => [],
+            'final_paths' => $finalPaths->all(),
+        ];
     }
 
     private function demoVehicleImageTargetPath(Vehicle $vehicle, \SplFileInfo $file, int $index): string

@@ -64,18 +64,23 @@ class OutreachDemoFlowTest extends TestCase
         File::deleteDirectory($sourceDirectory);
     }
 
-    public function test_growth_partner_start_url_redirects_to_existing_demo_flow_and_keeps_attribution(): void
+    public function test_growth_partner_start_url_redirects_to_canonical_yamaha_demo_flow_and_keeps_attribution(): void
     {
         Storage::fake('public');
         Storage::fake('local');
 
-        $queryString = 'source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026';
+        $sourceDirectory = sys_get_temp_dir().'/club2026-generic-demo-images-'.Str::random(8);
+        File::ensureDirectoryExists($sourceDirectory);
+        File::put($sourceDirectory.'/garagebook-marketing-fallback.jpg', 'generic-marketing-image');
+        config()->set('services.outreach_demo.image_source_path', $sourceDirectory);
+
+        $queryString = 'utm_source=aprilia-riders-association&utm_medium=partner&utm_campaign=club2026&partner_slug=aprilia-riders-association&campaign_slug=club2026';
 
         $response = $this->get('/start?'.$queryString);
 
         $prospect = OutreachProspect::query()
             ->where('source', 'growth_partner')
-            ->where('website', 'growth-partner:motorclub-x')
+            ->where('website', 'growth-partner:club2026-yamaha-mt-07')
             ->firstOrFail();
 
         $response->assertRedirect('/demo/garage/'.$prospect->token.'?'.$queryString);
@@ -83,12 +88,11 @@ class OutreachDemoFlowTest extends TestCase
         $this->assertDatabaseHas('outreach_campaigns', [
             'slug' => 'growth-club2026',
         ]);
-        $this->assertSame('motorclub-x', $prospect->company_name);
+        $this->assertSame('Club2026 Yamaha MT-07 demo', $prospect->company_name);
         $this->assertSame([
-            'source' => 'partner',
             'campaign_slug' => 'club2026',
-            'partner_slug' => 'motorclub-x',
-            'utm_source' => 'motorclub-x',
+            'partner_slug' => 'aprilia-riders-association',
+            'utm_source' => 'aprilia-riders-association',
             'utm_medium' => 'partner',
             'utm_campaign' => 'club2026',
             'landing_page' => '/start',
@@ -100,11 +104,24 @@ class OutreachDemoFlowTest extends TestCase
 
         $this->assertSame('Yamaha', $vehicle?->brand);
         $this->assertSame('MT-07', $vehicle?->model);
+        $this->assertSame('Garage demo', $vehicle?->display_variant);
+        $this->assertNull($vehicle?->photo);
+        $this->assertSame([], $vehicle?->photos ?? []);
+
+        $this->get('/admin/tijdlijn?vehicle_id='.$vehicle?->id)
+            ->assertOk()
+            ->assertSeeText('Yamaha')
+            ->assertSeeText('MT-07')
+            ->assertSeeText('Voorjaarsservice met bewijsbestand')
+            ->assertDontSee('garagebook-marketing-fallback', false);
+
+        $this->get('/admin/vehicles/create')
+            ->assertOk()
+            ->assertSeeText('Start gratis');
         $this->assertSame([
-            'source' => 'partner',
             'campaign_slug' => 'club2026',
-            'partner_slug' => 'motorclub-x',
-            'utm_source' => 'motorclub-x',
+            'partner_slug' => 'aprilia-riders-association',
+            'utm_source' => 'aprilia-riders-association',
             'utm_medium' => 'partner',
             'utm_campaign' => 'club2026',
             'landing_page' => '/start',

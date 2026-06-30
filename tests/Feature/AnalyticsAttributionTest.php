@@ -46,7 +46,7 @@ class AnalyticsAttributionTest extends TestCase
 
         $prospect = OutreachProspect::query()
             ->where('source', 'growth_partner')
-            ->where('website', 'growth-partner:motorclub-x')
+            ->where('website', 'growth-partner:club2026-yamaha-mt-07')
             ->firstOrFail();
 
         $response->assertRedirect('/demo/garage/'.$prospect->token.'?source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026');
