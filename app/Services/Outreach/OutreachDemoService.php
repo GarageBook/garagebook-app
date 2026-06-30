@@ -3,13 +3,11 @@
 namespace App\Services\Outreach;
 
 use App\Filament\Pages\Timeline;
-use App\Models\MaintenanceLog;
 use App\Models\OutreachCampaign;
 use App\Models\OutreachEvent;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Models\VehicleDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -24,8 +22,6 @@ use RuntimeException;
 
 class OutreachDemoService
 {
-    public const CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG = '2023-yamaha-mt-07';
-
     public const CURRENT_PROSPECT_SESSION_KEY = 'outreach_demo.current_prospect_id';
 
     public function demoRouteForGrowthPartner(string $partnerSlug, string $campaignSlug): string
@@ -120,32 +116,26 @@ class OutreachDemoService
 
     public function getCanonicalDemoVehicle(): Vehicle
     {
+        return $this->getExistingPhotographedDemoVehicle();
+    }
+
+    public function getExistingPhotographedDemoVehicle(): Vehicle
+    {
         $vehicle = Vehicle::query()
-            ->with('user')
-            ->where('public_slug', self::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG)
-            ->first();
+            ->with(['user.outreachProspect'])
+            ->whereHas('user', fn ($query) => $query->where('is_outreach_demo', true))
+            ->where('brand', 'Yamaha')
+            ->where('model', 'MT-07')
+            ->where('display_variant', 'Garage demo')
+            ->latest('id')
+            ->get()
+            ->first(fn (Vehicle $vehicle): bool => $this->visibleDemoImagePaths($vehicle)->isNotEmpty());
 
         if (! $vehicle instanceof Vehicle) {
-            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle is missing.', [
-                'public_slug' => self::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG,
-            ]);
-        }
-
-        if ($vehicle->brand !== 'Yamaha' || $vehicle->model !== 'MT-07') {
-            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has unexpected identity.', [
-                'vehicle_id' => $vehicle->id,
-                'public_slug' => $vehicle->public_slug,
-                'brand' => $vehicle->brand,
-                'model' => $vehicle->model,
-            ]);
-        }
-
-        $imagePaths = $this->currentVehicleImagePaths($vehicle);
-
-        if ($imagePaths->isEmpty()) {
-            $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has no media.', [
-                'vehicle_id' => $vehicle->id,
-                'public_slug' => $vehicle->public_slug,
+            $this->failMissingCanonicalDemoVehicle('Existing photographed Yamaha MT-07 outreach demo vehicle is missing.', [
+                'brand' => 'Yamaha',
+                'model' => 'MT-07',
+                'display_variant' => 'Garage demo',
             ]);
         }
 
@@ -363,11 +353,11 @@ class OutreachDemoService
     private function resolveDemoUserAndVehicle(OutreachProspect $prospect): array
     {
         try {
-            $vehicle = $this->getCanonicalDemoVehicle();
+            $vehicle = $this->getExistingPhotographedDemoVehicle();
             $user = $vehicle->user;
 
             if (! $user instanceof User) {
-                $this->failMissingCanonicalDemoVehicle('Canonical outreach demo vehicle has no owner.', [
+                $this->failMissingCanonicalDemoVehicle('Existing photographed Yamaha MT-07 outreach demo vehicle has no owner.', [
                     'vehicle_id' => $vehicle->id,
                     'public_slug' => $vehicle->public_slug,
                 ]);
@@ -375,126 +365,13 @@ class OutreachDemoService
 
             return [$user, $vehicle];
         } catch (RuntimeException $exception) {
-            Log::error('Canonical outreach demo vehicle unavailable; falling back to legacy outreach demo vehicle.', [
+            Log::error('Existing photographed Yamaha MT-07 outreach demo vehicle unavailable.', [
                 'prospect_id' => $prospect->id,
                 'message' => $exception->getMessage(),
             ]);
+
+            abort(503, 'Demo tijdelijk niet beschikbaar.');
         }
-
-        $user = $prospect->user;
-
-        if (! $user instanceof User) {
-            $user = $this->createDemoUser($prospect);
-            $vehicle = $this->seedDemoVehicle($prospect, $user);
-
-            return [$user, $vehicle];
-        }
-
-        $vehicle = $user->vehicles()->latest('id')->first();
-
-        if ($vehicle instanceof Vehicle) {
-            return [$user, $vehicle];
-        }
-
-        return [$user, $this->seedDemoVehicle($prospect, $user)];
-    }
-
-    private function createDemoUser(OutreachProspect $prospect): User
-    {
-        return User::query()->create([
-            'name' => $prospect->company_name,
-            'email' => $this->resolveDemoEmail($prospect),
-            'password' => Str::random(40),
-            'email_verified_at' => now(),
-            'is_admin' => false,
-            'is_outreach_demo' => true,
-            'registration_source' => 'outreach_demo',
-        ]);
-    }
-
-    private function seedDemoVehicle(OutreachProspect $prospect, User $user): Vehicle
-    {
-        $directory = 'outreach-demos/prospect-'.$prospect->id;
-        $reportPath = $directory.'/onderhoudsrapport.txt';
-
-        Storage::disk('local')->put($reportPath, $this->demoDocumentText($prospect->company_name));
-
-        $vehicle = Vehicle::query()->create([
-            'user_id' => $user->id,
-            'brand' => 'Yamaha',
-            'model' => 'MT-07',
-            'display_variant' => 'Garage demo',
-            'nickname' => 'Demo motor voor '.$prospect->company_name,
-            'current_km' => 18750,
-            'distance_unit' => 'km',
-            'year' => 2023,
-            'is_public' => true,
-            'share_costs_publicly' => true,
-            'share_attachments_publicly' => true,
-            'notes' => 'Voorbeeldaccount voor outreach naar '.$prospect->company_name.'.',
-        ]);
-
-        $importResult = $this->refreshVehicleDemoImages($vehicle);
-        $vehicle->refresh();
-        $primaryPhotoPath = $vehicle->photo;
-
-        $maintenanceLogs = [
-            [
-                'description' => 'Afleverbeurt en software-check',
-                'maintenance_date' => now()->subMonths(8)->toDateString(),
-                'km_reading' => 13200,
-                'cost' => '219.00',
-                'notes' => 'Klaargezet als showroomwaardige demo met aantoonbare historie.',
-            ],
-            [
-                'description' => 'Jaarbeurt met kettingsetcontrole',
-                'maintenance_date' => now()->subMonths(4)->toDateString(),
-                'km_reading' => 15980,
-                'cost' => '348.50',
-                'notes' => 'Inclusief controle op remvloeistof en bandenslijtage.',
-            ],
-            [
-                'description' => 'Voorjaarsservice met bewijsbestand',
-                'maintenance_date' => now()->subWeeks(6)->toDateString(),
-                'km_reading' => 18420,
-                'cost' => '289.95',
-                'notes' => 'Deze demo-log bevat een voorbeeldafbeelding en gekoppeld document.',
-                'attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
-                'media_attachments' => $primaryPhotoPath ? [$primaryPhotoPath] : [],
-                'file_attachments' => [],
-                'share_attachments_publicly' => true,
-                'hide_photos_on_public_page' => false,
-            ],
-        ];
-
-        foreach ($maintenanceLogs as $attributes) {
-            MaintenanceLog::query()->create([
-                'vehicle_id' => $vehicle->id,
-                ...$attributes,
-            ]);
-        }
-
-        VehicleDocument::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'title' => 'Voorbeeld onderhoudsrapport',
-            'document_type' => 'maintenance_report',
-            'file_path' => $reportPath,
-            'original_filename' => 'garagebook-demo-onderhoudsrapport.txt',
-            'mime_type' => 'text/plain',
-            'file_size' => Storage::disk('local')->size($reportPath),
-            'document_date' => now()->subWeeks(6)->toDateString(),
-            'notes' => 'Voorbeeldbewijsstuk voor de demo-flow.',
-        ]);
-
-        Log::info('Outreach demo vehicle seeded', [
-            'prospect_id' => $prospect->id,
-            'user_id' => $user->id,
-            'vehicle_id' => $vehicle->id,
-            'imported_count' => $importResult['imported_count'],
-            'final_image_count' => $importResult['final_image_count'],
-        ]);
-
-        return $vehicle;
     }
 
     private function recordEvent(OutreachProspect $prospect, string $eventType, Request $request): OutreachEvent
@@ -503,28 +380,6 @@ class OutreachDemoService
             'event_type' => $eventType,
             'ip_address' => $request->ip(),
             'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
-        ]);
-    }
-
-    private function resolveDemoEmail(OutreachProspect $prospect): string
-    {
-        $base = 'outreach+'.$prospect->id.'@garagebook.nl';
-
-        if (! User::query()->where('email', $base)->exists()) {
-            return $base;
-        }
-
-        return 'outreach+'.$prospect->id.'-'.Str::lower(Str::random(6)).'@garagebook.nl';
-    }
-
-    private function demoDocumentText(string $companyName): string
-    {
-        return implode(PHP_EOL, [
-            'GarageBook demo-onderhoudsrapport',
-            'Prospect: '.$companyName,
-            'Onderdeel: Voorjaarsservice Yamaha MT-07',
-            'Werkzaamheden: olie, filters, kettingspanning, remcontrole',
-            'Doel: laten zien hoe garages onderhoud, bewijs en een publieke voertuigpagina kunnen delen.',
         ]);
     }
 
@@ -569,6 +424,13 @@ class OutreachDemoService
             ->filter(fn (mixed $path): bool => is_string($path) && filled($path))
             ->map(fn (string $path): string => ltrim($path, '/'))
             ->unique()
+            ->values();
+    }
+
+    private function visibleDemoImagePaths(Vehicle $vehicle): Collection
+    {
+        return $this->currentVehicleImagePaths($vehicle)
+            ->filter(fn (string $path): bool => Storage::disk('public')->exists($path))
             ->values();
     }
 

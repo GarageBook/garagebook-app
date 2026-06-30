@@ -35,28 +35,29 @@ class OutreachDemoFlowTest extends TestCase
         );
     }
 
-    public function test_canonical_demo_vehicle_resolver_returns_yamaha_with_media(): void
+    public function test_existing_photographed_demo_vehicle_resolver_returns_yamaha_with_media(): void
     {
         Storage::fake('public');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $this->createUnphotographedYamahaDemoVehicleWithOldAssumedSlug();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
 
-        $resolvedVehicle = app(OutreachDemoService::class)->getCanonicalDemoVehicle();
+        $resolvedVehicle = app(OutreachDemoService::class)->getExistingPhotographedDemoVehicle();
 
-        $this->assertSame($canonicalVehicle->id, $resolvedVehicle->id);
-        $this->assertSame(OutreachDemoService::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG, $resolvedVehicle->public_slug);
+        $this->assertSame($photographedDemoVehicle->id, $resolvedVehicle->id);
+        $this->assertSame('working-yamaha-mt-07-demo', $resolvedVehicle->public_slug);
         $this->assertSame('Yamaha', $resolvedVehicle->brand);
         $this->assertSame('MT-07', $resolvedVehicle->model);
-        $this->assertSame('vehicle-photos/canonical-yamaha-mt-07-primary.jpg', $resolvedVehicle->photo);
+        $this->assertSame('vehicle-photos/existing-yamaha-mt-07-primary.jpg', $resolvedVehicle->photo);
         Storage::disk('public')->assertExists($resolvedVehicle->photo);
     }
 
-    public function test_canonical_demo_vehicle_resolver_fails_hard_when_missing(): void
+    public function test_existing_photographed_demo_vehicle_resolver_fails_hard_when_missing(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Canonical outreach demo vehicle is missing.');
+        $this->expectExceptionMessage('Existing photographed Yamaha MT-07 outreach demo vehicle is missing.');
 
-        app(OutreachDemoService::class)->getCanonicalDemoVehicle();
+        app(OutreachDemoService::class)->getExistingPhotographedDemoVehicle();
     }
 
     public function test_exact_club2026_start_url_redirects_to_canonical_demo_without_500(): void
@@ -64,7 +65,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $queryString = 'utm_source=aprilia-riders-association&utm_medium=partner&utm_campaign=club2026&partner_slug=aprilia-riders-association&campaign_slug=club2026';
 
         $response = $this->get('/start?'.$queryString);
@@ -81,10 +82,12 @@ class OutreachDemoFlowTest extends TestCase
 
         $demoResponse = $this->get('/demo/garage/'.$prospect->token.'?'.$queryString);
 
-        $demoResponse->assertRedirect('/admin/tijdlijn?vehicle_id='.$canonicalVehicle->id);
+        $demoResponse->assertRedirect('/admin/tijdlijn?vehicle_id='.$photographedDemoVehicle->id);
         $this->assertNotSame(500, $demoResponse->getStatusCode());
-        $this->assertSame($canonicalVehicle->user_id, $prospect->refresh()->user_id);
-        $this->assertSame($canonicalVehicle->id, $prospect->user?->vehicles()->firstOrFail()->id);
+        $this->assertSame($photographedDemoVehicle->user_id, $prospect->refresh()->user_id);
+        $this->assertSame($photographedDemoVehicle->id, $prospect->user?->vehicles()->firstOrFail()->id);
+        $this->assertSame($photographedDemoVehicle->photo, $prospect->user?->vehicles()->firstOrFail()->photo);
+        $this->assertSame($photographedDemoVehicle->photos, $prospect->user?->vehicles()->firstOrFail()->photos);
         $this->assertSame([
             'campaign_slug' => 'club2026',
             'partner_slug' => 'aprilia-riders-association',
@@ -95,7 +98,7 @@ class OutreachDemoFlowTest extends TestCase
         ], session(AnalyticsAttribution::SESSION_KEY));
     }
 
-    public function test_exact_club2026_start_url_does_not_500_when_canonical_demo_vehicle_is_missing(): void
+    public function test_exact_club2026_start_url_does_not_create_fallback_demo_when_photographed_demo_is_missing(): void
     {
         Storage::fake('public');
         Storage::fake('local');
@@ -114,14 +117,10 @@ class OutreachDemoFlowTest extends TestCase
 
         $demoResponse = $this->get('/demo/garage/'.$prospect->token.'?'.$queryString);
 
-        $demoResponse->assertRedirect();
+        $demoResponse->assertStatus(503);
         $this->assertNotSame(500, $demoResponse->getStatusCode());
-
-        $vehicle = $prospect->refresh()->user?->vehicles()->firstOrFail();
-
-        $this->assertSame('Yamaha', $vehicle?->brand);
-        $this->assertSame('MT-07', $vehicle?->model);
-        $this->assertCount(3, $vehicle?->maintenanceLogs ?? []);
+        $this->assertNull($prospect->refresh()->user_id);
+        $this->assertSame(0, Vehicle::query()->count());
     }
 
     public function test_growth_partner_start_url_redirects_to_existing_demo_flow_and_keeps_attribution(): void
@@ -129,7 +128,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $queryString = 'source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026';
 
         $response = $this->get('/start?'.$queryString);
@@ -158,13 +157,13 @@ class OutreachDemoFlowTest extends TestCase
         $this->assertSame(1, Vehicle::query()->count());
 
         $this->get('/demo/garage/'.$prospect->token.'?'.$queryString)
-            ->assertRedirect('/admin/tijdlijn?vehicle_id='.$canonicalVehicle->id);
+            ->assertRedirect('/admin/tijdlijn?vehicle_id='.$photographedDemoVehicle->id);
 
         $prospect->refresh();
 
-        $this->assertSame($canonicalVehicle->user_id, $prospect->user_id);
+        $this->assertSame($photographedDemoVehicle->user_id, $prospect->user_id);
         $this->assertSame(1, Vehicle::query()->count());
-        $this->assertSame($canonicalVehicle->id, $prospect->user?->vehicles()->firstOrFail()->id);
+        $this->assertSame($photographedDemoVehicle->id, $prospect->user?->vehicles()->firstOrFail()->id);
         $this->assertSame([
             'source' => 'partner',
             'campaign_slug' => 'club2026',
@@ -181,7 +180,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $queryString = 'source=partner&campaign_slug=club2026&partner_slug=motorclub-x&utm_source=motorclub-x&utm_medium=partner&utm_campaign=club2026';
 
         $this->get('/start?'.$queryString)->assertRedirect();
@@ -189,12 +188,12 @@ class OutreachDemoFlowTest extends TestCase
 
         $this->get('/demo/garage/'.$prospect->token.'?'.$queryString)->assertRedirect();
 
-        $this->get('/garage/'.$canonicalVehicle->public_slug)
+        $this->get('/garage/'.$photographedDemoVehicle->public_slug)
             ->assertOk()
-            ->assertSee('storage/vehicle-photos/canonical-yamaha-mt-07-primary.jpg', false)
+            ->assertSee('storage/vehicle-photos/existing-yamaha-mt-07-primary.jpg', false)
             ->assertDontSee('garagebook-hero-workshop-motor.webp', false);
 
-        $this->actingAs($canonicalVehicle->user)
+        $this->actingAs($photographedDemoVehicle->user)
             ->get(VehicleResource::getUrl('create'))
             ->assertOk()
             ->assertSeeText('Start gratis')
@@ -206,7 +205,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $prospect = OutreachProspect::factory()->create([
             'company_name' => 'Moto Haarlem',
             'user_id' => null,
@@ -218,15 +217,15 @@ class OutreachDemoFlowTest extends TestCase
         $user = $prospect->user;
         $vehicle = $user?->vehicles()->first();
 
-        $response->assertRedirect('/admin/tijdlijn?vehicle_id='.$canonicalVehicle->id);
+        $response->assertRedirect('/admin/tijdlijn?vehicle_id='.$photographedDemoVehicle->id);
         $this->assertNotNull($prospect->clicked_at);
         $this->assertNotNull($prospect->first_login_at);
         $this->assertSame(1, $prospect->login_count);
         $this->assertTrue($user?->is_outreach_demo ?? false);
         $this->assertFalse($user?->isAdmin() ?? true);
-        $this->assertSame($canonicalVehicle->id, $vehicle?->id);
+        $this->assertSame($photographedDemoVehicle->id, $vehicle?->id);
         $this->assertTrue($vehicle?->is_public ?? false);
-        $this->assertSame(OutreachDemoService::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG, $vehicle?->public_slug);
+        $this->assertSame('working-yamaha-mt-07-demo', $vehicle?->public_slug);
         $this->assertCount(3, $vehicle?->maintenanceLogs ?? []);
 
         $this->assertDatabaseHas('outreach_events', [
@@ -238,11 +237,11 @@ class OutreachDemoFlowTest extends TestCase
             'event_type' => 'demo_login_completed',
         ]);
 
-        $this->get('/garage/'.$canonicalVehicle->public_slug)
+        $this->get('/garage/'.$photographedDemoVehicle->public_slug)
             ->assertOk()
             ->assertSeeText('Yamaha MT-07')
             ->assertSeeText('Voorjaarsservice met bewijsbestand')
-            ->assertSee('storage/'.$canonicalVehicle->photo, false);
+            ->assertSee('storage/'.$photographedDemoVehicle->photo, false);
     }
 
     public function test_second_click_reuses_same_demo_user_and_does_not_create_vehicle(): void
@@ -250,7 +249,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $prospect = OutreachProspect::factory()->create([
             'company_name' => 'Moto Utrecht',
             'user_id' => null,
@@ -261,7 +260,7 @@ class OutreachDemoFlowTest extends TestCase
         $prospect->refresh();
         $userId = $prospect->user_id;
         $vehicleCount = Vehicle::query()->count();
-        $maintenanceCount = MaintenanceLog::query()->where('vehicle_id', $canonicalVehicle->id)->count();
+        $maintenanceCount = MaintenanceLog::query()->where('vehicle_id', $photographedDemoVehicle->id)->count();
 
         $this->get('/demo/garage/'.$prospect->token)->assertRedirect();
 
@@ -270,7 +269,7 @@ class OutreachDemoFlowTest extends TestCase
         $this->assertSame($userId, $prospect->user_id);
         $this->assertSame(2, $prospect->login_count);
         $this->assertSame($vehicleCount, Vehicle::query()->count());
-        $this->assertSame($maintenanceCount, MaintenanceLog::query()->where('vehicle_id', $canonicalVehicle->id)->count());
+        $this->assertSame($maintenanceCount, MaintenanceLog::query()->where('vehicle_id', $photographedDemoVehicle->id)->count());
     }
 
     public function test_existing_outreach_demo_uses_same_canonical_vehicle(): void
@@ -278,16 +277,16 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $canonicalVehicle = $this->createCanonicalDemoVehicle();
+        $photographedDemoVehicle = $this->createExistingPhotographedDemoVehicle();
         $prospect = OutreachProspect::factory()->create([
             'company_name' => 'Bestaande outreach demo',
             'user_id' => null,
         ]);
 
         $this->get('/demo/garage/'.$prospect->token)
-            ->assertRedirect('/admin/tijdlijn?vehicle_id='.$canonicalVehicle->id);
+            ->assertRedirect('/admin/tijdlijn?vehicle_id='.$photographedDemoVehicle->id);
 
-        $this->assertSame($canonicalVehicle->user_id, $prospect->refresh()->user_id);
+        $this->assertSame($photographedDemoVehicle->user_id, $prospect->refresh()->user_id);
         $this->assertSame(1, Vehicle::query()->count());
     }
 
@@ -311,7 +310,7 @@ class OutreachDemoFlowTest extends TestCase
         Storage::fake('public');
         Storage::fake('local');
 
-        $this->createCanonicalDemoVehicle();
+        $this->createExistingPhotographedDemoVehicle();
         $otherUser = User::factory()->create();
         $otherVehicle = Vehicle::query()->create([
             'user_id' => $otherUser->id,
@@ -344,14 +343,14 @@ class OutreachDemoFlowTest extends TestCase
             ->assertDontSeeText('Andere gebruiker beurt');
     }
 
-    private function createCanonicalDemoVehicle(): Vehicle
+    private function createExistingPhotographedDemoVehicle(): Vehicle
     {
-        Storage::disk('public')->put('vehicle-photos/canonical-yamaha-mt-07-primary.jpg', 'primary-photo');
-        Storage::disk('public')->put('vehicle-photos/canonical-yamaha-mt-07-detail.jpg', 'detail-photo');
+        Storage::disk('public')->put('vehicle-photos/existing-yamaha-mt-07-primary.jpg', 'primary-photo');
+        Storage::disk('public')->put('vehicle-photos/existing-yamaha-mt-07-detail.jpg', 'detail-photo');
 
         $user = User::factory()->outreachDemo()->create([
             'name' => 'GarageBook demo',
-            'email' => 'outreach-demo@garagebook.nl',
+            'email' => 'photographed-outreach-demo@garagebook.nl',
         ]);
 
         $vehicle = Vehicle::query()->create([
@@ -359,17 +358,17 @@ class OutreachDemoFlowTest extends TestCase
             'brand' => 'Yamaha',
             'model' => 'MT-07',
             'display_variant' => 'Garage demo',
-            'nickname' => 'Canonical Yamaha MT-07 demo',
+            'nickname' => 'Existing photographed Yamaha MT-07 demo',
             'current_km' => 18750,
             'distance_unit' => 'km',
             'year' => 2023,
-            'public_slug' => OutreachDemoService::CANONICAL_DEMO_VEHICLE_PUBLIC_SLUG,
+            'public_slug' => 'working-yamaha-mt-07-demo',
             'is_public' => true,
             'share_costs_publicly' => true,
             'share_attachments_publicly' => true,
-            'photo' => 'vehicle-photos/canonical-yamaha-mt-07-primary.jpg',
-            'photos' => ['vehicle-photos/canonical-yamaha-mt-07-detail.jpg'],
-            'notes' => 'Canonical demo dataset for outreach and partner flows.',
+            'photo' => 'vehicle-photos/existing-yamaha-mt-07-primary.jpg',
+            'photos' => ['vehicle-photos/existing-yamaha-mt-07-detail.jpg'],
+            'notes' => 'Existing photographed demo dataset for outreach and partner flows.',
         ]);
 
         foreach ([
@@ -383,7 +382,7 @@ class OutreachDemoFlowTest extends TestCase
                 'maintenance_date' => $date,
                 'km_reading' => $kmReading,
                 'cost' => $cost,
-                'notes' => 'Canonical Yamaha MT-07 demo-data.',
+                'notes' => 'Existing photographed Yamaha MT-07 demo-data.',
                 'attachments' => $description === 'Voorjaarsservice met bewijsbestand' ? [$vehicle->photo] : [],
                 'media_attachments' => $description === 'Voorjaarsservice met bewijsbestand' ? [$vehicle->photo] : [],
                 'file_attachments' => [],
@@ -393,5 +392,30 @@ class OutreachDemoFlowTest extends TestCase
         }
 
         return $vehicle->refresh();
+    }
+
+    private function createUnphotographedYamahaDemoVehicleWithOldAssumedSlug(): Vehicle
+    {
+        $user = User::factory()->outreachDemo()->create([
+            'name' => 'Old assumed slug demo',
+            'email' => 'old-assumed-yamaha-demo@garagebook.nl',
+        ]);
+
+        return Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'MT-07',
+            'display_variant' => 'Garage demo',
+            'nickname' => 'Old assumed Yamaha MT-07 demo',
+            'current_km' => 18750,
+            'distance_unit' => 'km',
+            'year' => 2023,
+            'public_slug' => '2023-yamaha-mt-07',
+            'is_public' => true,
+            'share_costs_publicly' => true,
+            'share_attachments_publicly' => true,
+            'photo' => null,
+            'photos' => [],
+        ]);
     }
 }
