@@ -22,6 +22,9 @@ class GrowthProspectNormalizer
         $prospectType = $this->clean($data['prospect_type'] ?? null) ?: 'community';
         $prospectSubtype = $this->clean($data['prospect_subtype'] ?? null);
 
+        $verificationRequired = $this->verificationRequired($emailStatus, $website, $data);
+        $lifecycleStatus = $this->lifecycleStatus($emailStatus, $verificationRequired);
+
         return array_filter([
             'name' => $name,
             'website' => $website,
@@ -30,7 +33,7 @@ class GrowthProspectNormalizer
             'email' => $email,
             'normalized_email' => $email,
             'email_status' => $emailStatus,
-            'verification_required' => $this->verificationRequired($emailStatus, $website, $data),
+            'verification_required' => $verificationRequired,
             'phone' => $this->normalizePhone($data['phone'] ?? null),
             'city' => $this->clean($data['city'] ?? null),
             'region' => $this->clean($data['city'] ?? null) ?: $this->clean($data['region'] ?? null),
@@ -41,8 +44,9 @@ class GrowthProspectNormalizer
             'source_url' => $this->clean($data['source_url'] ?? null),
             'source_type' => $this->clean($data['source_type'] ?? null),
             'notes' => $this->clean($data['notes'] ?? null),
-            'lifecycle_status' => $emailStatus === GrowthProspect::EMAIL_STATUS_MISSING ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_READY,
-            'status' => $emailStatus === GrowthProspect::EMAIL_STATUS_MISSING ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_READY,
+            'skip_reason' => $this->skipReason($emailStatus),
+            'lifecycle_status' => $lifecycleStatus,
+            'status' => $lifecycleStatus,
         ], fn ($value): bool => $value !== null);
     }
 
@@ -146,8 +150,30 @@ class GrowthProspectNormalizer
      */
     private function verificationRequired(string $emailStatus, ?string $website, array $data): bool
     {
-        return $emailStatus !== GrowthProspect::EMAIL_STATUS_VERIFIED
-            || blank($website)
+        if (in_array($emailStatus, [GrowthProspect::EMAIL_STATUS_MISSING, GrowthProspect::EMAIL_STATUS_INVALID], true)) {
+            return true;
+        }
+
+        return blank($website)
             || blank($data['source_url'] ?? null);
+    }
+
+    private function lifecycleStatus(string $emailStatus, bool $verificationRequired): string
+    {
+        return match ($emailStatus) {
+            GrowthProspect::EMAIL_STATUS_MISSING => GrowthProspect::LIFECYCLE_ENRICHED,
+            GrowthProspect::EMAIL_STATUS_INVALID => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+            GrowthProspect::EMAIL_STATUS_VERIFIED, GrowthProspect::EMAIL_STATUS_FOUND => $verificationRequired ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_READY,
+            default => GrowthProspect::LIFECYCLE_ENRICHED,
+        };
+    }
+
+    private function skipReason(string $emailStatus): ?string
+    {
+        return match ($emailStatus) {
+            GrowthProspect::EMAIL_STATUS_MISSING => 'missing_email',
+            GrowthProspect::EMAIL_STATUS_INVALID => 'invalid_email',
+            default => null,
+        };
     }
 }

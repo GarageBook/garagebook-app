@@ -34,6 +34,8 @@ class GrowthProspect extends Model
 
     public const LIFECYCLE_READY = 'ready';
 
+    public const LIFECYCLE_MANUAL_REVIEW = 'manual_review';
+
     public const LIFECYCLE_CONTACTED = 'contacted';
 
     public const LIFECYCLE_REPLIED = 'replied';
@@ -46,6 +48,7 @@ class GrowthProspect extends Model
         self::LIFECYCLE_NEW,
         self::LIFECYCLE_ENRICHED,
         self::LIFECYCLE_READY,
+        self::LIFECYCLE_MANUAL_REVIEW,
         self::LIFECYCLE_CONTACTED,
         self::LIFECYCLE_REPLIED,
         self::LIFECYCLE_INTERESTED,

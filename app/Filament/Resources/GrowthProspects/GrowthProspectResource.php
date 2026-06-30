@@ -411,12 +411,29 @@ class GrowthProspectResource extends Resource
                     ->label('Mark as ready')
                     ->icon('heroicon-o-check')
                     ->action(function (Collection $records): void {
-                        $records->each(fn (GrowthProspect $record) => $record->update([
-                            'status' => GrowthProspect::LIFECYCLE_READY,
-                            'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
-                            'skip_reason' => null,
-                            'verification_required' => false,
-                        ]));
+                        $records->each(function (GrowthProspect $record): void {
+                            $email = trim((string) $record->email);
+                            $emailIsMissing = $email === '';
+                            $emailIsValid = ! $emailIsMissing && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+                            $canBeReady = in_array($record->email_status, [GrowthProspect::EMAIL_STATUS_FOUND, GrowthProspect::EMAIL_STATUS_VERIFIED], true)
+                                && $emailIsValid
+                                && ! blank($record->website)
+                                && blank($record->duplicate_of_id)
+                                && $record->status !== GrowthProspect::LIFECYCLE_ARCHIVED
+                                && $record->lifecycle_status !== GrowthProspect::LIFECYCLE_MANUAL_REVIEW;
+
+                            $record->update([
+                                'status' => $canBeReady ? GrowthProspect::LIFECYCLE_READY : ($emailIsMissing ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_MANUAL_REVIEW),
+                                'lifecycle_status' => $canBeReady ? GrowthProspect::LIFECYCLE_READY : ($emailIsMissing ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_MANUAL_REVIEW),
+                                'skip_reason' => $canBeReady ? null : ($emailIsMissing ? 'missing_email' : 'manual_review_required'),
+                                'verification_required' => ! $canBeReady,
+                                'email_status' => $emailIsMissing
+                                    ? GrowthProspect::EMAIL_STATUS_MISSING
+                                    : ($emailIsValid
+                                        ? ($record->email_status === GrowthProspect::EMAIL_STATUS_VERIFIED ? GrowthProspect::EMAIL_STATUS_VERIFIED : GrowthProspect::EMAIL_STATUS_FOUND)
+                                        : GrowthProspect::EMAIL_STATUS_INVALID),
+                            ]);
+                        });
 
                         self::sendBulkUpdatedNotification($records->count(), 'Prospects ready gezet');
                     }),
@@ -425,6 +442,8 @@ class GrowthProspectResource extends Resource
                     ->icon('heroicon-o-eye')
                     ->action(function (Collection $records): void {
                         $records->each(fn (GrowthProspect $record) => $record->update([
+                            'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+                            'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
                             'verification_required' => true,
                             'skip_reason' => 'manual_review_required',
                         ]));
@@ -447,6 +466,8 @@ class GrowthProspectResource extends Resource
                     ->icon('heroicon-o-envelope')
                     ->action(function (Collection $records): void {
                         $records->each(fn (GrowthProspect $record) => $record->update([
+                            'status' => GrowthProspect::LIFECYCLE_ENRICHED,
+                            'lifecycle_status' => GrowthProspect::LIFECYCLE_ENRICHED,
                             'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
                             'verification_required' => true,
                             'skip_reason' => 'missing_email',
@@ -466,6 +487,9 @@ class GrowthProspectResource extends Resource
                     ])
                     ->action(function (Collection $records, array $data): void {
                         $records->each(fn (GrowthProspect $record) => $record->update([
+                            'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+                            'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+                            'verification_required' => true,
                             'duplicate_of_id' => $data['duplicate_of_id'],
                             'skip_reason' => 'duplicate',
                         ]));

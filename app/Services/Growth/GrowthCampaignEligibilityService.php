@@ -38,6 +38,10 @@ class GrowthCampaignEligibilityService
             return self::REASON_ARCHIVED;
         }
 
+        if ($prospect->lifecycle_status === GrowthProspect::LIFECYCLE_MANUAL_REVIEW || $prospect->status === GrowthProspect::LIFECYCLE_MANUAL_REVIEW) {
+            return self::REASON_MANUAL_REVIEW_REQUIRED;
+        }
+
         if ($prospect->duplicate_of_id !== null) {
             return self::REASON_DUPLICATE;
         }

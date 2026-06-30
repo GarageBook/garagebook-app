@@ -75,7 +75,9 @@ class GrowthCommunity2026PipelineTest extends TestCase
 
         $prospect = GrowthProspect::query()->where('name', 'Camperclub Zuid')->firstOrFail();
         $this->assertSame(GrowthProspect::EMAIL_STATUS_MISSING, $prospect->email_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_ENRICHED, $prospect->lifecycle_status);
         $this->assertTrue($prospect->verification_required);
+        $this->assertSame('missing_email', $prospect->skip_reason);
     }
 
     public function test_duplicate_prospect_is_not_emailed(): void

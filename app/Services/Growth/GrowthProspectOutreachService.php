@@ -148,8 +148,14 @@ class GrowthProspectOutreachService
         $normalizedDomain = $prospect->normalized_domain ?: $normalizer->normalizeDomain($prospect->website);
         $emailStatus = $prospect->email_status;
 
-        if (blank($emailStatus) || ($emailStatus === GrowthProspect::EMAIL_STATUS_MISSING && $normalizedEmail !== null)) {
-            $emailStatus = $normalizedEmail === null ? GrowthProspect::EMAIL_STATUS_MISSING : GrowthProspect::EMAIL_STATUS_FOUND;
+        if (blank($emailStatus)) {
+            if ($normalizedEmail === null) {
+                $emailStatus = GrowthProspect::EMAIL_STATUS_MISSING;
+            } elseif (filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL) === false) {
+                $emailStatus = GrowthProspect::EMAIL_STATUS_INVALID;
+            } else {
+                $emailStatus = GrowthProspect::EMAIL_STATUS_FOUND;
+            }
         }
 
         if ($normalizedEmail !== null && filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL) === false) {
