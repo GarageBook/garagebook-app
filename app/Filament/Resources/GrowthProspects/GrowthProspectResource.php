@@ -7,7 +7,9 @@ use App\Filament\Resources\GrowthProspects\Pages\EditGrowthProspect;
 use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Models\GrowthCampaign;
+use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
+use App\Services\Growth\GrowthOutreachEventLogger;
 use App\Services\Growth\GrowthProspectOutreachService;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
 use BackedEnum;
@@ -81,12 +83,25 @@ class GrowthProspectResource extends Resource
                     Forms\Components\TextInput::make('website')
                         ->label('Website')
                         ->maxLength(255),
+                    Forms\Components\TextInput::make('normalized_domain')
+                        ->label('Genormaliseerd domein')
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('organization_key')
+                        ->label('Organisatie key')
+                        ->maxLength(255),
                     Forms\Components\TextInput::make('category')
                         ->label('Categorie')
                         ->maxLength(255),
                     Forms\Components\TextInput::make('subcategory')
                         ->label('Subcategorie')
                         ->maxLength(255),
+                    Forms\Components\Select::make('prospect_type')
+                        ->label('Type')
+                        ->options(array_combine(GrowthProspect::PROSPECT_TYPES, GrowthProspect::PROSPECT_TYPES)),
+                    Forms\Components\Select::make('prospect_subtype')
+                        ->label('Subtype')
+                        ->options(array_combine(GrowthProspect::PROSPECT_SUBTYPES, GrowthProspect::PROSPECT_SUBTYPES))
+                        ->searchable(),
                     Forms\Components\TextInput::make('region')
                         ->label('Regio')
                         ->maxLength(255),
@@ -107,6 +122,19 @@ class GrowthProspectResource extends Resource
                     Forms\Components\TextInput::make('email')
                         ->label('E-mail')
                         ->email()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('normalized_email')
+                        ->label('Genormaliseerd e-mail')
+                        ->email()
+                        ->maxLength(255),
+                    Forms\Components\Select::make('email_status')
+                        ->label('E-mailstatus')
+                        ->options(array_combine(GrowthProspect::EMAIL_STATUSES, GrowthProspect::EMAIL_STATUSES))
+                        ->default(GrowthProspect::EMAIL_STATUS_MISSING),
+                    Forms\Components\Toggle::make('verification_required')
+                        ->label('Verificatie nodig'),
+                    Forms\Components\TextInput::make('phone')
+                        ->label('Telefoon')
                         ->maxLength(255),
                     Forms\Components\TextInput::make('primary_contact_channel')
                         ->label('Primair contactkanaal')
@@ -135,6 +163,13 @@ class GrowthProspectResource extends Resource
                         ->maxValue(255),
                     Forms\Components\TextInput::make('status')
                         ->label('Status')
+                        ->maxLength(255),
+                    Forms\Components\Select::make('lifecycle_status')
+                        ->label('Lifecycle')
+                        ->options(array_combine(GrowthProspect::LIFECYCLE_STATUSES, GrowthProspect::LIFECYCLE_STATUSES))
+                        ->default(GrowthProspect::LIFECYCLE_NEW),
+                    Forms\Components\TextInput::make('skip_reason')
+                        ->label('Skip reason')
                         ->maxLength(255),
                 ])
                 ->columns(2),
@@ -177,7 +212,7 @@ class GrowthProspectResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('campaign'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['campaign', 'lastCampaign']))
             ->defaultSort('name')
             ->columns([
                 Tables\Columns\TextColumn::make('name')
@@ -187,20 +222,58 @@ class GrowthProspectResource extends Resource
                 Tables\Columns\TextColumn::make('website')
                     ->label('Website')
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('category')
-                    ->label('Categorie')
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('normalized_domain')
+                    ->label('Domein')
                     ->searchable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('prospect_type')
+                    ->label('Type')
+                    ->badge()
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('prospect_subtype')
+                    ->label('Subtype')
+                    ->badge()
                     ->sortable()
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('email')
                     ->label('E-mail')
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('email_status')
+                    ->label('E-mailstatus')
+                    ->badge()
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('lifecycle_status')
+                    ->label('Lifecycle')
+                    ->badge()
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('last_campaign_slug')
+                    ->label('Laatste campagne')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder(fn (GrowthProspect $record): string => $record->campaign?->slug ?: '-'),
+                Tables\Columns\TextColumn::make('last_contacted_at')
+                    ->label('Laatst benaderd')
+                    ->dateTime('d-m-Y H:i')
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('skip_reason')
+                    ->label('Skip reason')
+                    ->badge()
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\IconColumn::make('verification_required')
+                    ->label('Verificatie')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('campaign.name')
                     ->label('Campagne')
                     ->searchable()
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Prioriteit')
@@ -274,6 +347,15 @@ class GrowthProspectResource extends Resource
                         ->orderBy('category')
                         ->pluck('category', 'category')
                         ->all()),
+                SelectFilter::make('email_status')
+                    ->label('E-mailstatus')
+                    ->options(array_combine(GrowthProspect::EMAIL_STATUSES, GrowthProspect::EMAIL_STATUSES)),
+                SelectFilter::make('lifecycle_status')
+                    ->label('Lifecycle')
+                    ->options(array_combine(GrowthProspect::LIFECYCLE_STATUSES, GrowthProspect::LIFECYCLE_STATUSES)),
+                SelectFilter::make('prospect_subtype')
+                    ->label('Subtype')
+                    ->options(array_combine(GrowthProspect::PROSPECT_SUBTYPES, GrowthProspect::PROSPECT_SUBTYPES)),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -325,6 +407,136 @@ class GrowthProspectResource extends Resource
                             ->success()
                             ->send();
                     }),
+                BulkAction::make('markReady')
+                    ->label('Mark as ready')
+                    ->icon('heroicon-o-check')
+                    ->action(function (Collection $records): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'status' => GrowthProspect::LIFECYCLE_READY,
+                            'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
+                            'skip_reason' => null,
+                            'verification_required' => false,
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Prospects ready gezet');
+                    }),
+                BulkAction::make('markManualReview')
+                    ->label('Mark as manual review')
+                    ->icon('heroicon-o-eye')
+                    ->action(function (Collection $records): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'verification_required' => true,
+                            'skip_reason' => 'manual_review_required',
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Prospects voor handmatige controle gemarkeerd');
+                    }),
+                BulkAction::make('verifyEmail')
+                    ->label('Verify email')
+                    ->icon('heroicon-o-shield-check')
+                    ->action(function (Collection $records): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'email_status' => GrowthProspect::EMAIL_STATUS_VERIFIED,
+                            'verification_required' => false,
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'E-mails geverifieerd');
+                    }),
+                BulkAction::make('markEmailMissing')
+                    ->label('Mark email missing')
+                    ->icon('heroicon-o-envelope')
+                    ->action(function (Collection $records): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+                            'verification_required' => true,
+                            'skip_reason' => 'missing_email',
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'E-mail ontbreekt gemarkeerd');
+                    }),
+                BulkAction::make('markDuplicate')
+                    ->label('Merge/mark duplicate')
+                    ->icon('heroicon-o-link')
+                    ->form([
+                        Forms\Components\Select::make('duplicate_of_id')
+                            ->label('Hoofdrecord')
+                            ->options(fn (): array => GrowthProspect::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'duplicate_of_id' => $data['duplicate_of_id'],
+                            'skip_reason' => 'duplicate',
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Duplicaten gemarkeerd');
+                    }),
+                BulkAction::make('addToCampaign')
+                    ->label('Add to campaign')
+                    ->icon('heroicon-o-megaphone')
+                    ->form([
+                        Forms\Components\Select::make('campaign_id')
+                            ->label('Growth campagne')
+                            ->options(fn (): array => GrowthCampaign::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $campaign = GrowthCampaign::query()->find($data['campaign_id']);
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'campaign_id' => $campaign?->id,
+                            'last_campaign_id' => $campaign?->id,
+                            'last_campaign_slug' => $campaign?->slug,
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Prospects aan campagne toegevoegd');
+                    }),
+                BulkAction::make('skipForCampaign')
+                    ->label('Skip for campaign')
+                    ->icon('heroicon-o-no-symbol')
+                    ->form([
+                        Forms\Components\Select::make('campaign_id')
+                            ->label('Growth campagne')
+                            ->options(fn (): array => GrowthCampaign::query()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->required(),
+                        Forms\Components\Select::make('reason')
+                            ->label('Reden')
+                            ->options([
+                                'already_contacted_recently' => 'already_contacted_recently',
+                                'already_received_campaign' => 'already_received_campaign',
+                                'missing_email' => 'missing_email',
+                                'invalid_email' => 'invalid_email',
+                                'duplicate' => 'duplicate',
+                                'archived' => 'archived',
+                                'no_website' => 'no_website',
+                                'manual_review_required' => 'manual_review_required',
+                            ])
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data, GrowthOutreachEventLogger $events): void {
+                        $campaign = GrowthCampaign::query()->find($data['campaign_id']);
+                        $records->each(function (GrowthProspect $record) use ($campaign, $data, $events): void {
+                            $record->update(['skip_reason' => $data['reason']]);
+                            $events->log($record, GrowthOutreachEvent::TYPE_SKIPPED, $campaign, $campaign?->slug, $data['reason']);
+                        });
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Prospects overgeslagen');
+                    }),
+                BulkAction::make('archive')
+                    ->label('Mark as archived')
+                    ->icon('heroicon-o-archive-box')
+                    ->requiresConfirmation()
+                    ->action(function (Collection $records): void {
+                        $records->each(fn (GrowthProspect $record) => $record->update([
+                            'status' => 'archived',
+                            'lifecycle_status' => GrowthProspect::LIFECYCLE_ARCHIVED,
+                        ]));
+
+                        self::sendBulkUpdatedNotification($records->count(), 'Prospects gearchiveerd');
+                    }),
+
             ]);
     }
 
@@ -374,6 +586,15 @@ class GrowthProspectResource extends Resource
         return ! blank($record->email)
             && $record->status !== 'archived'
             && app(GrowthProspectTrackingUrlGenerator::class)->generate($record) !== null;
+    }
+
+    private static function sendBulkUpdatedNotification(int $count, string $title): void
+    {
+        Notification::make()
+            ->title($title)
+            ->body($count.' prospects bijgewerkt.')
+            ->success()
+            ->send();
     }
 
     public static function getPages(): array

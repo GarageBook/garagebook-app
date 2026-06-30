@@ -11,6 +11,7 @@ class GrowthCampaignSeeder extends Seeder
     {
         collect([
             ['name' => 'Club2026', 'slug' => 'club2026'],
+            ['name' => 'Community2026', 'slug' => 'community2026', 'description' => 'Merkclubs, oldtimerclubs, camperclubs, youngtimerclubs en andere voertuigcommunities.'],
             ['name' => 'Classic2026', 'slug' => 'classic2026'],
             ['name' => 'Event2026', 'slug' => 'event2026'],
             ['name' => 'Training2026', 'slug' => 'training2026'],
@@ -22,6 +23,7 @@ class GrowthCampaignSeeder extends Seeder
                 [
                     'name' => $campaign['name'],
                     'status' => GrowthCampaign::STATUS_DRAFT,
+                    'description' => $campaign['description'] ?? null,
                 ],
             );
         });

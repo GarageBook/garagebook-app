@@ -32,6 +32,7 @@ class GrowthCampaign extends Model
     protected $fillable = [
         'name',
         'slug',
+        'description',
         'status',
         'starts_at',
         'ends_at',
