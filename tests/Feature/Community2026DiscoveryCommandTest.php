@@ -28,7 +28,7 @@ class Community2026DiscoveryCommandTest extends TestCase
         $this->assertFileExists($output);
         $rows = $this->readCsv($output);
 
-        $this->assertSame(['name', 'website', 'email', 'phone', 'city', 'province', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes'], $rows[0]);
+        $this->assertSame(['name', 'website', 'email', 'phone', 'city', 'province', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes', 'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason'], $rows[0]);
         $this->assertSame('Motorclub Noord', $rows[1][0]);
         $this->assertSame('https://motorclub-noord.example', $rows[1][1]);
         $this->assertSame('info@motorclub-noord.example', $rows[1][2]);
@@ -124,6 +124,47 @@ class Community2026DiscoveryCommandTest extends TestCase
         $this->assertSame('website', $rows[1][7]);
         $this->assertSame('oldtimer_club', $rows[1][9]);
         $this->assertStringContainsString('social:', $rows[1][10]);
+    }
+
+    public function test_quality_filter_separates_rejected_rows(): void
+    {
+        $input = $this->writeTempFile('discovery-quality.csv', implode(PHP_EOL, [
+            'name,website,email,phone,city,province,source_url,source_type,prospect_type,prospect_subtype,notes',
+            'Motorclub Noord,https://motorclub-noord.example,info@motorclub-noord.example,0612345678,Groningen,Groningen,https://source.example/noord,csv,community,motorcycle_club,Club met leden',
+            'Club Zonder Mail,https://club-zonder-mail.example,,,,,https://source.example/missing,csv,community,brand_club,Moet handmatig',
+            '1-Cilinder- en Small-block dag,https://junk.example,,,,,https://source.example/junk,csv,community,oldtimer_club,Evenement',
+            'Home,,,,,,https://source.example/home,csv,community,association,Home pagina',
+        ]));
+
+        $output = base_path('storage/app/imports/community2026_discovered.csv');
+        $rejected = base_path('storage/app/imports/community2026_rejected.csv');
+        File::delete($output);
+        File::delete($rejected);
+
+        $this->artisan('garagebook:discover-community2026', [
+            '--file' => $input,
+        ])->assertSuccessful()
+            ->expectsOutput('discovered total: 4')
+            ->expectsOutput('accepted: 1')
+            ->expectsOutput('manual review: 1')
+            ->expectsOutput('rejected: 2');
+
+        $this->assertFileExists($output);
+        $this->assertFileExists($rejected);
+
+        $rows = $this->readCsv($output);
+        $rejectedRows = $this->readCsv($rejected);
+
+        $this->assertSame(['name', 'website', 'email', 'phone', 'city', 'province', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes', 'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason'], $rows[0]);
+        $this->assertSame('Motorclub Noord', $rows[1][0]);
+        $this->assertSame('accepted', $rows[1][13]);
+        $this->assertSame('Club Zonder Mail', $rows[2][0]);
+        $this->assertSame('manual_review', $rows[2][13]);
+
+        $this->assertSame('1-Cilinder- en Small-block dag', $rejectedRows[1][0]);
+        $this->assertSame('rejected', $rejectedRows[1][13]);
+        $this->assertSame('Home', $rejectedRows[2][0]);
+        $this->assertSame('rejected', $rejectedRows[2][13]);
     }
 
     private function mainPageHtml(): string

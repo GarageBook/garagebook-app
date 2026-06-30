@@ -15,6 +15,7 @@ class Community2026ImportService
 
     private const COLUMNS = [
         'name', 'website', 'email', 'phone', 'city', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes',
+        'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason',
     ];
 
     public function __construct(
@@ -108,7 +109,7 @@ class Community2026ImportService
         }
 
         $headers = fgetcsv($handle) ?: [];
-        $headers = array_map(fn ($header): string => preg_replace('/^\xEF\xBB\xBF/', '', trim((string) $header)) ?: '', $headers);
+        $headers = array_map(fn ($header): string => preg_replace('/^ï»¿/', '', trim((string) $header)) ?: '', $headers);
         $rows = [];
 
         while (($values = fgetcsv($handle)) !== false) {
@@ -173,7 +174,7 @@ class Community2026ImportService
                 continue;
             }
 
-            if (filled($prospect->{$field}) && ! in_array($field, ['email_status', 'verification_required', 'lifecycle_status', 'status', 'notes'], true)) {
+            if (filled($prospect->{$field}) && ! in_array($field, ['email_status', 'verification_required', 'lifecycle_status', 'status', 'notes', 'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason'], true)) {
                 unset($payload[$field]);
             }
         }

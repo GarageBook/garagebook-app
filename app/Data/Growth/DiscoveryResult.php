@@ -18,6 +18,10 @@ final class DiscoveryResult
         public readonly ?string $prospectType = 'community',
         public readonly ?string $prospectSubtype = null,
         public readonly ?string $notes = null,
+        public readonly int $qualityScore = 0,
+        public readonly array $qualityFlags = [],
+        public readonly string $qualityVerdict = 'accepted',
+        public readonly ?string $qualityReason = null,
     ) {}
 
     /**
@@ -63,6 +67,31 @@ final class DiscoveryResult
             prospectType: $prospectType,
             prospectSubtype: $prospectSubtype,
             notes: $notes,
+            qualityScore: (int) ($data['quality_score'] ?? 0),
+            qualityFlags: self::normalizeQualityFlags($data['quality_flags'] ?? []),
+            qualityVerdict: self::normalizeQualityVerdict($data['quality_verdict'] ?? 'accepted'),
+            qualityReason: $normalizer->normalizeText($data['quality_reason'] ?? null),
+        );
+    }
+
+    public function withQuality(int $score, array $flags, string $verdict, ?string $reason = null): self
+    {
+        return new self(
+            name: $this->name,
+            website: $this->website,
+            email: $this->email,
+            phone: $this->phone,
+            city: $this->city,
+            province: $this->province,
+            sourceUrl: $this->sourceUrl,
+            sourceType: $this->sourceType,
+            prospectType: $this->prospectType,
+            prospectSubtype: $this->prospectSubtype,
+            notes: $this->notes,
+            qualityScore: max(0, min(100, $score)),
+            qualityFlags: array_values(array_unique(array_filter($flags, static fn (mixed $flag): bool => is_string($flag) && trim($flag) !== ''))),
+            qualityVerdict: $verdict,
+            qualityReason: $reason,
         );
     }
 
@@ -91,6 +120,10 @@ final class DiscoveryResult
             prospectType: $this->prospectType ?: $other->prospectType,
             prospectSubtype: $this->prospectSubtype ?: $other->prospectSubtype,
             notes: $this->notes ?: $other->notes,
+            qualityScore: max($this->qualityScore, $other->qualityScore),
+            qualityFlags: array_values(array_unique(array_filter(array_merge($this->qualityFlags, $other->qualityFlags)))),
+            qualityVerdict: $this->qualityVerdict !== 'accepted' ? $this->qualityVerdict : $other->qualityVerdict,
+            qualityReason: $this->qualityReason ?: $other->qualityReason,
         );
     }
 
@@ -111,6 +144,45 @@ final class DiscoveryResult
             'prospect_type' => (string) ($this->prospectType ?? ''),
             'prospect_subtype' => (string) ($this->prospectSubtype ?? ''),
             'notes' => (string) ($this->notes ?? ''),
+            'quality_score' => (string) $this->qualityScore,
+            'quality_flags' => json_encode($this->qualityFlags, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            'quality_verdict' => $this->qualityVerdict,
+            'quality_reason' => (string) ($this->qualityReason ?? ''),
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function normalizeQualityFlags(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_unique(array_filter(array_map(static fn (mixed $flag): string => trim((string) $flag), $value))));
+        }
+
+        if (! is_string($value)) {
+            return [];
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+
+        if (is_array($decoded)) {
+            return array_values(array_unique(array_filter(array_map(static fn (mixed $flag): string => trim((string) $flag), $decoded))));
+        }
+
+        return array_values(array_unique(array_filter(array_map('trim', preg_split('/\s*[|,;]\s*/', $value) ?: []))));
+    }
+
+    private static function normalizeQualityVerdict(mixed $value): string
+    {
+        $value = strtolower(trim((string) $value));
+
+        return in_array($value, ['accepted', 'manual_review', 'rejected'], true) ? $value : 'accepted';
     }
 }

@@ -25,6 +25,10 @@ return new class extends Migration
             $table->string('skip_reason')->nullable()->after('duplicate_of_id')->index();
             $table->string('source_url')->nullable()->after('skip_reason');
             $table->string('source_type')->nullable()->after('source_url')->index();
+            $table->unsignedTinyInteger('quality_score')->nullable()->after('source_type')->index();
+            $table->json('quality_flags')->nullable()->after('quality_score');
+            $table->string('quality_verdict')->nullable()->after('quality_flags')->index();
+            $table->string('quality_reason')->nullable()->after('quality_verdict');
         });
     }
 
@@ -48,6 +52,10 @@ return new class extends Migration
                 'skip_reason',
                 'source_url',
                 'source_type',
+                'quality_score',
+                'quality_flags',
+                'quality_verdict',
+                'quality_reason',
             ]);
         });
     }

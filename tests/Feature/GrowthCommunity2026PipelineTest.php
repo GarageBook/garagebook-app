@@ -80,6 +80,21 @@ class GrowthCommunity2026PipelineTest extends TestCase
         $this->assertSame('missing_email', $prospect->skip_reason);
     }
 
+    public function test_quality_review_rows_keep_manual_review_status(): void
+    {
+        $path = $this->writeImportCsv('community-quality-review.csv', [
+            ['Club Zonder Mail', 'https://club-zonder-mail.example', '', '', 'Breda', 'https://source.example/missing', 'manual', 'community', 'brand_club', 'Moet handmatig', 64, '["no_email","low_organization_signal"]', 'manual_review', 'missing email'],
+        ]);
+
+        app(Community2026ImportService::class)->importPath($path);
+
+        $prospect = GrowthProspect::query()->where('name', 'Club Zonder Mail')->firstOrFail();
+        $this->assertSame(64, $prospect->quality_score);
+        $this->assertSame(['no_email', 'low_organization_signal'], $prospect->quality_flags);
+        $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, $prospect->lifecycle_status);
+        $this->assertSame('missing_email', $prospect->skip_reason);
+    }
+
     public function test_duplicate_prospect_is_not_emailed(): void
     {
         Mail::fake();
@@ -240,7 +255,7 @@ class GrowthCommunity2026PipelineTest extends TestCase
     }
 
     /**
-     * @param  array<int, array<int, string>>  $rows
+     * @param  array<int, array<int, string|int>>  $rows
      */
     private function writeImportCsv(string $name, array $rows): string
     {
@@ -250,7 +265,7 @@ class GrowthCommunity2026PipelineTest extends TestCase
         }
 
         $handle = fopen($path, 'w');
-        fputcsv($handle, ['name', 'website', 'email', 'phone', 'city', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes']);
+        fputcsv($handle, ['name', 'website', 'email', 'phone', 'city', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes', 'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason']);
         foreach ($rows as $row) {
             fputcsv($handle, $row);
         }

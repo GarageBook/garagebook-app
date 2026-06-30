@@ -88,6 +88,23 @@ class Community2026CleanupCommandTest extends TestCase
             'status' => GrowthProspect::LIFECYCLE_READY,
         ]);
 
+        GrowthProspect::query()->create([
+            'campaign_id' => $campaign->id,
+            'name' => 'Quality Review Club',
+            'website' => 'https://quality-review.example',
+            'normalized_domain' => 'quality-review.example',
+            'email' => 'info@quality-review.example',
+            'normalized_email' => 'info@quality-review.example',
+            'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
+            'verification_required' => false,
+            'quality_score' => 42,
+            'quality_flags' => ['low_organization_signal'],
+            'quality_verdict' => 'manual_review',
+            'quality_reason' => 'manual review required',
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
+            'status' => GrowthProspect::LIFECYCLE_READY,
+        ]);
+
         $this->artisan('garagebook:community2026-cleanup')
             ->expectsOutput('Community2026 cleanup voltooid.')
             ->assertSuccessful();
@@ -95,12 +112,13 @@ class Community2026CleanupCommandTest extends TestCase
         $this->assertSame(2, GrowthProspect::query()->where('campaign_id', $campaign->id)->where('lifecycle_status', GrowthProspect::LIFECYCLE_READY)->count());
         $this->assertSame(1, GrowthProspect::query()->where('campaign_id', $campaign->id)->where('email_status', GrowthProspect::EMAIL_STATUS_MISSING)->count());
         $this->assertSame(1, GrowthProspect::query()->where('campaign_id', $campaign->id)->where('email_status', GrowthProspect::EMAIL_STATUS_INVALID)->count());
-        $this->assertSame(2, GrowthProspect::query()->where('campaign_id', $campaign->id)->where('lifecycle_status', GrowthProspect::LIFECYCLE_MANUAL_REVIEW)->count());
+        $this->assertSame(3, GrowthProspect::query()->where('campaign_id', $campaign->id)->where('lifecycle_status', GrowthProspect::LIFECYCLE_MANUAL_REVIEW)->count());
         $this->assertSame(1, GrowthProspect::query()->where('campaign_id', $campaign->id)->whereNotNull('duplicate_of_id')->count());
 
         $this->assertSame(GrowthProspect::LIFECYCLE_READY, $master->fresh()->lifecycle_status);
         $this->assertSame(GrowthProspect::LIFECYCLE_ENRICHED, GrowthProspect::query()->where('name', 'Missing Club')->firstOrFail()->lifecycle_status);
         $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, GrowthProspect::query()->where('name', 'Invalid Club')->firstOrFail()->lifecycle_status);
         $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, GrowthProspect::query()->where('name', 'Duplicate Club')->firstOrFail()->lifecycle_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, GrowthProspect::query()->where('name', 'Quality Review Club')->firstOrFail()->lifecycle_status);
     }
 }

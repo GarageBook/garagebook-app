@@ -76,8 +76,9 @@ class Community2026CleanupService
         $phone = $this->normalizer->normalizePhone($prospect->phone);
         $emailStatus = $this->resolveEmailStatus($prospect, $normalizedEmail);
         $verificationRequired = $this->verificationRequired($prospect, $emailStatus);
-        $lifecycleStatus = $this->resolveLifecycleStatus($prospect, $emailStatus, $verificationRequired);
-        $skipReason = $this->resolveSkipReason($prospect, $emailStatus, $lifecycleStatus);
+        $qualityManualReview = $this->qualityManualReview($prospect);
+        $lifecycleStatus = $this->resolveLifecycleStatus($prospect, $emailStatus, $verificationRequired, $qualityManualReview);
+        $skipReason = $this->resolveSkipReason($prospect, $emailStatus, $lifecycleStatus, $qualityManualReview);
 
         return array_filter([
             'normalized_email' => $normalizedEmail,
@@ -116,13 +117,81 @@ class Community2026CleanupService
         return blank($prospect->website) || blank($prospect->source_url);
     }
 
-    private function resolveLifecycleStatus(GrowthProspect $prospect, string $emailStatus, bool $verificationRequired): string
+    private function qualityManualReview(GrowthProspect $prospect): bool
+    {
+        $qualityScore = $prospect->quality_score;
+        $qualityVerdict = $this->normalizeString($prospect->quality_verdict);
+        $flags = $this->qualityFlags($prospect);
+
+        if ($qualityVerdict === 'manual_review' || $qualityVerdict === 'rejected') {
+            return true;
+        }
+
+        if ($qualityScore !== null && $qualityScore < 80) {
+            return true;
+        }
+
+        return collect($flags)->contains(fn (string $flag): bool => in_array($flag, [
+            'manual_review_required',
+            'low_organization_signal',
+            'no_website',
+            'no_email',
+            'missing_subtype',
+            'placeholder_name',
+            'event_title',
+            'gibberish_name',
+            'invalid_subtype',
+        ], true));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function qualityFlags(GrowthProspect $prospect): array
+    {
+        $flags = $prospect->quality_flags;
+
+        if (is_array($flags)) {
+            return array_values(array_filter(array_map(
+                fn (mixed $flag): string => trim((string) $flag),
+                $flags,
+            )));
+        }
+
+        if (! is_string($flags) || trim($flags) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($flags, true);
+
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map(
+                fn (mixed $flag): string => trim((string) $flag),
+                $decoded,
+            )));
+        }
+
+        return array_values(array_filter(array_map('trim', preg_split('/\s*[|,;]\s*/', $flags) ?: [])));
+    }
+
+    private function normalizeString(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : strtolower($value);
+    }
+
+    private function resolveLifecycleStatus(GrowthProspect $prospect, string $emailStatus, bool $verificationRequired, bool $qualityManualReview): string
     {
         if ($prospect->status === GrowthProspect::LIFECYCLE_ARCHIVED || $prospect->lifecycle_status === GrowthProspect::LIFECYCLE_ARCHIVED) {
             return GrowthProspect::LIFECYCLE_ARCHIVED;
         }
 
         if ($prospect->duplicate_of_id !== null) {
+            return GrowthProspect::LIFECYCLE_MANUAL_REVIEW;
+        }
+
+        if ($qualityManualReview) {
             return GrowthProspect::LIFECYCLE_MANUAL_REVIEW;
         }
 
@@ -137,7 +206,7 @@ class Community2026CleanupService
         return $verificationRequired ? GrowthProspect::LIFECYCLE_ENRICHED : GrowthProspect::LIFECYCLE_READY;
     }
 
-    private function resolveSkipReason(GrowthProspect $prospect, string $emailStatus, string $lifecycleStatus): ?string
+    private function resolveSkipReason(GrowthProspect $prospect, string $emailStatus, string $lifecycleStatus, bool $qualityManualReview): ?string
     {
         if ($prospect->status === GrowthProspect::LIFECYCLE_ARCHIVED || $prospect->lifecycle_status === GrowthProspect::LIFECYCLE_ARCHIVED) {
             return 'archived';
@@ -145,6 +214,10 @@ class Community2026CleanupService
 
         if ($prospect->duplicate_of_id !== null) {
             return 'duplicate';
+        }
+
+        if ($qualityManualReview) {
+            return 'manual_review_required';
         }
 
         return match ([$emailStatus, $lifecycleStatus]) {

@@ -8,9 +8,13 @@ use Illuminate\Support\Facades\File;
 
 class Community2026DiscoveryService
 {
+    public function __construct(
+        private readonly Community2026DiscoveryQualityService $quality,
+    ) {}
+
     /**
      * @param  iterable<int, DiscoveryProvider>  $providers
-     * @return array<int, DiscoveryResult>
+     * @return array{accepted: array<int, DiscoveryResult>, manual_review: array<int, DiscoveryResult>, rejected: array<int, DiscoveryResult>, total: int}
      */
     public function discover(iterable $providers): array
     {
@@ -38,7 +42,19 @@ class Community2026DiscoveryService
             }
         }
 
-        return $results->values()->all();
+        $batch = [
+            'accepted' => [],
+            'manual_review' => [],
+            'rejected' => [],
+            'total' => $results->count(),
+        ];
+
+        foreach ($results->values() as $result) {
+            $assessed = $this->quality->assess($result);
+            $batch[$assessed->qualityVerdict][] = $assessed;
+        }
+
+        return $batch;
     }
 
     /**
@@ -78,7 +94,7 @@ class Community2026DiscoveryService
      */
     public function headers(): array
     {
-        return ['name', 'website', 'email', 'phone', 'city', 'province', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes'];
+        return ['name', 'website', 'email', 'phone', 'city', 'province', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes', 'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason'];
     }
 
     private function resolvePath(string $path): string
@@ -91,7 +107,7 @@ class Community2026DiscoveryService
             return $path;
         }
 
-        if (preg_match('/^[A-Za-z]:[\\/]/', $path) === 1) {
+        if (preg_match('/^[A-Za-z]:[\/]/', $path) === 1) {
             return $path;
         }
 

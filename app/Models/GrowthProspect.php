@@ -103,6 +103,10 @@ class GrowthProspect extends Model
         'skip_reason',
         'source_url',
         'source_type',
+        'quality_score',
+        'quality_flags',
+        'quality_verdict',
+        'quality_reason',
         'notes',
         'why_interesting',
         'approach_strategy',
@@ -114,6 +118,8 @@ class GrowthProspect extends Model
     {
         return [
             'score' => 'integer',
+            'quality_score' => 'integer',
+            'quality_flags' => 'array',
             'verification_required' => 'boolean',
             'last_contacted_at' => 'datetime',
             'next_follow_up_at' => 'datetime',

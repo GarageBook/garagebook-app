@@ -16,6 +16,7 @@ class DiscoverCommunity2026Command extends Command
         {--url=* : Een of meer URLs om te crawlen}
         {--urls= : Komma-gescheiden lijst, of pad naar een tekstbestand met URLs}
         {--output=storage/app/imports/community2026_discovered.csv : Output CSV pad}
+        {--rejected=storage/app/imports/community2026_rejected.csv : Rejected CSV pad}
         {--limit=100 : Max aantal URLs om te crawlen}';
 
     protected $description = 'Genereer Community2026 discovery-output zonder te mailen of te queuen.';
@@ -30,13 +31,20 @@ class DiscoverCommunity2026Command extends Command
             return self::FAILURE;
         }
 
-        $results = $service->discover($providers);
-        $written = $service->writeCsv($results, (string) $this->option('output'));
+        $batch = $service->discover($providers);
+        $discoverRows = array_merge($batch['accepted'], $batch['manual_review']);
+        $written = $service->writeCsv($discoverRows, (string) $this->option('output'));
+        $rejectedWritten = $service->writeCsv($batch['rejected'], (string) $this->option('rejected'));
 
         $this->info('Discovery voltooid.');
-        $this->line('Gevonden: '.count($results));
-        $this->line('Geschreven: '.$written);
+        $this->line('discovered total: '.$batch['total']);
+        $this->line('accepted: '.count($batch['accepted']));
+        $this->line('manual review: '.count($batch['manual_review']));
+        $this->line('rejected: '.count($batch['rejected']));
+        $this->line('written: '.$written);
+        $this->line('rejected written: '.$rejectedWritten);
         $this->line('Output: '.$this->resolveOutputPath((string) $this->option('output')));
+        $this->line('Rejected output: '.$this->resolveOutputPath((string) $this->option('rejected')));
 
         return self::SUCCESS;
     }
@@ -126,7 +134,7 @@ class DiscoverCommunity2026Command extends Command
             return $path;
         }
 
-        if (preg_match('/^[A-Za-z]:[\\/]/', $path) === 1) {
+        if (preg_match('/^[A-Za-z]:[\/]/', $path) === 1) {
             return $path;
         }
 
@@ -139,7 +147,7 @@ class DiscoverCommunity2026Command extends Command
             return $path;
         }
 
-        if (preg_match('/^[A-Za-z]:[\\/]/', $path) === 1) {
+        if (preg_match('/^[A-Za-z]:[\/]/', $path) === 1) {
             return $path;
         }
 
