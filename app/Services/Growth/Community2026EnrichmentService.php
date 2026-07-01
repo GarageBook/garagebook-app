@@ -20,6 +20,9 @@ class Community2026EnrichmentService
         'secretariaat' => 90,
         'secretaris' => 88,
         'contact' => 80,
+        'verkoop' => 76,
+        'service' => 75,
+        'support' => 74,
         'bestuur' => 70,
         'algemeen' => 60,
         'vereniging' => 58,
@@ -41,12 +44,11 @@ class Community2026EnrichmentService
         '/bestelling/i',
         '/order/i',
         '/sales/i',
-        '/verkoop/i',
     ];
 
     private const LINK_KEYWORDS = [
-        'contact', 'contactpagina', 'contacteer', 'bestuur', 'secretariaat', 'secretaris', 'vereniging',
-        'clubinfo', 'club-info', 'organisatie', 'over-ons', 'over ons', 'privacy', 'privacybeleid',
+        'contact', 'contactpagina', 'contacteer', 'contact-us', 'bestuur', 'secretariaat', 'secretaris', 'vereniging',
+        'clubinfo', 'club-info', 'organisatie', 'over-ons', 'over ons', 'about', 'service', 'klantenservice', 'winkel', 'shop', 'privacy', 'privacybeleid',
         'privacy-statement', 'algemene-voorwaarden', 'voorwaarden',
     ];
 
@@ -62,6 +64,13 @@ class Community2026EnrichmentService
         '/club-info',
         '/organisatie',
         '/over-ons',
+        '/about',
+        '/service',
+        '/klantenservice',
+        '/winkel',
+        '/shop',
+        '/onderdelen',
+        '/producten',
         '/privacybeleid',
         '/privacy-statement',
         '/voorwaarden',
@@ -98,7 +107,7 @@ class Community2026EnrichmentService
 
             if ($candidate === null) {
                 $prospect->forceFill([
-                    'enrichment_notes' => $this->appendNote($prospect, 'community2026_enrichment: geen bruikbaar publiek e-mailadres gevonden'),
+                    'enrichment_notes' => $this->appendNote($prospect, $this->importer->campaignSlug().'_enrichment: geen bruikbaar publiek e-mailadres gevonden'),
                 ])->save();
 
                 return;
@@ -152,7 +161,7 @@ class Community2026EnrichmentService
             ->where('lifecycle_status', '!=', GrowthProspect::LIFECYCLE_ARCHIVED)
             ->where(function (Builder $query) use ($campaign): void {
                 $query->where('campaign_id', $campaign->id)
-                    ->orWhere('last_campaign_slug', Community2026ImportService::CAMPAIGN_SLUG);
+                    ->orWhere('last_campaign_slug', $this->importer->campaignSlug());
             });
     }
 
@@ -166,7 +175,7 @@ class Community2026EnrichmentService
             ->where('lifecycle_status', '!=', GrowthProspect::LIFECYCLE_ARCHIVED)
             ->where(function (Builder $query) use ($campaign): void {
                 $query->where('campaign_id', $campaign->id)
-                    ->orWhere('last_campaign_slug', Community2026ImportService::CAMPAIGN_SLUG);
+                    ->orWhere('last_campaign_slug', $this->importer->campaignSlug());
             });
     }
 
@@ -236,7 +245,8 @@ class Community2026EnrichmentService
 
         $best = $candidates[0];
         $best['note'] = sprintf(
-            'community2026_enrichment: %s gevonden met confidence %d via %s',
+            '%s_enrichment: %s gevonden met confidence %d via %s',
+            $this->importer->campaignSlug(),
             $best['email'],
             $best['confidence'],
             $best['source_url'],

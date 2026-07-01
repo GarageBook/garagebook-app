@@ -13,6 +13,12 @@ class Community2026ImportService
 {
     public const CAMPAIGN_SLUG = 'community2026';
 
+    private readonly string $campaignSlug;
+
+    private readonly string $campaignName;
+
+    private readonly string $campaignDescription;
+
     private const COLUMNS = [
         'name', 'website', 'email', 'phone', 'city', 'source_url', 'source_type', 'prospect_type', 'prospect_subtype', 'notes',
         'quality_score', 'quality_flags', 'quality_verdict', 'quality_reason',
@@ -21,7 +27,14 @@ class Community2026ImportService
     public function __construct(
         private readonly GrowthProspectNormalizer $normalizer,
         private readonly GrowthOutreachEventLogger $events,
-    ) {}
+        ?string $campaignSlug = null,
+        ?string $campaignName = null,
+        ?string $campaignDescription = null,
+    ) {
+        $this->campaignSlug = $campaignSlug ?: self::CAMPAIGN_SLUG;
+        $this->campaignName = $campaignName ?: 'Community2026';
+        $this->campaignDescription = $campaignDescription ?: 'Merkclubs, oldtimerclubs, camperclubs, youngtimerclubs en andere voertuigcommunities.';
+    }
 
     /**
      * @return array{created:int, updated:int, skipped:int, enriched:int, imported:int}
@@ -58,9 +71,9 @@ class Community2026ImportService
                 $result['created']++;
             }
 
-            $this->events->log($prospect, GrowthOutreachEvent::TYPE_IMPORTED, $campaign, self::CAMPAIGN_SLUG, null, ['source' => $row]);
+            $this->events->log($prospect, GrowthOutreachEvent::TYPE_IMPORTED, $campaign, $this->campaignSlug, null, ['source' => $row]);
             if ($eventType === GrowthOutreachEvent::TYPE_ENRICHED) {
-                $this->events->log($prospect, GrowthOutreachEvent::TYPE_ENRICHED, $campaign, self::CAMPAIGN_SLUG, null, ['source' => $row]);
+                $this->events->log($prospect, GrowthOutreachEvent::TYPE_ENRICHED, $campaign, $this->campaignSlug, null, ['source' => $row]);
                 $result['enriched']++;
             }
             $result['imported']++;
@@ -72,13 +85,18 @@ class Community2026ImportService
     public function campaign(): GrowthCampaign
     {
         return GrowthCampaign::query()->updateOrCreate(
-            ['slug' => self::CAMPAIGN_SLUG],
+            ['slug' => $this->campaignSlug],
             [
-                'name' => 'Community2026',
-                'description' => 'Merkclubs, oldtimerclubs, camperclubs, youngtimerclubs en andere voertuigcommunities.',
+                'name' => $this->campaignName,
+                'description' => $this->campaignDescription,
                 'status' => GrowthCampaign::STATUS_DRAFT,
             ],
         );
+    }
+
+    public function campaignSlug(): string
+    {
+        return $this->campaignSlug;
     }
 
     /**

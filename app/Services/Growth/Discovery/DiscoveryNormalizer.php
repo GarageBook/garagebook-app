@@ -118,6 +118,17 @@ class DiscoveryNormalizer
             'forum' => ['forum'],
             'foundation' => ['foundation', 'stichting'],
             'association' => ['association', 'vereniging'],
+            'tire_specialist' => ['banden', 'bandenspecialist', 'tire'],
+            'detailing' => ['detailing', 'carclean', 'poetsbedrijf'],
+            'tuning' => ['tuning', 'tuner', 'performance'],
+            'suspension' => ['vering', 'suspension', 'onderstel'],
+            'brakes' => ['remmen', 'brakes', 'remspecialist'],
+            'parts_webshop' => ['onderdelen', 'parts', 'webshop'],
+            'motorcycle_accessories' => ['motoraccessoires', 'motor accessoires', 'motorbike accessories'],
+            'oldtimer_restoration' => ['oldtimerrestauratie', 'restauratie', 'classic restoration'],
+            'custom_shop' => ['custom shop', 'custom', 'special build'],
+            'camper_specialist' => ['camper', 'camperbedrijf', 'camper service'],
+            '4x4_specialist' => ['4x4', 'offroad', 'four wheel drive'],
         ];
 
         foreach ($patterns as $subtype => $needles) {

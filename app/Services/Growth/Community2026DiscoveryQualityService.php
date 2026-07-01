@@ -16,17 +16,19 @@ class Community2026DiscoveryQualityService
     private const ORGANIZATION_KEYWORDS = [
         'club', 'vereniging', 'stichting', 'foundation', 'association', 'community', 'forum', 'team',
         'owners', 'riders', 'motorclub', 'autoclub', 'car club', 'merkclub', 'oldtimer', 'youngtimer',
-        'camper', 'trackday', 'circuit', 'land rover', 'jeep', 'bmw', 'volvo', 'honda', 'yamaha', 'ducati',
-        'alfa', 'porsche', 'mx-5', 'mx5', 'motor', 'classic', 'klassiek', 'liefhebbers', 'freunde',
+        'camper', 'trackday', 'circuit', 'banden', 'bandenspecialist', 'detailing', 'tuning', 'vering',
+        'remmen', 'onderdelen', 'accessoires', 'motoraccessoires', 'restauratie', 'custom', '4x4', 'offroad',
+        'land rover', 'jeep', 'bmw', 'volvo', 'honda', 'yamaha', 'ducati', 'alfa', 'porsche', 'mx-5', 'mx5',
+        'motor', 'classic', 'klassiek', 'liefhebbers', 'freunde', 'camperbedrijf', 'camperservice',
     ];
 
     /**
      * @return array<int, string>
      */
     private const REJECT_NAME_PATTERNS = [
-        '/\\b\\d{1,2}\\s*(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\\b/i',
-        '/\\b\\d{4}\\b/',
-        '/\\b(?:agenda|evenement|event|nieuws|bericht|dag|goedgekeurd|uitslag|report|verslag)\\b/i',
+        '/\b\d{1,2}\s*(?:januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b/i',
+        '/\b\d{4}\b/',
+        '/\b(?:agenda|evenement|event|nieuws|bericht|dag|goedgekeurd|uitslag|report|verslag)\b/i',
     ];
 
     /**
@@ -37,6 +39,10 @@ class Community2026DiscoveryQualityService
         'kickstart', 'lees meer', 'klik hier', 'doe mee', 'doe mee aan evenementen', 'evenementen', 'nieuws',
         'goed geconserveerde grootvader',
     ];
+
+    public function __construct(
+        private readonly string $seedLabel = 'Community2026',
+    ) {}
 
     public function assess(DiscoveryResult $result): DiscoveryResult
     {
@@ -58,8 +64,8 @@ class Community2026DiscoveryQualityService
             return $result->withQuality(0, ['invalid_subtype'], 'rejected', 'invalid prospect subtype');
         }
 
-        if ($hasWebsite && Str::contains((string) ($result->notes ?? ''), 'Community2026 seed URL')) {
-            return $result->withQuality(60, ['seed_url_fallback', 'no_email', 'manual_review_required'], 'manual_review', 'seed URL fallback needs enrichment');
+        if ($hasWebsite && Str::contains((string) ($result->notes ?? ''), $this->seedLabel.' seed URL')) {
+            return $result->withQuality(60, ['seed_url_fallback', 'no_email', 'manual_review_required'], 'manual_review', $this->seedLabel.' seed URL fallback needs enrichment');
         }
 
         if ($this->looksLikeEventTitle($name, $hasOrganizationSignal)) {
@@ -128,7 +134,7 @@ class Community2026DiscoveryQualityService
             }
         }
 
-        if (! $hasOrganizationSignal && preg_match('/\\b(?:goedgekeurd|aangekondigd|verslag|report|nieuws|agenda|evenement)\\b/i', $name) === 1) {
+        if (! $hasOrganizationSignal && preg_match('/\b(?:goedgekeurd|aangekondigd|verslag|report|nieuws|agenda|evenement)\b/i', $name) === 1) {
             return true;
         }
 
@@ -147,7 +153,7 @@ class Community2026DiscoveryQualityService
             }
         }
 
-        if (! $hasOrganizationSignal && preg_match('/^[\\p{L}\\d\\s!?.-]{1,20}$/u', $name) === 1) {
+        if (! $hasOrganizationSignal && preg_match('/^[\p{L}\d\s!?.-]{1,20}$/u', $name) === 1) {
             return true;
         }
 
@@ -160,8 +166,8 @@ class Community2026DiscoveryQualityService
             return true;
         }
 
-        $letters = preg_replace('/[^\\p{L}]/u', '', $name) ?: '';
-        $symbols = preg_replace('/[\\p{L}\\d\\s]/u', '', $name) ?: '';
+        $letters = preg_replace('/[^\p{L}]/u', '', $name) ?: '';
+        $symbols = preg_replace('/[\p{L}\d\s]/u', '', $name) ?: '';
 
         if (mb_strlen($letters) < 4) {
             return true;
@@ -171,7 +177,7 @@ class Community2026DiscoveryQualityService
             return true;
         }
 
-        return preg_match('/^(.)\\1{3,}$/u', $name) === 1;
+        return preg_match('/^(.)\1{3,}$/u', $name) === 1;
     }
 
     private function hasOrganizationSignal(string $name, string $notes): bool
@@ -223,6 +229,10 @@ class Community2026DiscoveryQualityService
             return 'missing subtype';
         }
 
-        return $flags[0] ?? 'manual review required';
+        if (in_array('low_organization_signal', $flags, true)) {
+            return 'low organization signal';
+        }
+
+        return 'manual review required';
     }
 }

@@ -18,6 +18,7 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         private readonly array $urls,
         private readonly int $limit = 100,
         private readonly ?int $fetchLimit = null,
+        private readonly string $seedLabel = 'Community2026',
     ) {}
 
     public function discover(): array
@@ -44,13 +45,13 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         }
 
         if (! $fetch) {
-            return $this->fallbackResult($url, 'Community2026 seed URL; website fetch skipped by batch limit.');
+            return $this->fallbackResult($url, $this->seedLabel.' seed URL; website fetch skipped by batch limit.');
         }
 
         $main = $this->fetch($url);
 
         if ($main === null) {
-            return $this->fallbackResult($url, 'Community2026 seed URL; website fetch failed or timed out.');
+            return $this->fallbackResult($url, $this->seedLabel.' seed URL; website fetch failed or timed out.');
         }
 
         $contactUrl = $main['contact_url'] ?? null;

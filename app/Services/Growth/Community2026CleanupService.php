@@ -11,9 +11,22 @@ class Community2026CleanupService
 {
     public const CAMPAIGN_SLUG = 'community2026';
 
+    private readonly string $campaignSlug;
+
+    private readonly string $campaignName;
+
+    private readonly string $campaignDescription;
+
     public function __construct(
         private readonly GrowthProspectNormalizer $normalizer,
-    ) {}
+        ?string $campaignSlug = null,
+        ?string $campaignName = null,
+        ?string $campaignDescription = null,
+    ) {
+        $this->campaignSlug = $campaignSlug ?: self::CAMPAIGN_SLUG;
+        $this->campaignName = $campaignName ?: 'Community2026';
+        $this->campaignDescription = $campaignDescription ?: 'Merkclubs, oldtimerclubs, camperclubs, youngtimerclubs en andere voertuigcommunities.';
+    }
 
     /**
      * @return array<string, int>
@@ -235,17 +248,22 @@ class Community2026CleanupService
         return GrowthProspect::query()
             ->where(function (Builder $query) use ($campaignId): void {
                 $query->where('campaign_id', $campaignId)
-                    ->orWhere('last_campaign_slug', self::CAMPAIGN_SLUG);
+                    ->orWhere('last_campaign_slug', $this->campaignSlug);
             });
+    }
+
+    public function campaignSlug(): string
+    {
+        return $this->campaignSlug;
     }
 
     private function campaign(): GrowthCampaign
     {
         return GrowthCampaign::query()->updateOrCreate(
-            ['slug' => self::CAMPAIGN_SLUG],
+            ['slug' => $this->campaignSlug],
             [
-                'name' => 'Community2026',
-                'description' => 'Merkclubs, oldtimerclubs, camperclubs, youngtimerclubs en andere voertuigcommunities.',
+                'name' => $this->campaignName,
+                'description' => $this->campaignDescription,
                 'status' => GrowthCampaign::STATUS_DRAFT,
             ],
         );

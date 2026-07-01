@@ -55,7 +55,7 @@ class GrowthProspect extends Model
         self::LIFECYCLE_ARCHIVED,
     ];
 
-    public const PROSPECT_TYPES = ['community'];
+    public const PROSPECT_TYPES = ['community', 'partner'];
 
     public const PROSPECT_SUBTYPES = [
         'oldtimer_club',
@@ -68,6 +68,17 @@ class GrowthProspect extends Model
         'forum',
         'foundation',
         'association',
+        'tire_specialist',
+        'detailing',
+        'tuning',
+        'suspension',
+        'brakes',
+        'parts_webshop',
+        'motorcycle_accessories',
+        'oldtimer_restoration',
+        'custom_shop',
+        'camper_specialist',
+        '4x4_specialist',
     ];
 
     protected $fillable = [
