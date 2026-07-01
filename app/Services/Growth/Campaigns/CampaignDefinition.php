@@ -52,6 +52,11 @@ abstract class CampaignDefinition
         return storage_path('app/imports/'.$this->slug().'_report.json');
     }
 
+    public function readyReportPath(): string
+    {
+        return storage_path('app/imports/'.$this->slug().'_ready_report.json');
+    }
+
     public function discoveryLimit(): int
     {
         return 500;

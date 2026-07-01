@@ -7,6 +7,7 @@ use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class GrowthCampaignEligibilityService
 {
@@ -26,6 +27,13 @@ class GrowthCampaignEligibilityService
 
     public const REASON_MANUAL_REVIEW_REQUIRED = 'manual_review_required';
 
+    public const REASON_PERSONAL_EMAIL = 'personal_email';
+
+    private const PERSONAL_EMAIL_DOMAINS = [
+        'gmail.com', 'googlemail.com', 'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com',
+        'yahoo.com', 'yahoo.nl', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.net', 'zohomail.com', 'aol.com', 'mail.com',
+    ];
+
     public function __construct(
         private readonly GrowthProspectNormalizer $normalizer,
     ) {}
@@ -44,6 +52,10 @@ class GrowthCampaignEligibilityService
 
         if ($prospect->duplicate_of_id !== null) {
             return self::REASON_DUPLICATE;
+        }
+
+        if ($this->isPersonalEmail($prospect->email, $prospect->normalized_email)) {
+            return self::REASON_PERSONAL_EMAIL;
         }
 
         if ($this->alreadyReceivedCampaign($prospect, $campaign->slug)) {
@@ -92,12 +104,24 @@ class GrowthCampaignEligibilityService
             ->where('occurred_at', '>=', $since)
             ->exists();
     }
-
     private function hasSimilarDuplicate(GrowthProspect $prospect): bool
     {
         return $this->similarProspectsQuery($prospect)
             ->whereKeyNot($prospect->id)
             ->exists();
+    }
+
+    private function isPersonalEmail(?string $email, ?string $normalizedEmail = null): bool
+    {
+        $email = $normalizedEmail ?: $this->normalizer->normalizeEmail($email);
+
+        if ($email === null || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return false;
+        }
+
+        $domain = Str::lower((string) Str::after($email, '@'));
+
+        return in_array($domain, self::PERSONAL_EMAIL_DOMAINS, true);
     }
 
     private function sentEventsForSimilarProspects(GrowthProspect $prospect): Builder
