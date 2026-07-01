@@ -2,7 +2,9 @@
 
 namespace App\Services\Growth\Community2026;
 
-interface CommunityDiscoveryProvider
+use App\Contracts\Growth\CampaignDiscoveryProvider;
+
+interface CommunityDiscoveryProvider extends CampaignDiscoveryProvider
 {
     /**
      * @return list<string>

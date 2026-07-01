@@ -2,17 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Growth\Community2026\CommunityDiscoveryProvider;
-use App\Services\Growth\Community2026DiscoveryQualityService;
-use App\Services\Growth\Community2026DiscoveryService;
+use App\Contracts\Growth\DiscoveryProvider;
+use App\Services\Growth\Campaigns\CampaignDiscoveryService;
+use App\Services\Growth\Campaigns\Partner2026Definition;
 use App\Services\Growth\Discovery\CsvDiscoveryProvider;
 use App\Services\Growth\Discovery\JsonDiscoveryProvider;
 use App\Services\Growth\Discovery\WebsiteDiscoveryProvider;
-use App\Services\Growth\Partner2026\DetailingDiscoveryProvider;
-use App\Services\Growth\Partner2026\LifestyleDiscoveryProvider;
-use App\Services\Growth\Partner2026\PartsDiscoveryProvider;
-use App\Services\Growth\Partner2026\TireSpecialistDiscoveryProvider;
-use App\Services\Growth\Partner2026\TuningDiscoveryProvider;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -29,15 +24,21 @@ class DiscoverPartner2026Command extends Command
 
     protected $description = 'Genereer Partner2026 discovery-output zonder te mailen of te queuen.';
 
+    public function __construct(
+        private readonly Partner2026Definition $definition,
+        private readonly CampaignDiscoveryService $service,
+    ) {
+        parent::__construct();
+    }
+
     public function handle(): int
     {
-        $service = new Community2026DiscoveryService(new Community2026DiscoveryQualityService('Partner2026'));
         $providers = $this->buildProviders();
 
         if ($providers === []) {
             $seedUrls = $this->seedUrls();
             $this->writeSeedUrls($seedUrls, (string) $this->option('seed-output'));
-            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'), 75, 'Partner2026');
+            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'), 75, $this->definition->seedLabel());
         }
 
         if ($providers === []) {
@@ -46,12 +47,12 @@ class DiscoverPartner2026Command extends Command
             return self::FAILURE;
         }
 
-        $batch = $service->discover($providers);
+        $batch = $this->service->discover($this->definition, $providers);
         $discoverRows = array_merge($batch['accepted'], $batch['manual_review']);
-        $written = $service->writeCsv($discoverRows, (string) $this->option('output'));
-        $rejectedWritten = $service->writeCsv($batch['rejected'], (string) $this->option('rejected'));
+        $written = $this->service->writeCsv($this->definition, $discoverRows, (string) $this->option('output'));
+        $rejectedWritten = $this->service->writeCsv($this->definition, $batch['rejected'], (string) $this->option('rejected'));
 
-        $this->info('Partner2026 discovery voltooid.');
+        $this->info($this->definition->name().' discovery voltooid.');
         $this->line('seed urls: '.$this->countSeedUrls());
         $this->line('discovered total: '.$batch['total']);
         $this->line('accepted: '.count($batch['accepted']));
@@ -66,7 +67,7 @@ class DiscoverPartner2026Command extends Command
     }
 
     /**
-     * @return array<int, CommunityDiscoveryProvider>
+     * @return array<int, DiscoveryProvider>
      */
     private function buildProviders(): array
     {
@@ -89,7 +90,7 @@ class DiscoverPartner2026Command extends Command
         );
 
         if ($urls !== []) {
-            $providers[] = new WebsiteDiscoveryProvider($urls, (int) $this->option('limit'), null, 'Partner2026');
+            $providers[] = new WebsiteDiscoveryProvider($urls, (int) $this->option('limit'), 75, $this->definition->seedLabel());
         }
 
         return $providers;
@@ -100,21 +101,9 @@ class DiscoverPartner2026Command extends Command
      */
     private function seedUrls(): array
     {
-        $providers = [
-            app(TireSpecialistDiscoveryProvider::class),
-            app(DetailingDiscoveryProvider::class),
-            app(TuningDiscoveryProvider::class),
-            app(PartsDiscoveryProvider::class),
-            app(LifestyleDiscoveryProvider::class),
-        ];
-
         $urls = [];
 
-        foreach ($providers as $provider) {
-            if (! $provider instanceof CommunityDiscoveryProvider) {
-                continue;
-            }
-
+        foreach ($this->definition->discoveryProviders() as $provider) {
             foreach ($provider->urls() as $url) {
                 $url = trim($url);
 

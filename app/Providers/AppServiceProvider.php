@@ -13,6 +13,9 @@ use App\Policies\MaintenanceLogPolicy;
 use App\Policies\TripLogPolicy;
 use App\Policies\VehicleDocumentPolicy;
 use App\Policies\VehiclePolicy;
+use App\Services\Growth\Campaigns\CampaignRegistry;
+use App\Services\Growth\Campaigns\Community2026Definition;
+use App\Services\Growth\Campaigns\Partner2026Definition;
 use App\Services\LocaleService;
 use Carbon\Carbon;
 use Filament\Auth\Events\Registered;
@@ -32,6 +35,13 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(RegistrationResponseContract::class, CustomRegistrationResponse::class);
+
+        $this->app->singleton(CampaignRegistry::class, function (): CampaignRegistry {
+            return new CampaignRegistry([
+                app(Community2026Definition::class),
+                app(Partner2026Definition::class),
+            ]);
+        });
     }
 
     /**
