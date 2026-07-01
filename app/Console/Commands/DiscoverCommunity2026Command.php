@@ -36,7 +36,7 @@ class DiscoverCommunity2026Command extends Command
         if ($providers === []) {
             $seedUrls = $this->seedUrls();
             $this->writeSeedUrls($seedUrls, (string) $this->option('seed-output'));
-            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'));
+            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'), 75);
         }
 
         if ($providers === []) {

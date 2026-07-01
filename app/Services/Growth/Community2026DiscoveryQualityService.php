@@ -58,6 +58,10 @@ class Community2026DiscoveryQualityService
             return $result->withQuality(0, ['invalid_subtype'], 'rejected', 'invalid prospect subtype');
         }
 
+        if ($hasWebsite && Str::contains((string) ($result->notes ?? ''), 'Community2026 seed URL')) {
+            return $result->withQuality(60, ['seed_url_fallback', 'no_email', 'manual_review_required'], 'manual_review', 'seed URL fallback needs enrichment');
+        }
+
         if ($this->looksLikeEventTitle($name, $hasOrganizationSignal)) {
             return $result->withQuality(0, ['event_title'], 'rejected', 'looks like an event or article title');
         }

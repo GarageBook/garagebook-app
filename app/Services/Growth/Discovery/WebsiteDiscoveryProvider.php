@@ -17,14 +17,15 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
     public function __construct(
         private readonly array $urls,
         private readonly int $limit = 100,
+        private readonly ?int $fetchLimit = null,
     ) {}
 
     public function discover(): array
     {
         $results = [];
 
-        foreach (array_slice(array_values(array_unique(array_filter($this->urls))), 0, $this->limit) as $url) {
-            $result = $this->discoverUrl($url);
+        foreach (array_slice(array_values(array_unique(array_filter($this->urls))), 0, $this->limit) as $index => $url) {
+            $result = $this->discoverUrl($url, $this->fetchLimit === null || $index < $this->fetchLimit);
 
             if ($result instanceof DiscoveryResult) {
                 $results[] = $result;
@@ -34,7 +35,7 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         return $results;
     }
 
-    private function discoverUrl(string $url): ?DiscoveryResult
+    private function discoverUrl(string $url, bool $fetch = true): ?DiscoveryResult
     {
         $url = $this->normalizeUrl($url);
 
@@ -42,16 +43,14 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
             return null;
         }
 
+        if (! $fetch) {
+            return $this->fallbackResult($url, 'Community2026 seed URL; website fetch skipped by batch limit.');
+        }
+
         $main = $this->fetch($url);
 
         if ($main === null) {
-            return DiscoveryResult::fromArray([
-                'website' => $url,
-                'source_url' => $url,
-                'source_type' => 'website',
-                'prospect_type' => 'community',
-                'notes' => 'Community2026 seed URL; website fetch failed or timed out.',
-            ], 'website');
+            return $this->fallbackResult($url, 'Community2026 seed URL; website fetch failed or timed out.');
         }
 
         $contactUrl = $main['contact_url'] ?? null;
@@ -66,6 +65,17 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         }
 
         return DiscoveryResult::fromArray($combined, 'website');
+    }
+
+    private function fallbackResult(string $url, string $notes): DiscoveryResult
+    {
+        return DiscoveryResult::fromArray([
+            'website' => $url,
+            'source_url' => $url,
+            'source_type' => 'website',
+            'prospect_type' => 'community',
+            'notes' => $notes,
+        ], 'website');
     }
 
     /**
@@ -83,7 +93,13 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
             return null;
         }
 
-        return $this->extract((string) $response->body(), $url);
+        $body = (string) $response->body();
+
+        if (trim($body) === '') {
+            return null;
+        }
+
+        return $this->extract($body, $url);
     }
 
     /**
