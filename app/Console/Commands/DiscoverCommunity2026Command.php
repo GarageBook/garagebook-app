@@ -3,11 +3,18 @@
 namespace App\Console\Commands;
 
 use App\Contracts\Growth\DiscoveryProvider;
+use App\Services\Growth\Community2026\BrandClubDiscoveryProvider;
+use App\Services\Growth\Community2026\CamperClubDiscoveryProvider;
+use App\Services\Growth\Community2026\CommunityDiscoveryProvider;
+use App\Services\Growth\Community2026\ForumDiscoveryProvider;
+use App\Services\Growth\Community2026\OldtimerClubDiscoveryProvider;
+use App\Services\Growth\Community2026\TrackdayDiscoveryProvider;
 use App\Services\Growth\Community2026DiscoveryService;
 use App\Services\Growth\Discovery\CsvDiscoveryProvider;
 use App\Services\Growth\Discovery\JsonDiscoveryProvider;
 use App\Services\Growth\Discovery\WebsiteDiscoveryProvider;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 
 class DiscoverCommunity2026Command extends Command
 {
@@ -15,9 +22,10 @@ class DiscoverCommunity2026Command extends Command
         {--file= : CSV of JSON inputbestand}
         {--url=* : Een of meer URLs om te crawlen}
         {--urls= : Komma-gescheiden lijst, of pad naar een tekstbestand met URLs}
+        {--seed-output=storage/app/imports/community2026_seed_urls.txt : Seed URL output pad}
         {--output=storage/app/imports/community2026_discovered.csv : Output CSV pad}
         {--rejected=storage/app/imports/community2026_rejected.csv : Rejected CSV pad}
-        {--limit=100 : Max aantal URLs om te crawlen}';
+        {--limit=500 : Max aantal URLs om te crawlen}';
 
     protected $description = 'Genereer Community2026 discovery-output zonder te mailen of te queuen.';
 
@@ -26,7 +34,13 @@ class DiscoverCommunity2026Command extends Command
         $providers = $this->buildProviders();
 
         if ($providers === []) {
-            $this->error('Geef --file, --url of --urls op.');
+            $seedUrls = $this->seedUrls();
+            $this->writeSeedUrls($seedUrls, (string) $this->option('seed-output'));
+            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'));
+        }
+
+        if ($providers === []) {
+            $this->error('Geen discovery providers beschikbaar.');
 
             return self::FAILURE;
         }
@@ -37,6 +51,7 @@ class DiscoverCommunity2026Command extends Command
         $rejectedWritten = $service->writeCsv($batch['rejected'], (string) $this->option('rejected'));
 
         $this->info('Discovery voltooid.');
+        $this->line('seed urls: '.$this->countSeedUrls());
         $this->line('discovered total: '.$batch['total']);
         $this->line('accepted: '.count($batch['accepted']));
         $this->line('manual review: '.count($batch['manual_review']));
@@ -77,6 +92,61 @@ class DiscoverCommunity2026Command extends Command
         }
 
         return $providers;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function seedUrls(): array
+    {
+        $providers = [
+            app(BrandClubDiscoveryProvider::class),
+            app(OldtimerClubDiscoveryProvider::class),
+            app(CamperClubDiscoveryProvider::class),
+            app(TrackdayDiscoveryProvider::class),
+            app(ForumDiscoveryProvider::class),
+        ];
+
+        $urls = [];
+
+        foreach ($providers as $provider) {
+            if (! $provider instanceof CommunityDiscoveryProvider) {
+                continue;
+            }
+
+            foreach ($provider->urls() as $url) {
+                $url = trim($url);
+
+                if ($url !== '') {
+                    $urls[$url] = $url;
+                }
+            }
+        }
+
+        sort($urls);
+
+        return array_values($urls);
+    }
+
+    /**
+     * @param  array<int, string>  $urls
+     */
+    private function writeSeedUrls(array $urls, string $path): void
+    {
+        $path = $this->resolveOutputPath($path);
+        File::ensureDirectoryExists(dirname($path));
+        File::put($path, implode(PHP_EOL, $urls).PHP_EOL);
+    }
+
+    private function countSeedUrls(): int
+    {
+        $path = $this->resolveOutputPath((string) $this->option('seed-output'));
+
+        if (! is_file($path)) {
+            return 0;
+        }
+
+        return count(array_filter(file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []));
     }
 
     /**

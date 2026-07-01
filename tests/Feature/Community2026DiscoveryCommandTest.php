@@ -72,6 +72,26 @@ class Community2026DiscoveryCommandTest extends TestCase
         $this->assertSame('json', $rows[1][7]);
     }
 
+    public function test_default_seed_providers_write_at_least_300_seed_urls(): void
+    {
+        Http::fake([
+            '*' => Http::response('', 500),
+        ]);
+
+        $seedOutput = base_path('storage/app/imports/community2026_seed_urls.txt');
+        $output = base_path('storage/app/imports/community2026_discovered.csv');
+        File::delete($seedOutput);
+        File::delete($output);
+
+        $this->artisan('garagebook:discover-community2026')
+            ->expectsOutputToContain('seed urls:')
+            ->assertSuccessful();
+
+        $this->assertFileExists($seedOutput);
+        $this->assertFileExists($output);
+        $this->assertGreaterThanOrEqual(300, count(file($seedOutput, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)));
+    }
+
     public function test_urls_option_can_read_from_text_file(): void
     {
         $seed = $this->writeTempFile('community2026_seed_urls.txt', implode(PHP_EOL, [

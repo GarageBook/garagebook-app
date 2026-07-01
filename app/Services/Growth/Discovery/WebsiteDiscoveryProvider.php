@@ -45,7 +45,13 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         $main = $this->fetch($url);
 
         if ($main === null) {
-            return null;
+            return DiscoveryResult::fromArray([
+                'website' => $url,
+                'source_url' => $url,
+                'source_type' => 'website',
+                'prospect_type' => 'community',
+                'notes' => 'Community2026 seed URL; website fetch failed or timed out.',
+            ], 'website');
         }
 
         $contactUrl = $main['contact_url'] ?? null;
@@ -68,7 +74,7 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
     private function fetch(string $url): ?array
     {
         try {
-            $response = Http::timeout(15)->withHeaders(['Accept' => 'text/html'])->get($url);
+            $response = Http::connectTimeout(1)->timeout(2)->withHeaders(['Accept' => 'text/html'])->get($url);
         } catch (\Throwable) {
             return null;
         }
