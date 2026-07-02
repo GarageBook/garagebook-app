@@ -19,6 +19,8 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         private readonly int $limit = 100,
         private readonly ?int $fetchLimit = null,
         private readonly string $seedLabel = 'Community2026',
+        private readonly string $defaultProspectType = 'community',
+        private readonly ?string $defaultProspectSubtype = null,
     ) {}
 
     public function discover(): array
@@ -74,7 +76,8 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
             'website' => $url,
             'source_url' => $url,
             'source_type' => 'website',
-            'prospect_type' => 'community',
+            'prospect_type' => $this->defaultProspectType,
+            'prospect_subtype' => $this->defaultProspectSubtype,
             'notes' => $notes,
         ], 'website');
     }
@@ -147,8 +150,8 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
             'province' => $province,
             'source_url' => $url,
             'source_type' => 'website',
-            'prospect_type' => 'community',
-            'prospect_subtype' => $this->inferSubtype($title.' '.$text),
+            'prospect_type' => $this->defaultProspectType,
+            'prospect_subtype' => $this->defaultProspectSubtype ?? $this->inferSubtype($title.' '.$text),
             'notes' => null,
             'notes_fragments' => $notesFragments,
             'contact_url' => $contactUrl,
@@ -379,11 +382,23 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
         $text = Str::lower($text);
 
         return match (true) {
-            str_contains($text, 'oldtimer') => 'oldtimer_club',
+            str_contains($text, 'motorbanden') || str_contains($text, 'motor banden') => 'motorcycle_tires',
+            str_contains($text, 'motoronderdelen') || str_contains($text, 'motor parts') => 'motorcycle_parts_webshop',
+            str_contains($text, 'motoraccessoires') || str_contains($text, 'motorkleding') || str_contains($text, 'motorhelmen') => 'motorcycle_accessories',
+            str_contains($text, 'motortuning') || str_contains($text, 'motor tuning') => 'motorcycle_tuning',
+            str_contains($text, 'oldtimerrestauratie') || str_contains($text, 'oldtimer restauratie') => 'oldtimer_restoration',
+            str_contains($text, 'youngtimerrestauratie') || str_contains($text, 'youngtimer restauratie') => 'youngtimer_restoration',
+            str_contains($text, 'oldtimer') => 'oldtimer_restoration',
             str_contains($text, 'brand club') || str_contains($text, 'merkclub') => 'brand_club',
             str_contains($text, 'motorclub') || str_contains($text, 'motorcycle') => 'motorcycle_club',
-            str_contains($text, 'camper') => 'camper_club',
-            str_contains($text, 'youngtimer') => 'youngtimer_club',
+            str_contains($text, 'camper') => 'camper_specialist',
+            str_contains($text, 'youngtimer') => 'youngtimer_restoration',
+            str_contains($text, '4x4') || str_contains($text, 'offroad') || str_contains($text, 'land rover') || str_contains($text, 'jeep') => '4x4_specialist',
+            str_contains($text, 'detailing') || str_contains($text, 'carclean') || str_contains($text, 'poetsbedrijf') => 'detailing',
+            str_contains($text, 'chiptuning') || str_contains($text, 'tuning') || str_contains($text, 'performance') => 'tuning',
+            str_contains($text, 'vering') || str_contains($text, 'suspension') => 'suspension',
+            str_contains($text, 'remmen') || str_contains($text, 'brakes') => 'brakes',
+            str_contains($text, 'uitlaat') || str_contains($text, 'exhaust') => 'exhaust',
             str_contains($text, 'trackday') => 'trackday_community',
             str_contains($text, 'forum') => 'forum',
             str_contains($text, 'stichting') || str_contains($text, 'foundation') => 'foundation',

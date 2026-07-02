@@ -38,7 +38,17 @@ class DiscoverPartner2026Command extends Command
         if ($providers === []) {
             $seedUrls = $this->seedUrls();
             $this->writeSeedUrls($seedUrls, (string) $this->option('seed-output'));
-            $providers[] = new WebsiteDiscoveryProvider($seedUrls, (int) $this->option('limit'), 75, $this->definition->seedLabel());
+
+            foreach ($this->definition->discoveryProviders() as $provider) {
+                $providers[] = new WebsiteDiscoveryProvider(
+                    $provider->urls(),
+                    (int) $this->option('limit'),
+                    null,
+                    $this->definition->seedLabel(),
+                    'partner',
+                    $provider->subtype(),
+                );
+            }
         }
 
         if ($providers === []) {

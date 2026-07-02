@@ -11,7 +11,7 @@ abstract class AbstractPartnerDiscoveryProvider implements CommunityDiscoveryPro
      * @param  array<int, string>  $paths
      * @return array<int, string>
      */
-    protected function urlsForDomains(array $domains, array $paths = ['', '/contact', '/over-ons', '/privacy', '/algemene-voorwaarden']): array
+    protected function urlsForDomains(array $domains, array $paths = ['']): array
     {
         $urls = [];
 

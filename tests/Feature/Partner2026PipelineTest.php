@@ -25,7 +25,7 @@ class Partner2026PipelineTest extends TestCase
         Queue::fake();
     }
 
-    public function test_default_seed_providers_write_at_least_250_seed_urls(): void
+    public function test_default_seed_providers_write_at_least_150_specialist_domains(): void
     {
         Http::fake([
             '*' => Http::response('', 500),
@@ -45,7 +45,19 @@ class Partner2026PipelineTest extends TestCase
         $this->assertFileExists($seedOutput);
         $this->assertFileExists($output);
         $this->assertFileExists($rejected);
-        $this->assertGreaterThanOrEqual(250, count(file($seedOutput, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []));
+
+        $seedUrls = file($seedOutput, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        $domains = array_values(array_unique(array_filter(array_map(
+            fn (string $url): ?string => parse_url($url, PHP_URL_HOST) ?: null,
+            $seedUrls,
+        ))));
+
+        $this->assertGreaterThanOrEqual(150, count($domains));
+        $this->assertNotContains('kwikfit.nl', $domains);
+        $this->assertNotContains('profile.nl', $domains);
+        $this->assertNotContains('euromaster.nl', $domains);
+        $this->assertNotContains('onderdelenlijn.nl', $domains);
+        $this->assertNotContains('carwash.nl', $domains);
     }
 
     public function test_import_cleanup_and_quality_filter_work_for_partner_campaign(): void
@@ -103,6 +115,8 @@ class Partner2026PipelineTest extends TestCase
         $this->assertSame(GrowthProspect::EMAIL_STATUS_FOUND, $prospect->email_status);
         $this->assertFalse($prospect->verification_required);
         $this->assertSame(GrowthProspect::LIFECYCLE_READY, $prospect->lifecycle_status);
+        $this->assertNull($prospect->suggested_email);
+        $this->assertSame(95, $prospect->suggested_email_confidence);
         Mail::assertNothingSent();
         Queue::assertNothingPushed();
     }
@@ -329,6 +343,21 @@ Ready Shop,https://ready.example,info@ready.example,0612345678,Rotterdam,Zuid-Ho
             ]);
             GrowthProspect::query()->create([
                 'campaign_id' => $campaign->id,
+                'name' => 'High Confidence Mailto Shop',
+                'website' => 'https://highconfidence.example',
+                'normalized_domain' => 'highconfidence.example',
+                'suggested_email' => 'info@highconfidence.example',
+                'suggested_email_confidence' => 95,
+                'email' => 'info@highconfidence.example',
+                'normalized_email' => 'info@highconfidence.example',
+                'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
+                'verification_required' => false,
+                'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
+                'status' => GrowthProspect::LIFECYCLE_READY,
+                'quality_score' => 90,
+            ]);
+            GrowthProspect::query()->create([
+                'campaign_id' => $campaign->id,
                 'name' => 'Personal Mail Shop',
                 'website' => 'https://personal.example',
                 'normalized_domain' => 'personal.example',
@@ -356,9 +385,11 @@ Ready Shop,https://ready.example,info@ready.example,0612345678,Rotterdam,Zuid-Ho
 
             $this->artisan('garagebook:queue-growth-campaign', ['campaign_slug' => 'partner2026', '--limit' => 50, '--dry-run' => true])
                 ->expectsOutputToContain('Dry-run pilot queue voor partner2026.')
+                ->expectsOutputToContain('queued: 3')
                 ->expectsOutputToContain('skipped personal email: 1')
                 ->expectsOutputToContain('skipped suggested email: 1')
                 ->expectsOutputToContain('Safe Shop 1')
+                ->expectsOutputToContain('High Confidence Mailto Shop')
                 ->assertSuccessful();
 
             $this->assertDatabaseCount('growth_outreach_events', 0);

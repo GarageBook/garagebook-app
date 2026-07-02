@@ -109,11 +109,27 @@ class GrowthCampaignQueueService
 
     private function blockingReason(GrowthProspect $prospect, GrowthCampaign $campaign): ?string
     {
-        if (filled($prospect->suggested_email)) {
+        if ($this->hasUnverifiedSuggestedEmail($prospect)) {
             return 'suggested_email';
         }
 
         return $this->eligibility->firstBlockingReason($prospect, $campaign);
+    }
+
+    private function hasUnverifiedSuggestedEmail(GrowthProspect $prospect): bool
+    {
+        if (blank($prospect->suggested_email)) {
+            return false;
+        }
+
+        $email = strtolower(trim((string) ($prospect->normalized_email ?: $prospect->email)));
+        $suggestedEmail = strtolower(trim((string) $prospect->suggested_email));
+
+        if ((int) ($prospect->suggested_email_confidence ?? 0) >= 90 && $email !== '' && $email === $suggestedEmail) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

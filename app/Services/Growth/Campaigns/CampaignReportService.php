@@ -77,7 +77,7 @@ class CampaignReportService
         $readyProspects = collect();
 
         foreach (GrowthProspect::query()->where('campaign_id', $campaign->id)->orderBy('id')->get() as $prospect) {
-            if (filled($prospect->suggested_email)) {
+            if ($this->hasUnverifiedSuggestedEmail($prospect)) {
                 $summary['excluded suggested email']++;
 
                 continue;
@@ -127,8 +127,8 @@ class CampaignReportService
         return (clone $query)
             ->where('lifecycle_status', GrowthProspect::LIFECYCLE_READY)
             ->whereNotNull('email')
-            ->whereNull('suggested_email')
-            ->get(['name', 'website', 'email', 'quality_score', 'suggested_email_confidence'])
+            ->get(['name', 'website', 'email', 'normalized_email', 'quality_score', 'suggested_email', 'suggested_email_confidence'])
+            ->reject(fn (GrowthProspect $prospect): bool => $this->hasUnverifiedSuggestedEmail($prospect))
             ->sort(function (GrowthProspect $a, GrowthProspect $b): int {
                 $scoreComparison = ((int) ($b->quality_score ?? 0)) <=> ((int) ($a->quality_score ?? 0));
 
@@ -183,8 +183,24 @@ class CampaignReportService
     private function isReadyForOutreach(GrowthProspect $prospect, GrowthCampaign $campaign): bool
     {
         return filled($prospect->email)
-            && blank($prospect->suggested_email)
+            && ! $this->hasUnverifiedSuggestedEmail($prospect)
             && $this->eligibility->firstBlockingReason($prospect, $campaign) === null;
+    }
+
+    private function hasUnverifiedSuggestedEmail(GrowthProspect $prospect): bool
+    {
+        if (blank($prospect->suggested_email)) {
+            return false;
+        }
+
+        $email = strtolower(trim((string) ($prospect->normalized_email ?: $prospect->email)));
+        $suggestedEmail = strtolower(trim((string) $prospect->suggested_email));
+
+        if ((int) ($prospect->suggested_email_confidence ?? 0) >= 90 && $email !== '' && $email === $suggestedEmail) {
+            return false;
+        }
+
+        return true;
     }
 
     private function countLines(string $path): int

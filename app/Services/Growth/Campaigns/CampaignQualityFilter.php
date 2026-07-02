@@ -15,8 +15,9 @@ class CampaignQualityFilter
     private const ORGANIZATION_KEYWORDS = [
         'club', 'vereniging', 'stichting', 'foundation', 'association', 'community', 'forum', 'team',
         'owners', 'riders', 'motorclub', 'autoclub', 'car club', 'merkclub', 'oldtimer', 'youngtimer',
-        'camper', 'trackday', 'circuit', 'banden', 'bandenspecialist', 'detailing', 'tuning', 'vering',
-        'remmen', 'onderdelen', 'accessoires', 'motoraccessoires', 'restauratie', 'custom', '4x4', 'offroad',
+        'camper', 'trackday', 'circuit', 'banden', 'bandenspecialist', 'motorbanden', 'detailing', 'tuning',
+        'chiptuning', 'motortuning', 'ecu', 'uitlaat', 'vering', 'suspension', 'remmen', 'onderdelen',
+        'motoronderdelen', 'accessoires', 'motoraccessoires', 'motorkleding', 'restauratie', 'custom', '4x4', 'offroad',
         'land rover', 'jeep', 'bmw', 'volvo', 'honda', 'yamaha', 'ducati', 'alfa', 'porsche', 'mx-5', 'mx5',
         'motor', 'classic', 'klassiek', 'liefhebbers', 'freunde', 'camperbedrijf', 'camperservice',
     ];

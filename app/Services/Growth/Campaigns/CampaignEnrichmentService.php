@@ -123,7 +123,7 @@ class CampaignEnrichmentService
                     'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
                     'status' => GrowthProspect::LIFECYCLE_READY,
                     'skip_reason' => null,
-                    'suggested_email' => $candidate['email'],
+                    'suggested_email' => null,
                     'suggested_email_confidence' => $candidate['confidence'],
                     'suggested_email_source_url' => $candidate['source_url'],
                     'enrichment_notes' => $this->appendNote($prospect, $candidate['note']),
@@ -422,6 +422,10 @@ class CampaignEnrichmentService
     private function isBlockedEmail(string $email): bool
     {
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return true;
+        }
+
+        if (preg_match('/(?:logo|icon|sprite|image|img|banner|button|asset|horizontal|vertical).*@[a-z0-9.-]+\.(?:png|jpg|jpeg|gif|webp|svg)$/i', $email) === 1) {
             return true;
         }
 

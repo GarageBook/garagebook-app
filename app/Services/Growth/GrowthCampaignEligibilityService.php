@@ -31,7 +31,7 @@ class GrowthCampaignEligibilityService
 
     private const PERSONAL_EMAIL_DOMAINS = [
         'gmail.com', 'googlemail.com', 'hotmail.com', 'outlook.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com',
-        'yahoo.com', 'yahoo.nl', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.net', 'zohomail.com', 'aol.com', 'mail.com',
+        'yahoo.com', 'yahoo.nl', 'proton.me', 'protonmail.com', 'gmx.com', 'gmx.net', 'zohomail.com', 'aol.com', 'mail.com', 'email.com',
     ];
 
     public function __construct(
@@ -120,6 +120,15 @@ class GrowthCampaignEligibilityService
         }
 
         $domain = Str::lower((string) Str::after($email, '@'));
+        $prefix = Str::lower((string) Str::before($email, '@'));
+
+        if (preg_match('/(?:logo|icon|sprite|image|img|banner|button|asset|horizontal|vertical).*@[a-z0-9.-]+\.(?:png|jpg|jpeg|gif|webp|svg)$/i', $email) === 1) {
+            return true;
+        }
+
+        if (preg_match('/(?:^|[-_@])(?:2x|3x|png|jpg|jpeg|gif|webp|svg)(?:[-_.@]|$)/i', $prefix.'@'.$domain) === 1) {
+            return true;
+        }
 
         return in_array($domain, self::PERSONAL_EMAIL_DOMAINS, true);
     }
