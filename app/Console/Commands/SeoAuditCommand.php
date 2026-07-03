@@ -65,7 +65,7 @@ class SeoAuditCommand extends Command
             $response = $this->dispatchPath($sitemapPath);
 
             if (! $response->isOk()) {
-                $this->markAuditFailure('sitemap', "sitemap bestaat: {$sitemapPath} returned {$response->getStatusCode()}");
+                $this->recordFailure('sitemap', "sitemap bestaat: {$sitemapPath} returned {$response->getStatusCode()}");
 
                 continue;
             }
@@ -80,7 +80,7 @@ class SeoAuditCommand extends Command
             $allUrls = $allUrls->merge($urls);
         }
 
-        $allUrls->duplicates()->unique()->each(fn (string $url) => $this->markAuditFailure('sitemap', 'geen duplicates: '.$url));
+        $allUrls->duplicates()->unique()->each(fn (string $url) => $this->recordFailure('sitemap', 'geen duplicates: '.$url));
 
         if ($allUrls->duplicates()->isEmpty()) {
             $this->pass('geen duplicates');
@@ -88,26 +88,26 @@ class SeoAuditCommand extends Command
 
         foreach ($allUrls as $url) {
             if (parse_url($url, PHP_URL_QUERY)) {
-                $this->markAuditFailure('sitemap', 'geen querystrings: '.$url);
+                $this->recordFailure('sitemap', 'geen querystrings: '.$url);
             }
 
             $chain = $this->redirectChain($url);
             $final = $chain[array_key_last($chain)]['response'];
 
             if (count($chain) > 1) {
-                $this->markAuditFailure('sitemap', 'geen redirects: '.$url);
+                $this->recordFailure('sitemap', 'geen redirects: '.$url);
             }
 
             if (! $final->isOk()) {
-                $this->markAuditFailure('sitemap', 'alle URLs geven 200: '.$url.' returned '.$final->getStatusCode());
+                $this->recordFailure('sitemap', 'alle URLs geven 200: '.$url.' returned '.$final->getStatusCode());
             }
 
             if ($this->hasNoindex($this->responseBody($final))) {
-                $this->markAuditFailure('sitemap', "geen noindex pagina's: {$url}");
+                $this->recordFailure('sitemap', "geen noindex pagina's: {$url}");
             }
 
             if ($this->isDemoOrOutreachUrl($publicGarageService, $url)) {
-                $this->markAuditFailure('sitemap', 'geen demo/outreach URLs: '.$url);
+                $this->recordFailure('sitemap', 'geen demo/outreach URLs: '.$url);
             }
         }
 
@@ -138,7 +138,7 @@ class SeoAuditCommand extends Command
             $shouldIndex = $publicGarageService->shouldIndex($vehicle);
 
             if (! $response->isOk()) {
-                $this->markAuditFailure('garage_pages', 'garage page 200: '.$canonicalUrl.' returned '.$response->getStatusCode());
+                $this->recordFailure('garage_pages', 'garage page 200: '.$canonicalUrl.' returned '.$response->getStatusCode());
 
                 continue;
             }
@@ -146,59 +146,59 @@ class SeoAuditCommand extends Command
             $canonical = $this->canonicalHref($body);
 
             if ($canonical !== $canonicalUrl) {
-                $this->markAuditFailure('garage_pages', 'self canonical: '.$canonicalUrl.' has '.($canonical ?: '[missing]'));
+                $this->recordFailure('garage_pages', 'self canonical: '.$canonicalUrl.' has '.($canonical ?: '[missing]'));
             }
 
             if ($shouldIndex && ! $garageSitemapSet->has($canonicalUrl)) {
-                $this->markAuditFailure('garage_pages', 'canonical = sitemap URL: '.$canonicalUrl.' missing from sitemap');
+                $this->recordFailure('garage_pages', 'canonical = sitemap URL: '.$canonicalUrl.' missing from sitemap');
             }
 
             if (! $this->containsSchemaType($body, 'WebPage')) {
-                $this->markAuditFailure('garage_pages', 'WebPage schema aanwezig: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'WebPage schema aanwezig: '.$canonicalUrl);
             }
 
             if (! $this->containsSchemaType($body, 'Vehicle')) {
-                $this->markAuditFailure('garage_pages', 'Vehicle schema aanwezig: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'Vehicle schema aanwezig: '.$canonicalUrl);
             }
 
             if ($this->containsSchemaType($body, 'Product')) {
-                $this->markAuditFailure('garage_pages', 'GEEN Product schema: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'GEEN Product schema: '.$canonicalUrl);
             }
 
             if (! $this->hasNonEmptyTag($body, 'title')) {
-                $this->markAuditFailure('garage_pages', 'title aanwezig: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'title aanwezig: '.$canonicalUrl);
             }
 
             if (! $this->hasMetaDescription($body)) {
-                $this->markAuditFailure('garage_pages', 'meta description aanwezig: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'meta description aanwezig: '.$canonicalUrl);
             }
 
             if (! $this->hasNonEmptyTag($body, 'h1')) {
-                $this->markAuditFailure('garage_pages', 'H1 aanwezig: '.$canonicalUrl);
+                $this->recordFailure('garage_pages', 'H1 aanwezig: '.$canonicalUrl);
             }
 
             $queryChain = $this->redirectChain($canonicalUrl.'?seo_audit=1');
             $redirectCount = count($queryChain) - 1;
 
             if ($redirectCount > 1) {
-                $this->markAuditFailure('redirects', 'exact 1 redirect max: '.$canonicalUrl.'?seo_audit=1');
-                $this->markAuditFailure('redirects', 'geen redirect chains: '.$canonicalUrl.'?seo_audit=1');
+                $this->recordFailure('redirects', 'exact 1 redirect max: '.$canonicalUrl.'?seo_audit=1');
+                $this->recordFailure('redirects', 'geen redirect chains: '.$canonicalUrl.'?seo_audit=1');
             }
 
             if ($redirectCount === 1) {
                 $location = $queryChain[0]['response']->headers->get('Location');
 
                 if ($location !== $canonicalUrl) {
-                    $this->markAuditFailure('redirects', 'exact 1 redirect max: '.$canonicalUrl.' redirects to '.($location ?: '[missing]'));
+                    $this->recordFailure('redirects', 'exact 1 redirect max: '.$canonicalUrl.' redirects to '.($location ?: '[missing]'));
                 }
             }
 
             if (str_starts_with((string) $canonical, 'http://')) {
-                $this->markAuditFailure('redirects', 'geen http canonical: '.$canonicalUrl);
+                $this->recordFailure('redirects', 'geen http canonical: '.$canonicalUrl);
             }
 
             if (parse_url((string) $canonical, PHP_URL_HOST) === 'www.garagebook.nl') {
-                $this->markAuditFailure('redirects', 'geen www canonical: '.$canonicalUrl);
+                $this->recordFailure('redirects', 'geen www canonical: '.$canonicalUrl);
             }
         }
 
@@ -235,15 +235,15 @@ class SeoAuditCommand extends Command
             $canonical = $this->canonicalHref($body);
 
             if ($shouldIndex !== $inSitemap) {
-                $this->markAuditFailure('indexability', 'shouldIndex consistent met sitemap: '.$canonicalUrl);
+                $this->recordFailure('indexability', 'shouldIndex consistent met sitemap: '.$canonicalUrl);
             }
 
             if ($shouldIndex === $robotsNoindex) {
-                $this->markAuditFailure('indexability', 'shouldIndex consistent met robots: '.$canonicalUrl);
+                $this->recordFailure('indexability', 'shouldIndex consistent met robots: '.$canonicalUrl);
             }
 
             if ($shouldIndex && $canonical !== $canonicalUrl) {
-                $this->markAuditFailure('indexability', 'shouldIndex consistent met canonical: '.$canonicalUrl);
+                $this->recordFailure('indexability', 'shouldIndex consistent met canonical: '.$canonicalUrl);
             }
         }
 
@@ -406,7 +406,7 @@ class SeoAuditCommand extends Command
         return preg_match('/<meta\s+[^>]*name=["\']description["\'][^>]*content=["\'][^"\']+/', $body) === 1;
     }
 
-    private function markAuditFailure(string $category, string $message): void
+    private function recordFailure(string $category, string $message): void
     {
         $this->errors[$category][] = $message;
         $this->counts[$category]++;
