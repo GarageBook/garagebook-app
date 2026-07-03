@@ -160,6 +160,21 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/outreach-prospects', false);
     }
 
+    public function test_admin_and_seo_dashboard_load_without_database_notifications_table(): void
+    {
+        \Illuminate\Support\Facades\Schema::dropIfExists('notifications');
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get('/admin/seo-health-dashboard')
+            ->assertOk();
+    }
+
     public function test_admin_only_user_management_widgets_are_hidden_for_regular_users_and_visible_for_admins(): void
     {
         $admin = User::factory()->admin()->create();
