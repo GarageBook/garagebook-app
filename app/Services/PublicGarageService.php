@@ -9,6 +9,7 @@ use App\Support\MediaPath;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PublicGarageService
@@ -17,6 +18,7 @@ class PublicGarageService
     {
         return Vehicle::query()
             ->with([
+                'user',
                 'maintenanceLogs' => fn ($query) => $query
                     ->latest('maintenance_date')
                     ->latest('id'),
@@ -45,9 +47,14 @@ class PublicGarageService
 
     public function publicUrl(Vehicle $vehicle): string
     {
+        return $this->canonicalUrl($vehicle);
+    }
+
+    public function canonicalUrl(Vehicle $vehicle): string
+    {
         $publicSlug = $vehicle->public_slug ?: $this->ensurePublicSlug($vehicle);
 
-        return url('/garage/' . $publicSlug);
+        return rtrim((string) config('app.url'), '/').'/garage/'.$publicSlug;
     }
 
     public function ensurePublicSlug(Vehicle $vehicle): string
@@ -72,7 +79,7 @@ class PublicGarageService
         $suffix = 2;
 
         while ($this->slugExists($candidate, $ignoreVehicleId)) {
-            $candidate = $baseSlug . '-' . $suffix;
+            $candidate = $baseSlug.'-'.$suffix;
             $suffix++;
         }
 
@@ -82,6 +89,10 @@ class PublicGarageService
     public function shouldIndex(Vehicle $vehicle): bool
     {
         if (! $vehicle->is_public || blank($vehicle->public_slug)) {
+            return false;
+        }
+
+        if ($this->isOutreachDemoVehicle($vehicle)) {
             return false;
         }
 
@@ -104,6 +115,7 @@ class PublicGarageService
     {
         return Vehicle::query()
             ->with([
+                'user',
                 'maintenanceLogs' => fn ($query) => $query
                     ->latest('maintenance_date')
                     ->latest('id'),
@@ -115,6 +127,15 @@ class PublicGarageService
             ->get()
             ->filter(fn (Vehicle $vehicle) => $this->shouldIndex($vehicle))
             ->values();
+    }
+
+    public function isOutreachDemoVehicle(Vehicle $vehicle): bool
+    {
+        $user = $vehicle->relationLoaded('user')
+            ? $vehicle->user
+            : $vehicle->user()->first();
+
+        return (bool) ($user?->is_outreach_demo ?? false);
     }
 
     public function publicVehicleName(Vehicle $vehicle): string
@@ -140,7 +161,7 @@ class PublicGarageService
     {
         $stats = $this->publicStats($vehicle);
         $costSegment = $stats['shared_costs_enabled']
-            ? ($stats['shared_cost_count'] > 0 ? ' Kosten zijn op ' . $stats['shared_cost_count'] . ' moment(en) gedeeld.' : '')
+            ? ($stats['shared_cost_count'] > 0 ? ' Kosten zijn op '.$stats['shared_cost_count'].' moment(en) gedeeld.' : '')
             : '';
 
         return sprintf(
@@ -179,8 +200,8 @@ class PublicGarageService
 
                 return [
                     'path' => $path,
-                    'thumbnail_url' => asset('storage/' . ltrim($thumbnailPath ?: $path, '/')),
-                    'url' => asset('storage/' . ltrim($path, '/')),
+                    'thumbnail_url' => asset('storage/'.ltrim($thumbnailPath ?: $path, '/')),
+                    'url' => asset('storage/'.ltrim($path, '/')),
                 ];
             })
             ->filter()
@@ -235,7 +256,7 @@ class PublicGarageService
                     ? app(DistanceUnitService::class)->formatFromKilometers($log->km_reading, $vehicle->distance_unit, 0)
                     : null,
                 'cost_label' => $vehicle->share_costs_publicly && $log->cost !== null
-                    ? '€ ' . number_format((float) $log->cost, 2, ',', '.')
+                    ? '€ '.number_format((float) $log->cost, 2, ',', '.')
                     : null,
                 'notes' => trim((string) $log->notes) !== '' ? trim((string) $log->notes) : null,
                 'has_km_reading' => $log->km_reading > 0,
@@ -281,23 +302,23 @@ class PublicGarageService
             [
                 'label' => 'Gedocumenteerd onderhoud',
                 'value' => $metrics['maintenance_count'] > 0
-                    ? $metrics['maintenance_count'] . ' onderhoudsmomenten gedeeld door eigenaar'
+                    ? $metrics['maintenance_count'].' onderhoudsmomenten gedeeld door eigenaar'
                     : 'Deze publieke historie groeit mee zodra onderhoud wordt toegevoegd',
                 'tone' => 'neutral',
             ],
             [
                 'label' => 'Onderbouwde kilometerstanden',
                 'value' => $metrics['documented_km_count'] > 0
-                    ? $metrics['documented_km_count'] . ' momenten met datum en kilometerstand ondersteunen de opbouw van de historie'
+                    ? $metrics['documented_km_count'].' momenten met datum en kilometerstand ondersteunen de opbouw van de historie'
                     : 'Kilometerstanden maken deze historie nog sterker zodra ze worden vastgelegd',
                 'tone' => 'success',
             ],
             [
                 'label' => 'Bijlagen en bewijs',
                 'value' => $metrics['public_attachment_count'] > 0
-                    ? $metrics['public_attachment_count'] . ' zichtbare bijlagen laten zien wat er aan dit voertuig is gedaan'
+                    ? $metrics['public_attachment_count'].' zichtbare bijlagen laten zien wat er aan dit voertuig is gedaan'
                     : ($metrics['public_vehicle_photo_count'] > 0
-                        ? $metrics['public_vehicle_photo_count'] . ' voertuigfoto\'s ondersteunen de publieke presentatie van deze historie'
+                        ? $metrics['public_vehicle_photo_count'].' voertuigfoto\'s ondersteunen de publieke presentatie van deze historie'
                         : 'Er zijn nog geen publieke bijlagen zichtbaar, maar de eigenaar kan bewijs veilig blijven aanvullen'),
                 'tone' => 'neutral',
             ],
@@ -323,7 +344,7 @@ class PublicGarageService
             'eyebrow' => 'Deelbare voertuiggeschiedenis',
             'title' => 'Gemaakt om vertrouwen op te bouwen',
             'description' => 'Deze publieke pagina bundelt onderhoud, gebruik en bewijs op een manier die rustig leesbaar blijft voor een geïnteresseerde koper, garage of liefhebber.',
-            'audience' => 'Geschikt om te delen met een ' . $audienceLabel . '.',
+            'audience' => 'Geschikt om te delen met een '.$audienceLabel.'.',
             'future_transfer_note' => 'Bij verkoop kan deze historie straks worden overgedragen aan de volgende eigenaar. Die overdracht is nog niet actief.',
         ];
     }
@@ -372,7 +393,7 @@ class PublicGarageService
 
     public function legacyVehicleSlug(Vehicle $vehicle): string
     {
-        return Str::slug(trim($vehicle->nickname ?: $vehicle->brand . ' ' . $vehicle->model));
+        return Str::slug(trim($vehicle->nickname ?: $vehicle->brand.' '.$vehicle->model));
     }
 
     private function publicSlugBase(Vehicle $vehicle): string
@@ -407,8 +428,8 @@ class PublicGarageService
         $hasPrivateEvidence = collect($timelineItems)->contains(fn (array $item): bool => (bool) ($item['has_private_attachments'] ?? false));
 
         $historyPeriodLabel = match (true) {
-            $firstDateLabel && $latestDateLabel && $firstDateLabel !== $latestDateLabel => $firstDateLabel . ' tot ' . $latestDateLabel,
-            $latestDateLabel !== null => 'Sinds ' . $latestDateLabel,
+            $firstDateLabel && $latestDateLabel && $firstDateLabel !== $latestDateLabel => $firstDateLabel.' tot '.$latestDateLabel,
+            $latestDateLabel !== null => 'Sinds '.$latestDateLabel,
             default => 'Nog in opbouw',
         };
 
@@ -518,15 +539,15 @@ class PublicGarageService
         $attachment = [
             'kind' => $kind,
             'label' => MediaPath::label($path),
-            'alt' => 'Publieke bijlage bij onderhoud van ' . $this->publicVehicleName($vehicle),
+            'alt' => 'Publieke bijlage bij onderhoud van '.$this->publicVehicleName($vehicle),
             'thumbnail_url' => null,
-            'url' => asset('storage/' . $path),
+            'url' => asset('storage/'.$path),
         ];
 
         if ($kind === 'image') {
             $thumbnailPath = ImageThumbnail::path($path, 720) ?: $path;
-            $attachment['alt'] = 'Publieke foto bij onderhoud van ' . $this->publicVehicleName($vehicle);
-            $attachment['thumbnail_url'] = asset('storage/' . ltrim($thumbnailPath, '/'));
+            $attachment['alt'] = 'Publieke foto bij onderhoud van '.$this->publicVehicleName($vehicle);
+            $attachment['thumbnail_url'] = asset('storage/'.ltrim($thumbnailPath, '/'));
         }
 
         return $attachment;
@@ -534,6 +555,6 @@ class PublicGarageService
 
     private function publicStoragePathExists(string $path): bool
     {
-        return \Illuminate\Support\Facades\Storage::disk('public')->exists(ltrim($path, '/'));
+        return Storage::disk('public')->exists(ltrim($path, '/'));
     }
 }
