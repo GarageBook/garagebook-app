@@ -50,6 +50,7 @@ class AdminManagementAccessTest extends TestCase
             '/admin/pages/'.$page->id.'/edit',
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
+            '/admin/seo-health-dashboard',
             '/admin/growth-campaigns',
             '/admin/growth-campaigns/create',
             '/admin/growth-prospects',
@@ -98,6 +99,7 @@ class AdminManagementAccessTest extends TestCase
             '/admin/pages/'.$page->id.'/edit',
             '/admin/analytics-dashboard',
             '/admin/growth-dashboard',
+            '/admin/seo-health-dashboard',
             '/admin/growth-campaigns',
             '/admin/growth-campaigns/create',
             '/admin/growth-prospects',
@@ -121,6 +123,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/seo-health-dashboard', false)
             ->assertSee('/admin/growth-campaigns', false)
             ->assertSee('/admin/growth-prospects', false)
             ->assertSee('/admin/localization-overview', false)
@@ -149,6 +152,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertSee('/admin/pages', false)
             ->assertSee('/admin/analytics-dashboard', false)
             ->assertSee('/admin/growth-dashboard', false)
+            ->assertSee('/admin/seo-health-dashboard', false)
             ->assertSee('/admin/growth-campaigns', false)
             ->assertSee('/admin/growth-prospects', false)
             ->assertSee('/admin/localization-overview', false)
@@ -193,6 +197,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/seo-health-dashboard', false)
             ->assertDontSee('/admin/growth-campaigns', false)
             ->assertDontSee('/admin/growth-prospects', false)
             ->assertDontSee('/admin/localization-overview', false)
@@ -210,6 +215,7 @@ class AdminManagementAccessTest extends TestCase
         $this->get('/admin/pages')->assertForbidden();
         $this->get('/admin/analytics-dashboard')->assertForbidden();
         $this->get('/admin/growth-dashboard')->assertForbidden();
+        $this->get('/admin/seo-health-dashboard')->assertForbidden();
         $this->get('/admin/growth-campaigns')->assertForbidden();
         $this->get('/admin/growth-prospects')->assertForbidden();
         $this->get('/admin/growth-prospects/import')->assertForbidden();
@@ -241,6 +247,7 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/pages', false)
             ->assertDontSee('/admin/analytics-dashboard', false)
             ->assertDontSee('/admin/growth-dashboard', false)
+            ->assertDontSee('/admin/seo-health-dashboard', false)
             ->assertDontSee('/admin/growth-campaigns', false)
             ->assertDontSee('/admin/growth-prospects', false)
             ->assertDontSee('/admin/localization-overview', false)

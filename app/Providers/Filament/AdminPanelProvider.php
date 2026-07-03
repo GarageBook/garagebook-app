@@ -8,6 +8,7 @@ use App\Filament\Pages\AnalyticsDashboard;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\GrowthDashboard;
 use App\Filament\Pages\LocalizationOverview;
+use App\Filament\Pages\SeoHealthDashboard;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use App\Http\Middleware\CaptureAnalyticsAttribution;
@@ -20,13 +21,13 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -47,6 +48,7 @@ class AdminPanelProvider extends PanelProvider
             })
             ->passwordReset()
             ->defaultThemeMode(ThemeMode::Light)
+            ->databaseNotifications()
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors([
                 'primary' => '#ffd200',
@@ -57,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
                 AnalyticsDashboard::class,
                 GrowthDashboard::class,
                 LocalizationOverview::class,
+                SeoHealthDashboard::class,
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
                 BlogResource::class,
@@ -338,13 +341,13 @@ class AdminPanelProvider extends PanelProvider
                         overflow-wrap: anywhere;
                     }
 
-                    .fi-sidebar-group[data-group-label="' . $managementLabel . '"] {
+                    .fi-sidebar-group[data-group-label="'.$managementLabel.'"] {
                         margin-top: 2rem;
                         padding-top: 1.25rem;
                         border-top: 1px solid rgba(148, 163, 184, 0.32);
                     }
 
-                    .fi-sidebar-group[data-group-label="' . $managementLabel . '"] .fi-sidebar-group-label {
+                    .fi-sidebar-group[data-group-label="'.$managementLabel.'"] .fi-sidebar-group-label {
                         color: #64748b;
                         font-weight: 700;
                         letter-spacing: 0.08em;
@@ -535,7 +538,7 @@ class AdminPanelProvider extends PanelProvider
 
                         <div class="gb-footer-columns">
                             <div>
-                                <h3>' . $myGarageBookLabel . '</h3>
+                                <h3>'.$myGarageBookLabel.'</h3>
                                 <div class="gb-footer-links">
                                     <a href="/admin/vehicles">Mijn voertuigen</a>
                                     <a href="/admin/maintenance-logs">Onderhoud</a>
@@ -543,19 +546,19 @@ class AdminPanelProvider extends PanelProvider
                             </div>
 
                             <div>
-                                <h3>' . $aboutGarageBookLabel . '</h3>
+                                <h3>'.$aboutGarageBookLabel.'</h3>
                                 <div class="gb-footer-links">
-                                    <a href="/">' . $websiteHomeLabel . '</a>
-                                    <a href="/blogs">' . $blogsLabel . '</a>
-                                    <a href="/ons-verhaal">' . $ourStoryLabel . '</a>
-                                    <a href="/privacy-statement">' . $privacyStatementLabel . '</a>
-                                    <a href="/algemene-voorwaarden">' . $termsLabel . '</a>
-                                    <a href="/contact">' . $contactLabel . '</a>
+                                    <a href="/">'.$websiteHomeLabel.'</a>
+                                    <a href="/blogs">'.$blogsLabel.'</a>
+                                    <a href="/ons-verhaal">'.$ourStoryLabel.'</a>
+                                    <a href="/privacy-statement">'.$privacyStatementLabel.'</a>
+                                    <a href="/algemene-voorwaarden">'.$termsLabel.'</a>
+                                    <a href="/contact">'.$contactLabel.'</a>
                                 </div>
                             </div>
 
                             <div>
-                                <h3>' . $followUsLabel . '</h3>
+                                <h3>'.$followUsLabel.'</h3>
                                 <div class="gb-footer-links">
                                 <a href="https://www.instagram.com/garagebook.global" target="_blank">Instagram</a>
                                 <a href="https://linkedin.com/company/thegaragebook/" target="_blank">LinkedIn</a>
@@ -566,7 +569,7 @@ class AdminPanelProvider extends PanelProvider
                     </div>
 
                     <div class="gb-footer-bottom">
-                        © GarageBook 2026 - ' . $allRightsReservedLabel . '
+                        © GarageBook 2026 - '.$allRightsReservedLabel.'
                     </div>
                 </footer>
             ')
