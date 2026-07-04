@@ -65,6 +65,11 @@ return [
         'recipient' => env('GROWTH_REPORT_RECIPIENT', 'willemvanveelen@icloud.com'),
     ],
 
+    'deployment_smoke_test' => [
+        'admin_email' => env('DEPLOYMENT_SMOKE_TEST_ADMIN_EMAIL', 'willemvanveelen@icloud.com'),
+        'public_garage_slug' => env('DEPLOYMENT_SMOKE_TEST_PUBLIC_GARAGE_SLUG'),
+    ],
+
     'outreach' => [
         'daily_limit' => env('OUTREACH_DAILY_LIMIT', 100),
         'warning_threshold' => env('OUTREACH_WARNING_THRESHOLD', 95),
