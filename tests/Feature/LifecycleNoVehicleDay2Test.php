@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Jobs\SendLifecycleEmailJob;
 use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Models\LifecycleEmailLog;
+use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\Lifecycle\LifecycleEmailService as NoVehicleLifecycleEmailService;
 use App\Services\LifecycleEmailService;
 use App\Support\AnalyticsEventTracker;
+use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Bus;
@@ -20,6 +22,13 @@ use Tests\TestCase;
 class LifecycleNoVehicleDay2Test extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(LifecycleEmailTemplateSeeder::class);
+    }
 
     public function test_user_without_vehicle_is_queued(): void
     {
@@ -35,9 +44,7 @@ class LifecycleNoVehicleDay2Test extends TestCase
         $this->assertSame(['found' => 1, 'queued' => 1, 'skipped' => 0], $result);
         $this->assertDatabaseHas('lifecycle_email_logs', [
             'user_id' => $user->id,
-            'email_key' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
-            'trigger' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
-            'mail_class' => NoVehicleDay2Mail::class,
+            'email_key' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             'status' => LifecycleEmailLog::STATUS_QUEUED,
         ]);
 
@@ -46,7 +53,7 @@ class LifecycleNoVehicleDay2Test extends TestCase
 
         Bus::assertDispatched(SendLifecycleEmailJob::class, function (SendLifecycleEmailJob $job) use ($user, $log): bool {
             return $job->userId === $user->id
-                && $job->emailKey === LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2
+                && $job->emailKey === LifecycleEmailTemplate::NO_VEHICLE_DAY2
                 && $job->logId === $log->id;
         });
     }
@@ -86,7 +93,7 @@ class LifecycleNoVehicleDay2Test extends TestCase
         app(NoVehicleLifecycleEmailService::class)->queueNoVehicleUsers();
 
         $this->assertSame(1, LifecycleEmailLog::query()
-            ->where('trigger', LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2)
+            ->where('email_key', LifecycleEmailTemplate::NO_VEHICLE_DAY2)
             ->count());
         Bus::assertDispatched(SendLifecycleEmailJob::class, 1);
     }
@@ -134,7 +141,8 @@ class LifecycleNoVehicleDay2Test extends TestCase
 
         Mail::assertSent(NoVehicleDay2Mail::class, function (NoVehicleDay2Mail $mail) use ($user): bool {
             return $mail->hasTo($user->email)
-                && $mail->ctaUrl === url('/admin/vehicles/create');
+                && $mail->template->email_key === LifecycleEmailTemplate::NO_VEHICLE_DAY2
+                && str_contains($mail->ctaUrl, '/lifecycle-emails/click/'.$user->id.'/'.LifecycleEmailTemplate::NO_VEHICLE_DAY2);
         });
 
         $log->refresh();
@@ -142,6 +150,26 @@ class LifecycleNoVehicleDay2Test extends TestCase
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
         $this->assertNotNull($log->sent_at);
         $this->assertNull($log->error);
+    }
+
+    public function test_day2_click_tracking_marks_log_clicked(): void
+    {
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(3),
+            'email_verified_at' => now()->subDays(3),
+        ]);
+        $log = $this->queuedLogFor($user);
+        $log->forceFill([
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ])->save();
+
+        $url = app(LifecycleEmailService::class)->trackedCtaUrl($user, LifecycleEmailTemplate::NO_VEHICLE_DAY2, $log);
+
+        $this->get($url)
+            ->assertRedirect('/admin/vehicles/create');
+
+        $this->assertNotNull($log->fresh()->clicked_at);
     }
 
     public function test_lifecycle_job_rate_limiter_releases_second_job_without_running_handler(): void
@@ -174,10 +202,8 @@ class LifecycleNoVehicleDay2Test extends TestCase
     {
         return LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
-            'email_key' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
-            'trigger' => LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2,
-            'subject' => 'Je GarageBook is nog een beetje leeg... 😉',
-            'mail_class' => NoVehicleDay2Mail::class,
+            'email_key' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
+            'subject' => 'Voeg je eerste voertuig toe',
             'status' => LifecycleEmailLog::STATUS_QUEUED,
             'queued_at' => now(),
         ]);

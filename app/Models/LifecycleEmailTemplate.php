@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class LifecycleEmailTemplate extends Model
 {
+    public const NO_VEHICLE_DAY2 = 'no_vehicle_day2';
+
     public const NO_VEHICLE_ADDED = 'no_vehicle_added';
 
     public const NO_MAINTENANCE_LOG_DAY_3 = 'no_maintenance_log_day_3';
@@ -19,6 +21,7 @@ class LifecycleEmailTemplate extends Model
     public const INACTIVE_USER_RETURN = 'inactive_user_return';
 
     public const EMAIL_KEYS = [
+        self::NO_VEHICLE_DAY2,
         self::NO_VEHICLE_ADDED,
         self::NO_MAINTENANCE_LOG_DAY_3,
         self::NO_MAINTENANCE_LOG_DAY_14,

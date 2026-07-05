@@ -34,7 +34,7 @@ class LifecycleEmailFlowTest extends TestCase
         $this->seed(LifecycleEmailTemplateSeeder::class);
     }
 
-    public function test_user_without_vehicle_gets_no_vehicle_added_lifecycle_key(): void
+    public function test_user_without_vehicle_gets_day2_no_vehicle_lifecycle_key(): void
     {
         Bus::fake();
 
@@ -43,7 +43,7 @@ class LifecycleEmailFlowTest extends TestCase
         ]);
 
         $this->assertSame(
-            LifecycleEmailTemplate::NO_VEHICLE_ADDED,
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
         );
 
@@ -51,7 +51,7 @@ class LifecycleEmailFlowTest extends TestCase
 
         Bus::assertDispatched(SendLifecycleEmailJob::class, function (SendLifecycleEmailJob $job) use ($user): bool {
             return $job->userId === $user->id
-                && $job->emailKey === LifecycleEmailTemplate::NO_VEHICLE_ADDED;
+                && $job->emailKey === LifecycleEmailTemplate::NO_VEHICLE_DAY2;
         });
     }
 
@@ -357,6 +357,42 @@ class LifecycleEmailFlowTest extends TestCase
         Bus::assertNotDispatched(SendLifecycleEmailJob::class);
     }
 
+    public function test_frequency_cap_skips_new_lifecycle_mail_within_seven_days(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(14),
+        ]);
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Moto Guzzi',
+            'model' => 'V85 TT',
+            'current_km' => 6000,
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Recent verzonden',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subDays(2),
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ]);
+
+        Artisan::call('garagebook:send-lifecycle-emails');
+
+        Bus::assertNotDispatched(SendLifecycleEmailJob::class);
+        $this->assertDatabaseHas('lifecycle_email_logs', [
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
+            'status' => LifecycleEmailLog::STATUS_SKIPPED,
+            'reason_skipped' => 'frequency_cap',
+        ]);
+    }
+
     public function test_command_dispatches_queue_jobs_for_eligible_users(): void
     {
         Bus::fake();
@@ -426,6 +462,7 @@ class LifecycleEmailFlowTest extends TestCase
         $log = LifecycleEmailLog::query()->where('user_id', $user->id)->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14)->firstOrFail();
 
         $this->assertSame('Aangepast onderwerp', $log->subject);
+        $this->assertNotNull($log->queued_at);
         $this->assertSame(LifecycleEmailLog::STATUS_SENT, $log->status);
         $this->assertNotNull($log->sent_at);
     }

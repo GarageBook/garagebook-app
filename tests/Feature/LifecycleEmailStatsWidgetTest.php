@@ -135,8 +135,33 @@ class LifecycleEmailStatsWidgetTest extends TestCase
             'failed_at' => now()->subHour(),
         ]);
 
+        $day2User = User::factory()->create([
+            'lifecycle_emails_unsubscribed_at' => now(),
+        ]);
+        LifecycleEmailLog::query()->create([
+            'user_id' => $day2User->id,
+            'email_key' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
+            'subject' => 'Day 2',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subHour(),
+            'clicked_at' => now()->subMinutes(30),
+        ]);
+
+        $inactiveUser = User::factory()->create();
+        LifecycleEmailLog::query()->create([
+            'user_id' => $inactiveUser->id,
+            'email_key' => LifecycleEmailTemplate::INACTIVE_USER_RETURN,
+            'subject' => 'Inactive',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subDay(),
+        ]);
+
         $stats = LifecycleEmailStatsWidget::calculateStats();
 
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_VEHICLE_DAY2]['sent']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_VEHICLE_DAY2]['clicked']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_VEHICLE_DAY2]['unsubscribed_after_send']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::INACTIVE_USER_RETURN]['sent']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['sent']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['clicked']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['goal_completed']);

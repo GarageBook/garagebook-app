@@ -17,6 +17,7 @@ class LifecycleEmailTemplateSeederTest extends TestCase
         $this->seed(LifecycleEmailTemplateSeeder::class);
 
         $expected = [
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
@@ -48,9 +49,9 @@ class LifecycleEmailTemplateSeederTest extends TestCase
         $template = LifecycleEmailTemplate::query()->where('email_key', LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3)->firstOrFail();
 
         $this->assertSame('Geen onderhoudslog - dag 3', $template->name);
-        $this->assertSame('Je eerste onderhoudsnotitie staat klaar', $template->subject);
-        $this->assertStringContainsString('Je voertuig staat al in GarageBook', $template->body);
-        $this->assertSame('Eerste onderhoud toevoegen', $template->cta_text);
+        $this->assertSame('Leg je eerste onderhoud vast', $template->subject);
+        $this->assertStringContainsString('Voeg nu de laatste beurt', $template->body);
+        $this->assertSame('Onderhoud toevoegen', $template->cta_text);
         $this->assertTrue($template->is_active);
     }
 

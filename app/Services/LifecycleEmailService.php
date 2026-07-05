@@ -8,6 +8,7 @@ use App\Jobs\SendLifecycleEmailJob;
 use App\Mail\AfterFirstMaintenanceLogMail;
 use App\Mail\InactiveUserReturnMail;
 use App\Mail\Lifecycle\LifecycleEmailMailable;
+use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Mail\NoMaintenanceLogDay14Mail;
 use App\Mail\NoMaintenanceLogDay30Mail;
 use App\Mail\NoMaintenanceLogDay3Mail;
@@ -34,6 +35,7 @@ class LifecycleEmailService
     public function retryableEmailKeys(): array
     {
         return [
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
@@ -93,6 +95,10 @@ class LifecycleEmailService
             return null;
         }
 
+        if (! $existingLog && $this->hasRecentLifecycleEmail($user, exceptEmailKey: $template->email_key)) {
+            return null;
+        }
+
         $payload = $this->lifecycleLogAttributes($user, $template, LifecycleEmailLog::STATUS_QUEUED, [
             'reason_skipped' => null,
             'skipped_at' => null,
@@ -116,6 +122,12 @@ class LifecycleEmailService
         $emailKey = $this->resolveEligibleEmailKey($user);
 
         if (! $emailKey) {
+            return false;
+        }
+
+        if ($this->hasRecentLifecycleEmail($user, exceptEmailKey: $emailKey)) {
+            $this->markLifecycleEmailSkipped($user, $emailKey, 'frequency_cap');
+
             return false;
         }
 
@@ -146,6 +158,7 @@ class LifecycleEmailService
         $renderedBody = $this->renderTemplateBody($user, $template);
 
         return match ($template->email_key) {
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2 => new NoVehicleDay2Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => new NoVehicleAddedMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => new NoMaintenanceLogDay3Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => new NoMaintenanceLogDay14Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
@@ -277,6 +290,7 @@ class LifecycleEmailService
         return LifecycleEmailLog::query()
             ->where('user_id', $user->getKey())
             ->whereIn('email_key', [
+                LifecycleEmailTemplate::NO_VEHICLE_DAY2,
                 LifecycleEmailTemplate::NO_VEHICLE_ADDED,
                 LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
                 LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
@@ -294,6 +308,7 @@ class LifecycleEmailService
         $vehicle = $this->firstVehicle($user);
 
         return match ($emailKey) {
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => VehicleResource::getUrl('create'),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
@@ -517,13 +532,19 @@ class LifecycleEmailService
 
     private function resolveNoVehicleKey(User $user): ?string
     {
-        if (! $this->getActiveTemplate(LifecycleEmailTemplate::NO_VEHICLE_ADDED)) {
+        $ageInDays = (int) $user->created_at?->startOfDay()->diffInDays(now()->startOfDay()) ?: 0;
+
+        if ($ageInDays >= 2
+            && $this->getActiveTemplate(LifecycleEmailTemplate::NO_VEHICLE_DAY2)
+            && ! $this->hasLifecycleEmailLog($user, LifecycleEmailTemplate::NO_VEHICLE_DAY2)) {
+            return LifecycleEmailTemplate::NO_VEHICLE_DAY2;
+        }
+
+        if ($this->hasLifecycleEmailLog($user, LifecycleEmailTemplate::NO_VEHICLE_DAY2)) {
             return null;
         }
 
-        $ageInDays = (int) $user->created_at?->startOfDay()->diffInDays(now()->startOfDay()) ?: 0;
-
-        if ($ageInDays < 3) {
+        if ($ageInDays < 3 || ! $this->getActiveTemplate(LifecycleEmailTemplate::NO_VEHICLE_ADDED)) {
             return null;
         }
 
@@ -615,6 +636,28 @@ class LifecycleEmailService
         }
 
         return $user->last_login_at->lte(now()->subDays(30));
+    }
+
+    private function hasLifecycleEmailLog(User $user, string $emailKey): bool
+    {
+        return LifecycleEmailLog::query()
+            ->where('user_id', $user->getKey())
+            ->where('email_key', $emailKey)
+            ->exists();
+    }
+
+    private function hasRecentLifecycleEmail(User $user, ?string $exceptEmailKey = null): bool
+    {
+        return LifecycleEmailLog::query()
+            ->where('user_id', $user->getKey())
+            ->whereIn('status', [
+                LifecycleEmailLog::STATUS_QUEUED,
+                LifecycleEmailLog::STATUS_PROCESSING,
+                LifecycleEmailLog::STATUS_SENT,
+            ])
+            ->when($exceptEmailKey, fn ($query) => $query->where('email_key', '!=', $exceptEmailKey))
+            ->where('created_at', '>=', now()->subDays(7))
+            ->exists();
     }
 
     private function hasCompletedLifecycleGoal(User $user): bool
@@ -730,6 +773,7 @@ class LifecycleEmailService
     private function emailKeyMatchesCurrentState(User $user, string $emailKey): bool
     {
         return match ($emailKey) {
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => ! $user->vehicles()->exists(),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
@@ -756,6 +800,10 @@ class LifecycleEmailService
 
         if (! $user->vehicles()->exists()) {
             return 'no_vehicle';
+        }
+
+        if (in_array($emailKey, [LifecycleEmailTemplate::NO_VEHICLE_DAY2, LifecycleEmailTemplate::NO_VEHICLE_ADDED], true)) {
+            return 'vehicle_added';
         }
 
         if ($this->userHasMaintenanceLogs($user)) {
@@ -793,6 +841,7 @@ class LifecycleEmailService
             'sent_at' => null,
             'failed_at' => null,
             'error_message' => null,
+            'error' => $reason,
         ]);
 
         if ($log) {
@@ -811,6 +860,7 @@ class LifecycleEmailService
             'email_key' => $template->email_key,
             'subject' => $template->subject,
             'status' => $status,
+            'queued_at' => $status === LifecycleEmailLog::STATUS_QUEUED ? now() : null,
             'sent_at' => null,
             'failed_at' => null,
             'skipped_at' => null,

@@ -11,15 +11,25 @@ class LifecycleEmailTemplateSeeder extends Seeder
     {
         $templates = [
             [
-                'email_key' => LifecycleEmailTemplate::NO_VEHICLE_ADDED,
-                'name' => 'Nog geen voertuig toegevoegd',
-                'subject' => 'Voeg je eerste voertuig toe aan GarageBook',
+                'email_key' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
+                'name' => 'Geen voertuig - dag 2',
+                'subject' => 'Voeg je eerste voertuig toe',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Je garage staat nog leeg in GarageBook. Zodra je je eerste voertuig toevoegt, heb je meteen een centrale plek voor onderhoud, documenten en later ook je volledige historie.
+Je GarageBook begint met één voertuig. Voeg je voertuig toe, dan kun je daarna direct onderhoud vastleggen.
+BODY,
+                'cta_text' => 'Voertuig toevoegen',
+                'is_active' => true,
+            ],
+            [
+                'email_key' => LifecycleEmailTemplate::NO_VEHICLE_ADDED,
+                'name' => 'Nog geen voertuig toegevoegd',
+                'subject' => 'Start je GarageBook met 1 voertuig',
+                'body' => <<<'BODY'
+Hoi {{ first_name }},
 
-Begin klein: voeg vandaag je eerste voertuig toe en bouw van daaruit verder.
+Je garage is nog leeg. Voeg je voertuig toe en leg daarna je eerste onderhoud vast.
 BODY,
                 'cta_text' => 'Voertuig toevoegen',
                 'is_active' => true,
@@ -27,73 +37,61 @@ BODY,
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
                 'name' => 'Geen onderhoudslog - dag 3',
-                'subject' => 'Je eerste onderhoudsnotitie staat klaar',
+                'subject' => 'Leg je eerste onderhoud vast',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Je voertuig staat al in GarageBook. De volgende logische stap is het eerste onderhoud toevoegen, zodat je geschiedenis direct gaat leven.
-
-Dat hoeft niet volledig te zijn. Een oliebeurt, bandenwissel, reparatie of factuur is al genoeg om je dossier te starten.
+Je voertuig staat in GarageBook. Voeg nu de laatste beurt, reparatie of controle toe, dan is je onderhoudshistorie gestart.
 BODY,
-                'cta_text' => 'Eerste onderhoud toevoegen',
+                'cta_text' => 'Onderhoud toevoegen',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
                 'name' => 'Geen onderhoudslog - dag 14',
-                'subject' => 'Bouw je onderhoudshistorie stap voor stap',
+                'subject' => 'Je onderhoudshistorie mist nog de eerste regel',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Met één onderhoudsregel wordt je voertuiggeschiedenis al bruikbaarder. Je ziet sneller wat er is gedaan, wanneer het gebeurde en wat je later nog wilt terugvinden.
-
-Voeg vandaag je eerste onderhoud toe en vul daarna rustig verder aan.
+Met één onderhoudsregel wordt je GarageBook al bruikbaar. Begin met de laatste beurt die je nog weet.
 BODY,
-                'cta_text' => 'Start je onderhoudshistorie',
+                'cta_text' => 'Eerste onderhoud toevoegen',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
                 'name' => 'Geen onderhoudslog - dag 30',
-                'subject' => 'Maak van je voertuig een compleet dossier',
+                'subject' => 'Maak je voertuiggeschiedenis compleet',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Je voertuig staat in GarageBook, maar zonder onderhoudsregels blijft het verhaal nog half leeg.
-
-Juist onderhoud maakt je dossier waardevol: wat is gedaan, wanneer, bij welke kilometerstand en met welke onderdelen of facturen.
-
-Begin met de laatste beurt die je nog weet en werk vanaf daar verder.
+Je voertuig staat klaar, maar de onderhoudshistorie ontbreekt nog. Voeg één recente beurt toe en vul later rustig aan.
 BODY,
-                'cta_text' => 'Voeg je eerste onderhoud toe',
+                'cta_text' => 'Laatste onderhoud toevoegen',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
                 'name' => 'Na eerste onderhoudslog',
-                'subject' => 'Je onderhoudshistorie is gestart',
+                'subject' => 'Je eerste onderhoud staat erin. Voeg nu bewijs toe',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Mooi, je eerste onderhoudsregel staat nu in GarageBook.
-
-Vanaf hier kun je je onderhoudshistorie verder aanvullen met eerdere beurten, facturen of andere documenten. Zo wordt je tijdlijn steeds completer.
+Je onderhoudshistorie is gestart. Maak deze regel sterker met een factuur, foto of extra notitie.
 BODY,
-                'cta_text' => 'Onderhoudshistorie bekijken',
+                'cta_text' => 'Historie aanvullen',
                 'is_active' => true,
             ],
             [
                 'email_key' => LifecycleEmailTemplate::INACTIVE_USER_RETURN,
                 'name' => 'Lang inactief',
-                'subject' => 'Je garage staat klaar als je verder wilt gaan',
+                'subject' => 'Is je GarageBook nog up-to-date?',
                 'body' => <<<'BODY'
 Hoi {{ first_name }},
 
-Het is alweer even geleden dat je in GarageBook was. Je voertuigen, onderhoud en documenten wachten hier nog steeds op je.
-
-Open je garage weer en pak eenvoudig verder waar je gebleven was.
+Is er sinds je laatste bezoek onderhoud gedaan? Werk je GarageBook bij met de nieuwste beurt of controle.
 BODY,
-                'cta_text' => 'Ga verder met je garage',
+                'cta_text' => 'GarageBook bijwerken',
                 'is_active' => true,
             ],
         ];

@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
@@ -12,7 +11,6 @@ use App\Support\LifecycleMailHealth;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SendLifecycleEmailJob implements ShouldQueue
@@ -68,12 +66,6 @@ class SendLifecycleEmailJob implements ShouldQueue
         }
 
         $log->refresh();
-
-        if ($this->isNoVehicleDay2Log($log)) {
-            $this->sendNoVehicleDay2Mail($user, $log, $service, $health);
-
-            return;
-        }
 
         if ($user->hasUnsubscribedFromLifecycleEmails()) {
             $service->markLifecycleEmailSkipped($user, $this->emailKey, 'unsubscribed');
@@ -156,72 +148,6 @@ class SendLifecycleEmailJob implements ShouldQueue
             ]);
     }
 
-    private function isNoVehicleDay2Log(LifecycleEmailLog $log): bool
-    {
-        return $log->trigger === LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2
-            || $log->email_key === LifecycleEmailLog::TRIGGER_NO_VEHICLE_DAY2
-            || $log->mail_class === NoVehicleDay2Mail::class;
-    }
-
-    private function sendNoVehicleDay2Mail(User $user, LifecycleEmailLog $log, LifecycleEmailService $service, LifecycleMailHealth $health): void
-    {
-        if ($user->vehicles()->exists()) {
-            $log->forceFill([
-                'status' => LifecycleEmailLog::STATUS_SKIPPED,
-                'skipped_at' => now(),
-                'reason_skipped' => 'vehicle_added',
-                'error' => 'vehicle_added',
-                'error_message' => 'vehicle_added',
-            ])->save();
-
-            return;
-        }
-
-        try {
-            $sentMessage = Mail::to($user->email)->send(new NoVehicleDay2Mail(
-                user: $user,
-                ctaUrl: url('/admin/vehicles/create'),
-                unsubscribeUrl: $service->unsubscribeUrl($user),
-            ));
-
-            $log->forceFill([
-                'status' => LifecycleEmailLog::STATUS_SENT,
-                'sent_at' => now(),
-                'failed_at' => null,
-                'skipped_at' => null,
-                'reason_skipped' => null,
-                'error' => null,
-                'error_message' => null,
-                ...LifecycleEmailLog::existingColumnAttributes($health->logContext(
-                    queueJobId: $this->queueJobId(),
-                    resendMessageId: $this->resolveSentMessageId($sentMessage),
-                )),
-            ])->save();
-        } catch (\Throwable $exception) {
-            if ($this->isRateLimitException($exception)) {
-                Log::warning('lifecycle_mail_rate_limited', [
-                    'log_id' => $log->getKey(),
-                    'user_id' => $user->getKey(),
-                    'email_key' => $log->email_key,
-                    'attempt' => $this->attempts(),
-                    'message' => $exception->getMessage(),
-                ]);
-
-                throw $exception;
-            }
-
-            $log->forceFill([
-                'status' => LifecycleEmailLog::STATUS_FAILED,
-                'failed_at' => now(),
-                'error' => str($exception->getMessage())->limit(65535)->value(),
-                'error_message' => str($exception->getMessage())->limit(65535)->value(),
-                ...LifecycleEmailLog::existingColumnAttributes($health->logContext(
-                    queueJobId: $this->queueJobId(),
-                )),
-            ])->save();
-        }
-    }
-
     private function queueJobId(): ?int
     {
         if (property_exists($this, 'job') && $this->job && method_exists($this->job, 'getJobId')) {
@@ -299,6 +225,7 @@ class SendLifecycleEmailJob implements ShouldQueue
             ->where('status', LifecycleEmailLog::STATUS_QUEUED)
             ->update([
                 'status' => LifecycleEmailLog::STATUS_PROCESSING,
+                'queued_at' => $log->queued_at ?? now(),
                 'failed_at' => null,
                 'skipped_at' => null,
                 'reason_skipped' => null,

@@ -40,7 +40,7 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
                 : 0.0;
 
             $cards[] = Stat::make($emailKey, sprintf('Q %d | S %d | F %d', $row['queued'], $row['sent'], $row['failed']))
-                ->description(sprintf('Kliks %d | Goals %d | Conv %.1f%%', $row['clicked'], $row['goal_completed'], $conversionRate))
+                ->description(sprintf('Kliks %d | Goals %d | Conv %.1f%% | Unsubs %d', $row['clicked'], $row['goal_completed'], $conversionRate, $row['unsubscribed_after_send']))
                 ->color($row['failed'] > 0 ? 'danger' : ($row['queued'] > 0 ? 'warning' : 'success'));
         }
 
@@ -54,11 +54,13 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
     public static function calculateStats(): array
     {
         $emailKeys = [
+            LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            LifecycleEmailTemplate::INACTIVE_USER_RETURN,
         ];
 
         $stats = [
@@ -73,6 +75,7 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
                 'failed' => 0,
                 'clicked' => 0,
                 'goal_completed' => 0,
+                'unsubscribed_after_send' => 0,
             ];
         }
 
@@ -128,6 +131,23 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
 
         foreach ($goalRows as $emailKey => $aggregate) {
             $stats['email_keys'][$emailKey]['goal_completed'] = (int) $aggregate;
+        }
+
+        if (Schema::hasTable('users')) {
+            $unsubscribeRows = LifecycleEmailLog::query()
+                ->join('users', 'users.id', '=', 'lifecycle_email_logs.user_id')
+                ->selectRaw('lifecycle_email_logs.email_key, COUNT(*) as aggregate')
+                ->whereIn('lifecycle_email_logs.email_key', $emailKeys)
+                ->where('lifecycle_email_logs.status', LifecycleEmailLog::STATUS_SENT)
+                ->whereNotNull('lifecycle_email_logs.sent_at')
+                ->whereNotNull('users.lifecycle_emails_unsubscribed_at')
+                ->whereColumn('users.lifecycle_emails_unsubscribed_at', '>=', 'lifecycle_email_logs.sent_at')
+                ->groupBy('lifecycle_email_logs.email_key')
+                ->pluck('aggregate', 'email_key');
+
+            foreach ($unsubscribeRows as $emailKey => $aggregate) {
+                $stats['email_keys'][$emailKey]['unsubscribed_after_send'] = (int) $aggregate;
+            }
         }
 
         if (Schema::hasTable('users') && Schema::hasTable('vehicles') && Schema::hasTable('maintenance_logs')) {
