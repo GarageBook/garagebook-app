@@ -53,6 +53,47 @@ class PublicGaragePageTest extends TestCase
         $response->assertDontSee('"item": "' . url('/garage') . '"', false);
     }
 
+    public function test_public_garage_structured_data_uses_webpage_main_entity_vehicle_without_product_markup(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        UploadedFile::fake()->image('kia-ceed.jpg')->storeAs('vehicle-photos', 'kia-ceed.jpg', 'public');
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Kia',
+            'model' => 'Ceed SW PHEV',
+            'year' => 2021,
+            'is_public' => true,
+            'photo' => 'vehicle-photos/kia-ceed.jpg',
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Onderhoud uitgevoerd',
+            'km_reading' => 45200,
+            'maintenance_date' => '2026-05-01',
+        ]);
+
+        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $schema = $this->publicGarageStructuredData($response->getContent());
+
+        $response->assertOk();
+        $this->assertSame('WebPage', $schema['@type'] ?? null);
+        $this->assertArrayNotHasKey('@graph', $schema);
+        $this->assertSame('Vehicle', $schema['mainEntity']['@type'] ?? null);
+        $this->assertSame('2021 Kia Ceed SW PHEV', $schema['mainEntity']['name'] ?? null);
+        $this->assertSame([
+            '@type' => 'Brand',
+            'name' => 'Kia',
+        ], $schema['mainEntity']['brand'] ?? null);
+        $this->assertFalse($this->structuredDataContainsType($schema, 'Product'));
+        $this->assertFalse($this->structuredDataContainsKey($schema, 'offers'));
+        $this->assertFalse($this->structuredDataContainsKey($schema, 'review'));
+        $this->assertFalse($this->structuredDataContainsKey($schema, 'aggregateRating'));
+    }
+
     public function test_public_page_renders_vehicle_photo_in_16_by_9_hero_container(): void
     {
         Storage::fake('public');
@@ -805,6 +846,59 @@ class PublicGaragePageTest extends TestCase
             ->assertSee('storage/maintenance-attachments/visible-photo.jpg', false)
             ->assertDontSee('storage/maintenance-attachments/private-invoice.pdf', false)
             ->assertDontSee('storage/maintenance-attachments/walkaround.mp4', false);
+    }
+
+    private function publicGarageStructuredData(string $html): array
+    {
+        preg_match_all('/<script type="application\/ld\+json">\s*(.*?)\s*<\/script>/s', $html, $matches);
+
+        foreach ($matches[1] as $json) {
+            $schema = json_decode(trim($json), true, flags: JSON_THROW_ON_ERROR);
+
+            if (($schema['@context'] ?? null) === 'https://schema.org' && ($schema['@type'] ?? null) === 'WebPage') {
+                return $schema;
+            }
+        }
+
+        $this->fail('Public garage WebPage JSON-LD was not rendered.');
+    }
+
+    private function structuredDataContainsType(mixed $node, string $type): bool
+    {
+        if (! is_array($node)) {
+            return false;
+        }
+
+        if (($node['@type'] ?? null) === $type) {
+            return true;
+        }
+
+        foreach ($node as $value) {
+            if ($this->structuredDataContainsType($value, $type)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function structuredDataContainsKey(mixed $node, string $key): bool
+    {
+        if (! is_array($node)) {
+            return false;
+        }
+
+        if (array_key_exists($key, $node)) {
+            return true;
+        }
+
+        foreach ($node as $value) {
+            if ($this->structuredDataContainsKey($value, $key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 }

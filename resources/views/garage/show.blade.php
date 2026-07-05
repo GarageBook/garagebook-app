@@ -14,41 +14,40 @@
     <script type="application/ld+json">
         {!! json_encode([
             '@' . 'context' => 'https://schema.org',
-            '@graph' => array_values(array_filter([
-                [
-                    '@type' => 'WebPage',
-                    'name' => $metaTitle,
-                    'url' => $canonicalUrl,
-                    'description' => $metaDescription,
-                    'inLanguage' => 'nl-NL',
-                ],
-                [
-                    '@type' => 'BreadcrumbList',
-                    'itemListElement' => [
-                        [
-                            '@type' => 'ListItem',
-                            'position' => 1,
-                            'name' => 'Home',
-                            'item' => url('/'),
-                        ],
-                        [
-                            '@type' => 'ListItem',
-                            'position' => 2,
-                            'name' => $vehicleName,
-                            'item' => $canonicalUrl,
-                        ],
+            '@type' => 'WebPage',
+            'name' => $metaTitle,
+            'url' => $canonicalUrl,
+            'description' => $metaDescription,
+            'inLanguage' => 'nl-NL',
+            'breadcrumb' => [
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Home',
+                        'item' => url('/'),
+                    ],
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 2,
+                        'name' => $vehicleName,
+                        'item' => $canonicalUrl,
                     ],
                 ],
-                filled($vehicleHeading) ? [
-                    '@type' => 'Vehicle',
-                    'name' => $vehicleName,
-                    'brand' => $vehicle->brand,
-                    'image' => $primaryPhoto['url'] ?? null,
-                    'model' => $vehicle->model,
-                    'vehicleModelDate' => $vehicle->year ? (string) $vehicle->year : null,
-                    'url' => $canonicalUrl,
+            ],
+            'mainEntity' => filled($vehicleHeading) ? [
+                '@type' => 'Vehicle',
+                'name' => $vehicleName,
+                'brand' => filled($vehicle->brand) ? [
+                    '@type' => 'Brand',
+                    'name' => $vehicle->brand,
                 ] : null,
-            ])),
+                'image' => $primaryPhoto['url'] ?? null,
+                'model' => $vehicle->model,
+                'vehicleModelDate' => $vehicle->year ? (string) $vehicle->year : null,
+                'url' => $canonicalUrl,
+            ] : null,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
     </script>
 @endsection
