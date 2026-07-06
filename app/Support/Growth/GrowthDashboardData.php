@@ -11,6 +11,7 @@ use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\PublicGarageService;
 use App\Support\AnalyticsDataWindow;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -527,6 +528,7 @@ class GrowthDashboardData
         $activation = $this->activationFunnel();
         $stats = $activation['stats'];
         $conversions = collect($activation['conversions']);
+        $extraKpis = $this->weeklyProductSeoKpis();
 
         $largestDropOff = $conversions
             ->filter(fn (array $conversion) => $conversion['percentage'] !== null)
@@ -545,8 +547,9 @@ class GrowthDashboardData
             'summary' => $stats['users_with_maintenance'] === 0
                 ? 'De activatie stopt nog voor de eerste onderhoudslog. Focus op het sneller vastleggen van het eerste onderhoud.'
                 : (($stats['users_with_active_reminder'] ?? 0) === 0
-                    ? 'Er zijn wel onderhoudslogs, maar reminders worden nog nauwelijks geactiveerd.'
+                    ? 'Er zijn wel onderhoudslogs, maar reminders worden nog nauwelijks geactiveerd als secundaire retentiefeature.'
                     : 'De basisactivatie loopt. Kijk vooral of remindergebruik en onderhoudsboekje-downloads blijven meegroeien.'),
+            'product_seo' => $this->weeklyProductSeoInterpretation($extraKpis),
         ];
 
         return [
@@ -563,8 +566,134 @@ class GrowthDashboardData
                 'active_last_30_days' => $stats['active_last_30_days'],
             ],
             'conversions' => $conversions->all(),
+            'extra_product_seo_kpis' => $extraKpis,
             'interpretation' => $interpretation,
         ];
+    }
+
+    private function weeklyProductSeoKpis(): array
+    {
+        $today = Carbon::today();
+        $sevenDayStart = $today->copy()->subDays(6)->startOfDay();
+        $previousSevenDayStart = $sevenDayStart->copy()->subDays(7);
+
+        $hasVehicles = $this->hasTable('vehicles');
+        $hasMaintenanceLogs = $this->hasTable('maintenance_logs');
+        $hasPublicVehicleColumns = $hasVehicles
+            && $this->hasColumn('vehicles', 'is_public')
+            && $this->hasColumn('vehicles', 'public_slug');
+
+        $totalUsers = User::query()->count();
+        $totalVehicles = $hasVehicles ? Vehicle::query()->count() : null;
+        $totalMaintenanceLogs = $hasMaintenanceLogs ? MaintenanceLog::query()->count() : null;
+        $usersWithTwoMaintenanceLogs = $hasVehicles && $hasMaintenanceLogs
+            ? $this->usersWithMinimumMaintenanceLogs(2)
+            : null;
+
+        $publicVehicles = collect();
+
+        if ($hasPublicVehicleColumns) {
+            $publicVehicles = Vehicle::query()
+                ->with([
+                    'user',
+                    'maintenanceLogs' => fn ($query) => $query
+                        ->latest('maintenance_date')
+                        ->latest('id'),
+                ])
+                ->where('is_public', true)
+                ->whereNotNull('public_slug')
+                ->where('public_slug', '!=', '')
+                ->get();
+        }
+
+        $publicVehiclePages = $hasPublicVehicleColumns ? $publicVehicles->count() : null;
+        $indexableVehiclePages = $hasPublicVehicleColumns
+            ? $publicVehicles
+                ->filter(fn (Vehicle $vehicle): bool => app(PublicGarageService::class)->shouldIndex($vehicle))
+                ->count()
+            : null;
+
+        $maintenanceLogsLastSevenDays = $hasMaintenanceLogs
+            ? MaintenanceLog::query()->where('created_at', '>=', $sevenDayStart)->count()
+            : null;
+        $maintenanceLogsPreviousSevenDays = $hasMaintenanceLogs
+            ? MaintenanceLog::query()
+                ->where('created_at', '>=', $previousSevenDayStart)
+                ->where('created_at', '<', $sevenDayStart)
+                ->count()
+            : null;
+
+        return [
+            'average_maintenance_logs_per_vehicle' => $totalVehicles !== null && $totalMaintenanceLogs !== null
+                ? ($totalVehicles > 0 ? round($totalMaintenanceLogs / $totalVehicles, 1) : 0.0)
+                : null,
+            'users_with_two_maintenance_logs' => $usersWithTwoMaintenanceLogs !== null
+                ? [
+                    'count' => $usersWithTwoMaintenanceLogs,
+                    'percentage' => $totalUsers > 0 ? round(($usersWithTwoMaintenanceLogs / $totalUsers) * 100, 1) : 0.0,
+                ]
+                : null,
+            'public_vehicles' => $publicVehiclePages !== null
+                ? [
+                    'count' => $publicVehiclePages,
+                    'percentage' => $totalVehicles > 0 ? round(($publicVehiclePages / $totalVehicles) * 100, 1) : 0.0,
+                ]
+                : null,
+            'public_vehicle_pages' => $publicVehiclePages,
+            'indexable_vehicle_pages' => $indexableVehiclePages,
+            'maintenance_logs_last_7_days' => [
+                'count' => $maintenanceLogsLastSevenDays,
+                'previous_count' => $maintenanceLogsPreviousSevenDays,
+                'is_increasing' => $maintenanceLogsLastSevenDays !== null
+                    && $maintenanceLogsPreviousSevenDays !== null
+                    && $maintenanceLogsLastSevenDays > $maintenanceLogsPreviousSevenDays,
+            ],
+            'new_public_pages_last_7_days' => [
+                // Vehicles currently have no published_at/public_created_at, so created_at is an approximation
+                // for pages that were public when the vehicle record was created.
+                'count' => $hasPublicVehicleColumns
+                    ? Vehicle::query()
+                        ->where('is_public', true)
+                        ->whereNotNull('public_slug')
+                        ->where('public_slug', '!=', '')
+                        ->where('created_at', '>=', $sevenDayStart)
+                        ->count()
+                    : null,
+                'is_estimate' => true,
+            ],
+            'average_days_to_first_maintenance' => $hasVehicles && $hasMaintenanceLogs
+                ? $this->averageDaysToFirstMaintenanceLog()
+                : null,
+            'average_sessions_per_user' => $this->averageSessionsPerUserLastThirtyDays(),
+            'future_kpis' => [
+                [
+                    'label' => 'AI-onboarding acceptatie',
+                    'value' => 'n.v.t. — nog niet actief',
+                ],
+            ],
+        ];
+    }
+
+    private function weeklyProductSeoInterpretation(array $extraKpis): array
+    {
+        $interpretation = [];
+
+        $usersWithTwoLogs = $extraKpis['users_with_two_maintenance_logs'] ?? null;
+        if (is_array($usersWithTwoLogs) && ($usersWithTwoLogs['percentage'] ?? 0.0) < 20.0) {
+            $interpretation[] = 'Users met ≥2 onderhoudslogs blijft laag; focus op tweede onderhoudslog.';
+        }
+
+        $publicVehicles = $extraKpis['public_vehicles'] ?? null;
+        if (is_array($publicVehicles) && ($publicVehicles['percentage'] ?? 0.0) < 25.0) {
+            $interpretation[] = 'Publieke voertuigen blijft laag; SEO-capaciteit kan omhoog.';
+        }
+
+        $logsLastSevenDays = $extraKpis['maintenance_logs_last_7_days'] ?? null;
+        if (is_array($logsLastSevenDays) && ($logsLastSevenDays['is_increasing'] ?? false)) {
+            $interpretation[] = 'Onderhoudslogs laatste 7 dagen stijgen; contentgroei positief.';
+        }
+
+        return $interpretation;
     }
 
     public function activationFunnel(): array
@@ -914,6 +1043,68 @@ class GrowthDashboardData
                 'position' => $row->position !== null ? round((float) $row->position, 2) : null,
             ])
             ->all();
+    }
+
+    private function averageDaysToFirstMaintenanceLog(): ?float
+    {
+        $firstLogs = DB::query()
+            ->fromSub(function ($query): void {
+                $query->select('vehicles.user_id')
+                    ->selectRaw('MIN(maintenance_logs.created_at) as first_maintenance_log_at')
+                    ->from('vehicles')
+                    ->join('maintenance_logs', 'maintenance_logs.vehicle_id', '=', 'vehicles.id')
+                    ->whereNotNull('vehicles.user_id')
+                    ->groupBy('vehicles.user_id');
+            }, 'first_logs')
+            ->join('users', 'users.id', '=', 'first_logs.user_id')
+            ->get(['users.created_at as user_created_at', 'first_logs.first_maintenance_log_at']);
+
+        if ($firstLogs->isEmpty()) {
+            return null;
+        }
+
+        $averageDays = $firstLogs
+            ->map(function ($row): float {
+                $userCreatedAt = Carbon::parse($row->user_created_at);
+                $firstMaintenanceLogAt = Carbon::parse($row->first_maintenance_log_at);
+
+                return $userCreatedAt->floatDiffInDays($firstMaintenanceLogAt, false);
+            })
+            ->filter(fn (float $days): bool => $days >= 0.0)
+            ->average();
+
+        return $averageDays !== null ? round((float) $averageDays, 1) : null;
+    }
+
+    private function averageSessionsPerUserLastThirtyDays(): ?float
+    {
+        if (! $this->hasTable('analytics_daily_summaries')) {
+            return null;
+        }
+
+        $window = AnalyticsDataWindow::forTable('analytics_daily_summaries');
+
+        if (! $window['has_data']) {
+            return null;
+        }
+
+        $endDate = Carbon::parse($window['end_at']);
+        $thirtyDayStart = $endDate->copy()->subDays(29)->toDateString();
+
+        $summary = AnalyticsDailySummary::query()
+            ->where('date', '>=', $thirtyDayStart)
+            ->where('date', '<=', $window['end_at'])
+            ->selectRaw('SUM(sessions) as sessions_sum')
+            ->selectRaw('SUM(users) as users_sum')
+            ->first();
+
+        $users = (int) ($summary?->users_sum ?? 0);
+
+        if ($users === 0) {
+            return null;
+        }
+
+        return round(((int) ($summary?->sessions_sum ?? 0)) / $users, 1);
     }
 
     private function usersWithMinimumMaintenanceLogs(int $minimumLogs): int
