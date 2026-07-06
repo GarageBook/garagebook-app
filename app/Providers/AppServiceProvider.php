@@ -2,13 +2,24 @@
 
 namespace App\Providers;
 
+use App\Events\Lifecycle\DocumentUploaded;
+use App\Events\Lifecycle\FuelLogCreated;
+use App\Events\Lifecycle\GaragePublished;
+use App\Events\Lifecycle\MaintenanceCreated;
+use App\Events\Lifecycle\VehicleCreated;
 use App\Filament\Auth\Http\Responses\RegistrationResponse as CustomRegistrationResponse;
+use App\Listeners\Lifecycle\UpdateLifecycleProgress;
 use App\Listeners\QueueMailerLiteSubscription;
 use App\Listeners\TrackSuccessfulLogin;
+use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
 use App\Models\TripLog;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
+use App\Observers\FuelLogObserver;
+use App\Observers\MaintenanceLogObserver;
+use App\Observers\VehicleDocumentObserver;
+use App\Observers\VehicleObserver;
 use App\Policies\MaintenanceLogPolicy;
 use App\Policies\TripLogPolicy;
 use App\Policies\VehicleDocumentPolicy;
@@ -62,7 +73,17 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('outreach-email', fn () => Limit::perSecond(4)->by('resend-outreach-email'));
         RateLimiter::for('lifecycle-email', fn () => Limit::perSecond(1)->by('resend-lifecycle-email'));
 
+        Vehicle::observe(VehicleObserver::class);
+        MaintenanceLog::observe(MaintenanceLogObserver::class);
+        VehicleDocument::observe(VehicleDocumentObserver::class);
+        FuelLog::observe(FuelLogObserver::class);
+
         Event::listen(Login::class, TrackSuccessfulLogin::class);
         Event::listen(Registered::class, QueueMailerLiteSubscription::class);
+        Event::listen(VehicleCreated::class, UpdateLifecycleProgress::class);
+        Event::listen(MaintenanceCreated::class, UpdateLifecycleProgress::class);
+        Event::listen(DocumentUploaded::class, UpdateLifecycleProgress::class);
+        Event::listen(FuelLogCreated::class, UpdateLifecycleProgress::class);
+        Event::listen(GaragePublished::class, UpdateLifecycleProgress::class);
     }
 }

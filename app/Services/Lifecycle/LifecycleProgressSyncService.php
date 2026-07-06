@@ -3,6 +3,7 @@
 namespace App\Services\Lifecycle;
 
 use App\Enums\LifecycleMilestone;
+use App\Events\Lifecycle\LifecycleStateChanged;
 use App\Models\LifecycleMilestoneEntry;
 use App\Models\LifecycleStateEntry;
 use App\Models\User;
@@ -41,6 +42,8 @@ class LifecycleProgressSyncService
             ]);
             $stateCreated = true;
         } elseif ($currentEntry->state !== $state) {
+            $previousState = (string) $currentEntry->state;
+
             $currentEntry->forceFill([
                 'exited_at' => $syncedAt,
             ])->save();
@@ -52,6 +55,8 @@ class LifecycleProgressSyncService
             ]);
             $stateCreated = true;
             $stateTransitioned = true;
+
+            event(new LifecycleStateChanged($user, $previousState, $state, $syncedAt));
         }
 
         $milestonesCreated = 0;
