@@ -9,10 +9,6 @@ use App\Services\Lifecycle\Rules\LifecycleRuleResult;
 
 class LifecycleMailAdapter
 {
-    public const UPLOAD_DOCUMENT_PREVIEW_KEY = 'upload_document_preview';
-
-    public const VEHICLE_PHOTO_REMINDER_PREVIEW_KEY = 'vehicle_photo_reminder_preview';
-
     /**
      * NoVehicleRule maps to day 2 because it is the earliest existing no-vehicle nudge.
      * The later no_vehicle_added template remains owned by the v1 lifecycle cadence.
@@ -20,8 +16,8 @@ class LifecycleMailAdapter
     private const TEMPLATE_MAP = [
         'no_vehicle' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
         'first_maintenance' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
-        'upload_document' => self::UPLOAD_DOCUMENT_PREVIEW_KEY,
-        'vehicle_photo_reminder' => self::VEHICLE_PHOTO_REMINDER_PREVIEW_KEY,
+        'upload_document' => LifecycleEmailTemplate::UPLOAD_DOCUMENT,
+        'vehicle_photo_reminder' => LifecycleEmailTemplate::VEHICLE_PHOTO_REMINDER,
         'inactive_maintenance' => LifecycleEmailTemplate::INACTIVE_USER_RETURN,
     ];
 

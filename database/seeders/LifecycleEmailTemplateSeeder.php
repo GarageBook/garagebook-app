@@ -83,6 +83,30 @@ BODY,
                 'is_active' => true,
             ],
             [
+                'email_key' => LifecycleEmailTemplate::UPLOAD_DOCUMENT,
+                'name' => 'Document toevoegen',
+                'subject' => 'Voeg bewijs toe aan je onderhoud',
+                'body' => <<<'BODY'
+Hoi {{ first_name }},
+
+Je onderhoud staat erin. Voeg een factuur, keuringsrapport of foto toe, zodat je historie later beter te onderbouwen is.
+BODY,
+                'cta_text' => 'Document toevoegen',
+                'is_active' => true,
+            ],
+            [
+                'email_key' => LifecycleEmailTemplate::VEHICLE_PHOTO_REMINDER,
+                'name' => 'Voertuigfoto toevoegen',
+                'subject' => 'Maak je GarageBook herkenbaarder',
+                'body' => <<<'BODY'
+Hoi {{ first_name }},
+
+Geef je voertuig een foto. Dan herken je je GarageBook sneller en voelt je digitale onderhoudshistorie completer.
+BODY,
+                'cta_text' => 'Foto toevoegen',
+                'is_active' => true,
+            ],
+            [
                 'email_key' => LifecycleEmailTemplate::INACTIVE_USER_RETURN,
                 'name' => 'Lang inactief',
                 'subject' => 'Is je GarageBook nog up-to-date?',

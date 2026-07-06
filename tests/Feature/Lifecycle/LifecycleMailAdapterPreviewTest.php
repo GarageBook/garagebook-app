@@ -106,22 +106,34 @@ class LifecycleMailAdapterPreviewTest extends TestCase
         $this->assertStringContainsString('laatste 7 dagen', $preview['reason']);
     }
 
-    public function test_missing_template_stays_preview_only_and_not_eligible(): void
+    public function test_upload_document_and_vehicle_photo_rules_map_to_active_templates(): void
     {
+        $this->seed(LifecycleEmailTemplateSeeder::class);
         $user = User::factory()->create();
+        $adapter = app(LifecycleMailAdapter::class);
 
-        $preview = app(LifecycleMailAdapter::class)->preview($user, LifecycleRuleResult::match(
+        $uploadDocument = $adapter->preview($user, LifecycleRuleResult::match(
             'upload_document',
             'Eerste document ontbreekt.',
             70,
             7,
         ));
+        $vehiclePhoto = $adapter->preview($user, LifecycleRuleResult::match(
+            'vehicle_photo_reminder',
+            'Voertuigfoto ontbreekt.',
+            60,
+            10,
+        ));
 
-        $this->assertSame(LifecycleMailAdapter::UPLOAD_DOCUMENT_PREVIEW_KEY, $preview['template_key']);
-        $this->assertNull($preview['subject']);
-        $this->assertNull($preview['cta']);
-        $this->assertFalse($preview['eligible']);
-        $this->assertStringContainsString('Template ontbreekt', $preview['reason']);
+        $this->assertSame(LifecycleEmailTemplate::UPLOAD_DOCUMENT, $uploadDocument['template_key']);
+        $this->assertSame('Voeg bewijs toe aan je onderhoud', $uploadDocument['subject']);
+        $this->assertSame('Document toevoegen', $uploadDocument['cta']);
+        $this->assertTrue($uploadDocument['eligible']);
+
+        $this->assertSame(LifecycleEmailTemplate::VEHICLE_PHOTO_REMINDER, $vehiclePhoto['template_key']);
+        $this->assertSame('Maak je GarageBook herkenbaarder', $vehiclePhoto['subject']);
+        $this->assertSame('Foto toevoegen', $vehiclePhoto['cta']);
+        $this->assertTrue($vehiclePhoto['eligible']);
     }
 
     public function test_command_mail_preview_queues_sends_and_logs_nothing(): void

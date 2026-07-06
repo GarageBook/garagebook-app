@@ -18,6 +18,10 @@ class LifecycleEmailTemplate extends Model
 
     public const AFTER_FIRST_MAINTENANCE_LOG = 'after_first_maintenance_log';
 
+    public const UPLOAD_DOCUMENT = 'upload_document';
+
+    public const VEHICLE_PHOTO_REMINDER = 'vehicle_photo_reminder';
+
     public const INACTIVE_USER_RETURN = 'inactive_user_return';
 
     public const EMAIL_KEYS = [
@@ -27,6 +31,8 @@ class LifecycleEmailTemplate extends Model
         self::NO_MAINTENANCE_LOG_DAY_14,
         self::NO_MAINTENANCE_LOG_DAY_30,
         self::AFTER_FIRST_MAINTENANCE_LOG,
+        self::UPLOAD_DOCUMENT,
+        self::VEHICLE_PHOTO_REMINDER,
         self::INACTIVE_USER_RETURN,
     ];
 
