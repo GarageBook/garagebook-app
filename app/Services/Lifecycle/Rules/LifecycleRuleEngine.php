@@ -74,6 +74,7 @@ class LifecycleRuleEngine
      */
     private function recordEvaluations(User $user, Collection $results, ?LifecycleRuleResult $winner, Carbon $evaluatedAt): void
     {
+        // Shadow evaluations are historical by design; retention/snapshot compaction is a later lifecycle sprint.
         foreach ($results as $result) {
             LifecycleRuleEvaluation::query()->updateOrCreate(
                 [
