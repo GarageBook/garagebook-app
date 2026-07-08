@@ -51,6 +51,10 @@ class Vehicle extends Model
         'media_attachments',
     ];
 
+    protected $attributes = [
+        'is_public' => true,
+    ];
+
     protected $casts = [
         'photos' => 'array',
         'media_attachments' => 'array',

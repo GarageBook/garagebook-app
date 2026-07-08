@@ -47,6 +47,11 @@ class VehicleResourceTest extends TestCase
             'brand' => 'Suzuki',
             'model' => 'V-Strom 800',
         ]);
+
+        $createdVehicle = Vehicle::query()->where('brand', 'Suzuki')->firstOrFail();
+
+        $this->assertTrue((bool) $createdVehicle->is_public);
+        $this->assertNotEmpty($createdVehicle->public_slug);
     }
 
     public function test_outreach_demo_user_sees_vehicle_create_blockade_and_cta(): void

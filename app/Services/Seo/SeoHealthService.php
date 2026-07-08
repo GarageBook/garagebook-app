@@ -35,6 +35,8 @@ class SeoHealthService
         $publicWithSlugButNoindex = $vehicles
             ->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug) && ! $this->publicGarageService->shouldIndex($vehicle))
             ->values();
+        $indexablePublicGaragePages = $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->shouldIndex($vehicle))->count();
+        $totalVehicles = Vehicle::query()->count();
 
         $critical = [
             'product_schema' => count($garageInspections['product_schema_urls']),
@@ -63,13 +65,17 @@ class SeoHealthService
             'critical' => $critical,
             'warning_counts' => $warnings,
             'overview' => [
-                'total_vehicles' => Vehicle::query()->count(),
+                'total_vehicles' => $totalVehicles,
                 'public_vehicles' => $vehicles->count(),
-                'indexable_public_garage_pages' => $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->shouldIndex($vehicle))->count(),
+                'hidden_vehicles' => Vehicle::query()->where('is_public', false)->count(),
+                'indexable_public_garage_pages' => $indexablePublicGaragePages,
                 'noindex_public_garage_pages' => $vehicles->filter(fn (Vehicle $vehicle): bool => ! $this->publicGarageService->shouldIndex($vehicle))->count(),
+                'vehicles_without_public_slug' => Vehicle::query()->where(fn ($query) => $query->whereNull('public_slug')->orWhere('public_slug', ''))->count(),
+                'vehicles_without_photo' => Vehicle::query()->whereNull('photo')->where(fn ($query) => $query->whereNull('photos')->orWhere('photos', '[]'))->count(),
+                'vehicles_without_maintenance' => Vehicle::query()->doesntHave('maintenanceLogs')->count(),
                 'demo_outreach_vehicles' => $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle))->count(),
                 'vehicles_with_public_slug' => $vehicles->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug))->count(),
-                'vehicles_without_public_slug' => $vehicles->filter(fn (Vehicle $vehicle): bool => blank($vehicle->public_slug))->count(),
+                'indexable_percentage' => $totalVehicles > 0 ? round(($indexablePublicGaragePages / $totalVehicles) * 100, 1) : 0.0,
             ],
             'sitemap' => [
                 'exists' => view()->exists('sitemap-garages'),

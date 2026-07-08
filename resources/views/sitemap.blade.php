@@ -4,7 +4,7 @@
         <loc>{{ url('/') }}</loc>
     </url>
     <url>
-        <loc>{{ url('/blogs') }}</loc>
+        <loc>https://garagebook.nl/blogs</loc>
     </url>
     @foreach($pages as $page)
     <url>

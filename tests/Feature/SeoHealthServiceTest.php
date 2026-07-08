@@ -8,7 +8,6 @@ use App\Models\Vehicle;
 use App\Services\PublicGarageService;
 use App\Services\Seo\SeoHealthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class SeoHealthServiceTest extends TestCase
@@ -58,8 +57,11 @@ class SeoHealthServiceTest extends TestCase
         $serviceCount = app(PublicGarageService::class)->indexableVehicles()->count();
 
         $this->assertSame($serviceCount, $report['sitemap']['eligible_count']);
-        $this->assertSame(1, $report['sitemap']['eligible_count']);
-        $this->assertSame([app(PublicGarageService::class)->canonicalUrl($indexableVehicle)], $report['sitemap']['urls']);
+        $this->assertSame(2, $report['sitemap']['eligible_count']);
+        $this->assertSame([
+            app(PublicGarageService::class)->canonicalUrl($indexableVehicle),
+            app(PublicGarageService::class)->canonicalUrl($noindexVehicle),
+        ], $report['sitemap']['urls']);
     }
 
     public function test_weak_public_pages_are_reported(): void
@@ -78,7 +80,23 @@ class SeoHealthServiceTest extends TestCase
         $this->assertSame('owner@example.com', $row['owner']);
         $this->assertContains('geen foto', $row['reasons']);
         $this->assertContains('korte/lege logomschrijving', $row['reasons']);
-        $this->assertContains('wel public_slug maar shouldIndex false', $row['reasons']);
+    }
+
+    public function test_public_vehicle_without_maintenance_or_photo_is_indexable(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createPublicVehicle($user, '2026-honda-cb750-hornet');
+
+        $this->assertTrue(app(PublicGarageService::class)->shouldIndex($vehicle->fresh(['user', 'maintenanceLogs'])));
+    }
+
+    public function test_hidden_vehicle_is_not_indexable(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createPublicVehicle($user, '2026-hidden-honda');
+        $vehicle->forceFill(['is_public' => false])->save();
+
+        $this->assertFalse(app(PublicGarageService::class)->shouldIndex($vehicle->fresh(['user', 'maintenanceLogs'])));
     }
 
     private function createPublicVehicle(User $user, string $slug): Vehicle

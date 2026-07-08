@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Filament\Pages\SeoHealthDashboard;
 use App\Models\User;
 use App\Services\PublicGarageService;
+use App\Services\Seo\SeoHealthService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +35,7 @@ class DeploymentSmokeTestCommand extends Command
 
         if ($admin instanceof User) {
             $this->assertRouteIsOk('admin dashboard', '/admin', $admin);
-            $this->assertRouteIsOk('seo health dashboard', '/admin/seo-health-dashboard', $admin);
+            $this->assertSeoHealthDashboardIsOk($admin);
         }
 
         Auth::forgetGuards();
@@ -104,6 +106,39 @@ class DeploymentSmokeTestCommand extends Command
         $this->line('✓ '.$label.': '.$path);
     }
 
+    private function assertSeoHealthDashboardIsOk(User $user): void
+    {
+        $guardName = (string) config('auth.defaults.guard', 'web');
+
+        Auth::forgetGuards();
+        Auth::shouldUse($guardName);
+        Auth::guard($guardName)->setUser($user);
+
+        try {
+            if (! SeoHealthDashboard::canAccess()) {
+                $this->recordFailure('seo health dashboard', '/admin/seo-health-dashboard', 403);
+
+                return;
+            }
+
+            app(SeoHealthService::class)->report();
+        } catch (Throwable $exception) {
+            Log::error('deployment_smoke_test_exception', [
+                'path' => '/admin/seo-health-dashboard',
+                'message' => $exception->getMessage(),
+                'exception' => $exception::class,
+            ]);
+
+            $this->recordFailure('seo health dashboard', '/admin/seo-health-dashboard', 500);
+
+            return;
+        } finally {
+            Auth::forgetGuards();
+        }
+
+        $this->line('✓ seo health dashboard: /admin/seo-health-dashboard');
+    }
+
     private function dispatchPath(string $path, ?User $user = null): Response
     {
         $appUrl = (string) config('app.url');
@@ -120,7 +155,6 @@ class DeploymentSmokeTestCommand extends Command
 
         Auth::forgetGuards();
         Auth::shouldUse($guardName);
-
         if ($user instanceof User) {
             Auth::guard($guardName)->setUser($user);
         }

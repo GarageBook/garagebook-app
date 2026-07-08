@@ -238,6 +238,10 @@
             </aside>
         </section>
 
+        <section data-public-maintenance-seo-content="true" style="margin-bottom:40px; padding:24px; border-radius:28px; background:#f8fafc; border:1px solid #e2e8f0;">
+            <h2 style="margin:0 0 12px; font-size:clamp(1.45rem, 7vw, 1.75rem); color:#111827; overflow-wrap:normal;">{{ $maintenanceSeoContent['title'] }}</h2>
+            <p style="margin:0; color:#374151; line-height:1.75; font-size:16px; max-width:820px;">{{ $maintenanceSeoContent['body'] }}</p>
+        </section>
         <section style="margin-bottom:40px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
                 <div>

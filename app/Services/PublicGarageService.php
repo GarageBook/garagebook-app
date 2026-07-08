@@ -96,19 +96,7 @@ class PublicGarageService
             return false;
         }
 
-        $timelineItems = $this->publicTimelineItems($vehicle);
-
-        if ($timelineItems === []) {
-            return false;
-        }
-
-        if ($this->publicVehiclePhotos($vehicle) !== []) {
-            return true;
-        }
-
-        return collect($timelineItems)->contains(
-            fn (array $item) => filled($item['description']) || filled($item['notes'])
-        );
+        return true;
     }
 
     public function indexableVehicles(): Collection
@@ -122,7 +110,7 @@ class PublicGarageService
             ])
             ->where('is_public', true)
             ->whereNotNull('public_slug')
-            ->whereHas('maintenanceLogs')
+            ->where('public_slug', '!=', '')
             ->orderBy('public_slug')
             ->get()
             ->filter(fn (Vehicle $vehicle) => $this->shouldIndex($vehicle))
@@ -179,6 +167,29 @@ class PublicGarageService
             'Deze publieke GarageBook-pagina laat zien welke onderhoudsmomenten de eigenaar van deze %s heeft opgebouwd. Onderhoud, kilometerstanden, foto\'s en bewijsstukken worden hier deelbaar samengebracht, terwijl de eigenaar controle houdt over wat openbaar is.',
             $this->publicVehicleName($vehicle),
         );
+    }
+
+    public function publicMaintenanceSeoContent(Vehicle $vehicle): array
+    {
+        $vehicleName = $this->publicVehicleName($vehicle);
+        $hasMaintenance = $vehicle->relationLoaded('maintenanceLogs')
+            ? $vehicle->maintenanceLogs->isNotEmpty()
+            : $vehicle->maintenanceLogs()->exists();
+
+        if ($hasMaintenance) {
+            return [
+                'title' => 'Onderhoud van '.$vehicleName,
+                'body' => sprintf(
+                    'Deze GarageBook-pagina bevat de onderhoudsgeschiedenis van een %s. Hier vind je uitgevoerde onderhoudsbeurten, vervangen onderdelen, reparaties, kilometerstanden en overige werkzaamheden.',
+                    $vehicleName,
+                ),
+            ];
+        }
+
+        return [
+            'title' => 'Onderhoud van deze '.$this->publicVehicleHeading($vehicle),
+            'body' => 'Voor dit voertuig zijn op dit moment nog geen onderhoudswerkzaamheden geregistreerd. Zodra de eigenaar onderhoud toevoegt, verschijnt dit automatisch op deze pagina.',
+        ];
     }
 
     public function publicVehiclePhotos(Vehicle $vehicle): array

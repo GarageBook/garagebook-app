@@ -88,7 +88,7 @@ class DeploymentSmokeTestCommandTest extends TestCase
             'model' => 'NC750X',
             'year' => 2026,
             'public_slug' => '2026-honda-nc750x',
-            'is_public' => true,
+            'is_public' => false,
         ]);
 
         $this->artisan('garagebook:deployment-smoke-test')

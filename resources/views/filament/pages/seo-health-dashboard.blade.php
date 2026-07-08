@@ -29,11 +29,13 @@
                 @foreach([
                     'Totaal voertuigen' => $report['overview']['total_vehicles'] ?? 0,
                     'Publieke voertuigen' => $report['overview']['public_vehicles'] ?? 0,
-                    'Indexeerbaar publiek' => $report['overview']['indexable_public_garage_pages'] ?? 0,
-                    'Noindex publiek' => $report['overview']['noindex_public_garage_pages'] ?? 0,
-                    'Demo/outreach' => $report['overview']['demo_outreach_vehicles'] ?? 0,
-                    'Met public_slug' => $report['overview']['vehicles_with_public_slug'] ?? 0,
-                    'Zonder public_slug' => $report['overview']['vehicles_without_public_slug'] ?? 0,
+                    'Verborgen voertuigen' => $report['overview']['hidden_vehicles'] ?? 0,
+                    'Indexeerbare voertuigen' => $report['overview']['indexable_public_garage_pages'] ?? 0,
+                    'Voertuigen zonder slug' => $report['overview']['vehicles_without_public_slug'] ?? 0,
+                    'Voertuigen zonder foto' => $report['overview']['vehicles_without_photo'] ?? 0,
+                    'Voertuigen zonder onderhoud' => $report['overview']['vehicles_without_maintenance'] ?? 0,
+                    'Outreach-demo uitgesloten' => $report['overview']['demo_outreach_vehicles'] ?? 0,
+                    'Percentage indexeerbaar' => ($report['overview']['indexable_percentage'] ?? 0) . '%',
                 ] as $label => $value)
                     <div class="{{ $card }}">
                         <div class="text-sm text-gray-500 dark:text-gray-400">{{ $label }}</div>

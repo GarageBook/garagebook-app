@@ -34,11 +34,11 @@ class PublicGaragePageTest extends TestCase
             'maintenance_date' => '2026-05-01',
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('Aantoonbare voertuiggeschiedenis van deze 2008 Toyota Highlander Hybrid Limited');
-        $response->assertSee('<link rel="canonical" href="' . url('/garage/' . $vehicle->public_slug) . '">', false);
+        $response->assertSee('<link rel="canonical" href="'.url('/garage/'.$vehicle->public_slug).'">', false);
         $response->assertSee('<meta name="robots" content="index,follow">', false);
         $response->assertSee('<meta name="description" content="Bekijk de gedeelde onderhoudsgeschiedenis van deze Toyota Highlander Hybrid Limited in GarageBook. 1 onderhoudsmoment(en) en 1 moment(en) met kilometerstand laten zien wat de eigenaar aantoonbaar heeft vastgelegd.">', false);
         $response->assertSee('"@type": "Vehicle"', false);
@@ -50,7 +50,8 @@ class PublicGaragePageTest extends TestCase
         $response->assertSee('Eigenaar bepaalt wat openbaar is');
         $response->assertSee('01-05-2026');
         $response->assertSee('Deze publieke GarageBook-pagina laat zien welke onderhoudsmomenten de eigenaar van deze 2008 Toyota Highlander Hybrid Limited heeft opgebouwd. Onderhoud, kilometerstanden, foto\'s en bewijsstukken worden hier deelbaar samengebracht, terwijl de eigenaar controle houdt over wat openbaar is.');
-        $response->assertDontSee('"item": "' . url('/garage') . '"', false);
+        $response->assertSee('Deze GarageBook-pagina bevat de onderhoudsgeschiedenis van een 2008 Toyota Highlander Hybrid Limited. Hier vind je uitgevoerde onderhoudsbeurten, vervangen onderdelen, reparaties, kilometerstanden en overige werkzaamheden.');
+        $response->assertDontSee('"item": "'.url('/garage').'"', false);
     }
 
     public function test_public_garage_structured_data_uses_webpage_main_entity_vehicle_without_product_markup(): void
@@ -76,7 +77,7 @@ class PublicGaragePageTest extends TestCase
             'maintenance_date' => '2026-05-01',
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
         $schema = $this->publicGarageStructuredData($response->getContent());
 
         $response->assertOk();
@@ -110,7 +111,7 @@ class PublicGaragePageTest extends TestCase
             'photo' => 'vehicle-photos/hero-bike.jpg',
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('data-public-vehicle-hero="true"', false);
@@ -137,7 +138,7 @@ class PublicGaragePageTest extends TestCase
             'photos' => ['vehicle-photos/hero-bike-2.jpg'],
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('data-public-vehicle-hero-prev="true"', false);
@@ -216,7 +217,7 @@ class PublicGaragePageTest extends TestCase
             asset('storage/vehicle-photos/highlander-3.jpg'),
         ];
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('data-public-vehicle-hero-total="3"', false);
@@ -241,7 +242,7 @@ class PublicGaragePageTest extends TestCase
             'is_public' => true,
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSeeText("Nog geen publieke voertuigfoto's zichtbaar");
@@ -264,7 +265,7 @@ class PublicGaragePageTest extends TestCase
             'photo' => 'vehicle-photos/single-hero-bike.jpg',
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertDontSee('aria-label="Vorige voertuigfoto"', false);
@@ -309,7 +310,7 @@ class PublicGaragePageTest extends TestCase
             ],
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('Historieperiode');
@@ -348,7 +349,7 @@ class PublicGaragePageTest extends TestCase
         ]);
 
         $this->get('/share/willem-van-veelen/toyota-highlander-hybrid-limited')
-            ->assertRedirect(url('/garage/' . $vehicle->public_slug))
+            ->assertRedirect(url('/garage/'.$vehicle->public_slug))
             ->assertStatus(301);
     }
 
@@ -371,7 +372,7 @@ class PublicGaragePageTest extends TestCase
             'maintenance_date' => '2026-05-03',
         ]);
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertNotFound();
     }
 
@@ -398,7 +399,7 @@ class PublicGaragePageTest extends TestCase
             'maintenance_date' => '2026-05-04',
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertDontSee('Willem van Veelen');
@@ -429,7 +430,7 @@ class PublicGaragePageTest extends TestCase
             'cost' => 123.45,
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('Kosten inzicht');
@@ -466,7 +467,7 @@ class PublicGaragePageTest extends TestCase
             ],
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('Eigenaar bepaalt wat openbaar is');
@@ -519,12 +520,12 @@ class PublicGaragePageTest extends TestCase
         $this->get('/sitemap-garages.xml')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/xml')
-            ->assertSee(url('/garage/' . $indexableVehicle->public_slug), false)
-            ->assertDontSee(url('/garage/' . $privateVehicle->public_slug), false)
-            ->assertDontSee('/garage/1999-aprilia-rsv-mille', false);
+            ->assertSee(url('/garage/'.$indexableVehicle->public_slug), false)
+            ->assertDontSee(url('/garage/'.$privateVehicle->public_slug), false)
+            ->assertSee('/garage/1999-aprilia-rsv-mille', false);
     }
 
-    public function test_non_indexable_public_vehicle_uses_noindex_follow_and_stays_out_of_sitemap(): void
+    public function test_public_vehicle_without_rich_content_is_indexable_and_in_sitemap(): void
     {
         $user = User::factory()->create();
 
@@ -536,21 +537,16 @@ class PublicGaragePageTest extends TestCase
             'is_public' => true,
         ]);
 
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'description' => '',
-            'km_reading' => 0,
-            'maintenance_date' => '2026-05-10',
-            'notes' => '',
-        ]);
+        $this->assertTrue(app(PublicGarageService::class)->shouldIndex($vehicle->fresh(['user', 'maintenanceLogs'])));
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
-            ->assertSee('<meta name="robots" content="noindex,follow">', false);
+            ->assertSee('<meta name="robots" content="index,follow">', false)
+            ->assertSee('Voor dit voertuig zijn op dit moment nog geen onderhoudswerkzaamheden geregistreerd. Zodra de eigenaar onderhoud toevoegt, verschijnt dit automatisch op deze pagina.');
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
-            ->assertDontSee(url('/garage/' . $vehicle->public_slug), false);
+            ->assertSee(url('/garage/'.$vehicle->public_slug), false);
     }
 
     public function test_public_page_shows_empty_states_when_no_public_history_or_photos_are_available(): void
@@ -565,12 +561,13 @@ class PublicGaragePageTest extends TestCase
             'is_public' => true,
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSeeText('Nog geen publieke voertuigfoto\'s zichtbaar');
         $response->assertSee('Nog geen publiek onderhoud gedeeld');
-        $response->assertSee('Deze pagina is publiek zichtbaar, maar nog niet bedoeld voor indexatie zolang de gedeelde historie beperkt is.');
+        $response->assertSee('Voor dit voertuig zijn op dit moment nog geen onderhoudswerkzaamheden geregistreerd. Zodra de eigenaar onderhoud toevoegt, verschijnt dit automatisch op deze pagina.');
+        $response->assertDontSee('Deze pagina is publiek zichtbaar, maar nog niet bedoeld voor indexatie zolang de gedeelde historie beperkt is.');
     }
 
     public function test_existing_public_slug_stays_unchanged_after_vehicle_identity_fields_change(): void
@@ -632,7 +629,7 @@ class PublicGaragePageTest extends TestCase
             'maintenance_date' => '2026-05-09',
         ]);
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
             ->assertSee('https://garagebook.nl/digitaal-onderhoudsboekje/', false);
     }
@@ -641,17 +638,17 @@ class PublicGaragePageTest extends TestCase
     {
         $service = app(PublicGarageService::class);
 
-        $motorcycle = new Vehicle();
+        $motorcycle = new Vehicle;
         $motorcycle->setRawAttributes([
             'vehicle_type' => 'motorfiets',
         ], true);
 
-        $car = new Vehicle();
+        $car = new Vehicle;
         $car->setRawAttributes([
             'category' => 'auto',
         ], true);
 
-        $unknown = new Vehicle();
+        $unknown = new Vehicle;
         $unknown->setRawAttributes([
             'vehicle_type' => 'scooterproject',
         ], true);
@@ -680,7 +677,7 @@ class PublicGaragePageTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/maintenance/pdf?vehicle_id=' . $vehicle->id)
+            ->get('/maintenance/pdf?vehicle_id='.$vehicle->id)
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
     }
@@ -737,7 +734,7 @@ class PublicGaragePageTest extends TestCase
             'attachments' => ['maintenance-attachments/hidden.jpg'],
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertSee('storage/maintenance-attachments/visible-1.jpg', false);
@@ -774,12 +771,11 @@ class PublicGaragePageTest extends TestCase
             ],
         ]);
 
-        $response = $this->get('/garage/' . $vehicle->public_slug);
+        $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
         $response->assertDontSee('storage/maintenance-attachments/private.jpg', false);
     }
-
 
     public function test_public_page_hides_maintenance_photo_when_photo_visibility_is_disabled(): void
     {
@@ -807,7 +803,7 @@ class PublicGaragePageTest extends TestCase
             ],
         ]);
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
             ->assertDontSee('storage/maintenance-attachments/hidden-photo.jpg', false);
     }
@@ -841,7 +837,7 @@ class PublicGaragePageTest extends TestCase
             ],
         ]);
 
-        $this->get('/garage/' . $vehicle->public_slug)
+        $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
             ->assertSee('storage/maintenance-attachments/visible-photo.jpg', false)
             ->assertDontSee('storage/maintenance-attachments/private-invoice.pdf', false)
@@ -900,5 +896,4 @@ class PublicGaragePageTest extends TestCase
 
         return false;
     }
-
 }

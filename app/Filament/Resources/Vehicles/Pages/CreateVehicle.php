@@ -92,6 +92,7 @@ class CreateVehicle extends CreateRecord
         abort_if($this->isOutreachDemoUser(), 403);
 
         $data['user_id'] = auth()->id();
+        $data['is_public'] = $data['is_public'] ?? true;
         $data['distance_unit'] = app(DistanceUnitService::class)->normalizeUnit($data['distance_unit'] ?? null);
         $data['current_km'] = (int) round(
             app(DistanceUnitService::class)->toKilometers($data['current_km'] ?? null, $data['distance_unit'], 0) ?? 0

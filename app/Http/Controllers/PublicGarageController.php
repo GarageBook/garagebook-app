@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\PublicGarageService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -11,10 +12,9 @@ class PublicGarageController extends Controller
 {
     public function __construct(
         private readonly PublicGarageService $publicGarageService,
-    ) {
-    }
+    ) {}
 
-    public function show(string $publicSlug): View
+    public function show(Request $request, string $publicSlug): View|RedirectResponse
     {
         $vehicle = $this->publicGarageService->findPublicVehicleBySlug($publicSlug);
 
@@ -23,6 +23,9 @@ class PublicGarageController extends Controller
         $vehicleName = $this->publicGarageService->publicVehicleName($vehicle);
         $vehicleHeading = $this->publicGarageService->publicVehicleHeading($vehicle);
         $canonicalUrl = $this->publicGarageService->publicUrl($vehicle);
+        if ($request->getQueryString() !== null) {
+            return redirect()->to($canonicalUrl, 301);
+        }
         $isIndexable = $this->publicGarageService->shouldIndex($vehicle);
         $publicStats = $this->publicGarageService->publicStats($vehicle);
         $timelineItems = $this->publicGarageService->publicTimelineItems($vehicle);
@@ -32,9 +35,10 @@ class PublicGarageController extends Controller
             'historyHighlights' => $this->publicGarageService->publicHistoryHighlights($vehicle),
             'introText' => $this->publicGarageService->publicIntroText($vehicle),
             'isIndexable' => $isIndexable,
+            'maintenanceSeoContent' => $this->publicGarageService->publicMaintenanceSeoContent($vehicle),
             'metaDescription' => $this->publicGarageService->publicMetaDescription($vehicle),
             'metaRobots' => $isIndexable ? 'index,follow' : 'noindex,follow',
-            'metaTitle' => trim($vehicleName) . ' voertuiggeschiedenis | GarageBook',
+            'metaTitle' => trim($vehicleName).' voertuiggeschiedenis | GarageBook',
             'publicStats' => $publicStats,
             'shareCues' => $this->publicGarageService->publicShareCues($vehicle),
             'timelineItems' => $timelineItems,
