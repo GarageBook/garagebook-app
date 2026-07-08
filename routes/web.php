@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Auth\Register;
+use App\Http\Controllers\Admin\SearchConsoleInsightsExportController;
 use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
@@ -9,8 +10,8 @@ use App\Http\Controllers\OutreachDemoLoginController;
 use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
-use App\Http\Controllers\VehicleAuthorityController;
 use App\Http\Controllers\TripPhotoController;
+use App\Http\Controllers\VehicleAuthorityController;
 use App\Http\Controllers\VehicleDocumentController;
 use App\Models\Blog;
 use App\Models\MaintenanceLog;
@@ -88,6 +89,9 @@ Route::get('/maintenance/pdf', function () {
 
 Route::get('/admin/seo-health-dashboard/export', SeoHealthDashboardExportController::class)
     ->name('admin.seo-health-dashboard.export');
+
+Route::get('/admin/search-console-insights/export', SearchConsoleInsightsExportController::class)
+    ->name('admin.search-console-insights.export');
 
 Route::middleware('auth')->group(function () {
 

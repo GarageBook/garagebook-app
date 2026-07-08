@@ -8,6 +8,7 @@ use App\Filament\Pages\AnalyticsDashboard;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\GrowthDashboard;
 use App\Filament\Pages\LocalizationOverview;
+use App\Filament\Pages\SearchConsoleInsights;
 use App\Filament\Pages\SeoHealthDashboard;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
@@ -59,6 +60,7 @@ class AdminPanelProvider extends PanelProvider
                 GrowthDashboard::class,
                 LocalizationOverview::class,
                 SeoHealthDashboard::class,
+                SearchConsoleInsights::class,
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
                 BlogResource::class,
