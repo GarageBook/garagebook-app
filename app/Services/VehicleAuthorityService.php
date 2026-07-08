@@ -19,6 +19,7 @@ class VehicleAuthorityService
 
     public function __construct(
         private readonly VehicleAuthorityIndexService $indexService,
+        private readonly VehicleIntelligenceService $intelligenceService,
     ) {}
 
     public function resolveBySlug(string $slug): ?array
@@ -67,34 +68,24 @@ class VehicleAuthorityService
             return null;
         }
 
+        $intelligence = $this->intelligenceService->forBrandModel($brand, $model);
+
         return [
             'brand' => $brand,
             'model' => $model,
             'slug' => $slug,
             'category' => $entry->category,
-            'year_range' => $this->yearRange($vehicles),
+            // year_range from intelligence covers all public vehicles, not just the top 5
+            'year_range' => $intelligence['specifications']['year_range'],
             'public_vehicles' => $vehicles,
             'related_models' => $this->indexService->relatedModels($brand, $model, 8),
             'related_pages' => self::RELATED_PAGES,
             'faq_items' => $this->faqItems($brand, $model),
+            'intelligence' => $intelligence,
+            'public_vehicle_count' => $entry->public_vehicle_count,
+            'first_seen_at' => $entry->first_seen_at,
+            'last_seen_at' => $entry->updated_at,
         ];
-    }
-
-    /**
-     * @param  Collection<int, Vehicle>  $vehicles
-     */
-    private function yearRange(Collection $vehicles): ?string
-    {
-        $years = $vehicles->pluck('year')->filter()->sort()->values();
-
-        if ($years->isEmpty()) {
-            return null;
-        }
-
-        $min = $years->first();
-        $max = $years->last();
-
-        return $min === $max ? (string) $min : "{$min}–{$max}";
     }
 
     /**

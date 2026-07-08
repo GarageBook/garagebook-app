@@ -1592,6 +1592,100 @@ samp,
     line-height: 1.4;
 }
 
+/* Vehicle Intelligence – specifications table */
+.gb-specs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 28px;
+    font-size: 0.95rem;
+}
+
+.gb-specs-row {
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.gb-specs-row:last-child {
+    border-bottom: none;
+}
+
+.gb-specs-key {
+    padding: 10px 16px 10px 0;
+    font-weight: 600;
+    color: #374151;
+    text-align: left;
+    white-space: nowrap;
+    width: 40%;
+}
+
+.gb-specs-value {
+    padding: 10px 0;
+    color: #111827;
+}
+
+/* Vehicle Intelligence – maintenance frequency list */
+.gb-maintenance-freq-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gb-maintenance-freq-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.gb-maintenance-freq-label {
+    font-size: 0.9rem;
+    color: #374151;
+    flex: 1;
+    min-width: 0;
+}
+
+.gb-maintenance-freq-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* Vehicle Intelligence – GarageBook statistieken */
+.gb-garage-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 16px 0 32px;
+}
+
+.gb-garage-stats-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.gb-garage-stats-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.gb-garage-stats-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    line-height: 1.3;
+}
+
 /* Topic links section — homepage internal link grid */
 .gb-topic-links {
     margin: 40px 0 0;
