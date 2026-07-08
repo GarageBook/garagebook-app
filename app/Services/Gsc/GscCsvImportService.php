@@ -17,9 +17,14 @@ class GscCsvImportService
     /**
      * @return array{pages:int,queries:int,date:string}
      */
-    public function import(?string $pagesPath, ?string $queriesPath, string $date): array
+    public function import(?string $pagesPath, ?string $queriesPath, string $date, bool $replaceExisting = false): array
     {
         $snapshotDate = Carbon::parse($date)->toDateString();
+
+        if ($replaceExisting) {
+            GscPageSnapshot::query()->whereDate('date', $snapshotDate)->delete();
+            GscQuerySnapshot::query()->whereDate('date', $snapshotDate)->delete();
+        }
 
         return [
             'pages' => $pagesPath ? $this->importPages($pagesPath, $snapshotDate) : 0,
