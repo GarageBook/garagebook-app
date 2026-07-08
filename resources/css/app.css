@@ -1443,6 +1443,155 @@ samp,
     overflow-wrap: normal !important;
 }
 
+/* Breadcrumbs */
+.gb-breadcrumbs {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.gb-breadcrumbs__link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.gb-breadcrumbs__link:hover {
+    color: #111827;
+    text-decoration: underline;
+}
+
+.gb-breadcrumbs__sep {
+    color: #d1d5db;
+}
+
+.gb-breadcrumbs__current {
+    color: #111827;
+    font-weight: 500;
+}
+
+/* Page intro paragraph */
+.gb-page-intro {
+    font-size: 18px;
+    color: #374151;
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 760px;
+}
+
+/* Vehicle authority list (public vehicles of same model) */
+.gb-vehicle-authority-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 20px 0 32px;
+}
+
+.gb-vehicle-authority-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #111827;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.15s ease;
+    flex-wrap: wrap;
+}
+
+.gb-vehicle-authority-item:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+}
+
+.gb-vehicle-authority-item__name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gb-vehicle-authority-item__variant {
+    font-weight: 400;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.gb-vehicle-authority-item__count {
+    font-size: 0.85rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* Related models from same brand */
+.gb-vehicle-authority-related {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0 32px;
+}
+
+.gb-vehicle-authority-related__item {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: #f3f4f6;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.gb-vehicle-authority-related__item:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+/* FAQ section */
+.gb-faq {
+    margin: 8px 0 32px;
+}
+
+.gb-faq__item {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 20px 0;
+}
+
+.gb-faq__item:last-child {
+    border-bottom: none;
+}
+
+.gb-faq__question {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px;
+}
+
+.gb-faq__answer {
+    font-size: 0.95rem;
+    color: #374151;
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* Related content description line */
+.gb-related-content__desc {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
 /* Topic links section — homepage internal link grid */
 .gb-topic-links {
     margin: 40px 0 0;

@@ -9,6 +9,7 @@ use App\Http\Controllers\OutreachDemoLoginController;
 use App\Http\Controllers\Public\StartRedirectController;
 use App\Http\Controllers\PublicGarageController;
 use App\Http\Controllers\PublicImageController;
+use App\Http\Controllers\VehicleAuthorityController;
 use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleDocumentController;
 use App\Models\Blog;
@@ -149,6 +150,19 @@ Route::get('/sitemap.xml', function () {
 
 Route::get('/sitemap-garages.xml', [PublicGarageController::class, 'sitemap'])
     ->name('sitemap.garages');
+
+Route::get('/sitemap-onderhoud.xml', [VehicleAuthorityController::class, 'sitemap'])
+    ->name('sitemap.onderhoud');
+
+/*
+|--------------------------------------------------------------------------
+| VEHICLE AUTHORITY PAGES
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/onderhoud/{slug}', [VehicleAuthorityController::class, 'show'])
+    ->name('onderhoud.show')
+    ->where('slug', '[a-z0-9][a-z0-9-]+');
 
 Route::get('/robots.txt', function () {
     return response()
