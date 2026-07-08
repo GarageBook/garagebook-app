@@ -23,6 +23,7 @@ class GscImportSession extends Model
         'date_rows_imported',
         'duration_ms',
         'warnings',
+        'notices',
         'errors',
     ];
 
@@ -41,6 +42,7 @@ class GscImportSession extends Model
             'date_rows_imported' => 'integer',
             'duration_ms' => 'integer',
             'warnings' => 'array',
+            'notices' => 'array',
             'errors' => 'array',
         ];
     }

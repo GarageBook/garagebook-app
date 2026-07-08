@@ -65,6 +65,10 @@ class ImportGscFolderCommand extends Command
         $this->line('Search appearance rows imported: '.$summary['search_appearances_imported']);
         $this->line('Date rows imported: '.$summary['date_rows_imported']);
 
+        foreach ($summary['notices'] ?? [] as $notice) {
+            $this->info($notice);
+        }
+
         foreach ($summary['warnings'] ?? [] as $warning) {
             $this->warn($warning);
         }

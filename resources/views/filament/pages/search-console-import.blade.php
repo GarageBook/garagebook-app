@@ -69,11 +69,15 @@
 
         @if ($result)
             <section class="{{ $card }}">
-                <h2 class="mb-3 text-base font-semibold text-gray-950 dark:text-white">Importresultaat</h2>
+                <h2 class="text-base font-semibold text-gray-950 dark:text-white">Importresultaat</h2>
+                @if (($result['status'] ?? null) !== 'failed')
+                    <p class="mt-1 mb-3 text-sm font-medium text-success-700 dark:text-success-400">Import succesvol voltooid.</p>
+                @endif
                 <dl class="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-5">
                     <div><dt class="text-gray-500 dark:text-gray-400">Status</dt><dd class="font-medium">{{ $result['status'] }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Bestanden verwerkt</dt><dd class="font-medium">{{ $result['processed_files'] ?? 0 }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Bestanden overgeslagen</dt><dd class="font-medium">{{ $result['skipped_files'] ?? 0 }}</dd></div>
+                    <div><dt class="text-gray-500 dark:text-gray-400">Bewust overgeslagen</dt><dd class="font-medium">{{ $result['intentionally_skipped_files'] ?? 0 }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Pagina's</dt><dd class="font-medium">{{ number_format($result['pages'] ?? 0, 0, ',', '.') }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Queries</dt><dd class="font-medium">{{ number_format($result['queries'] ?? 0, 0, ',', '.') }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Landen</dt><dd class="font-medium">{{ number_format($result['countries'] ?? 0, 0, ',', '.') }}</dd></div>
@@ -82,6 +86,17 @@
                     <div><dt class="text-gray-500 dark:text-gray-400">Datumregels</dt><dd class="font-medium">{{ number_format($result['date_rows'] ?? 0, 0, ',', '.') }}</dd></div>
                     <div><dt class="text-gray-500 dark:text-gray-400">Importduur</dt><dd class="font-medium">{{ number_format($result['duration_seconds'] ?? 0, 1, ',', '.') }}s</dd></div>
                 </dl>
+
+                @if (($result['notices'] ?? []) !== [])
+                    <div class="mt-4 rounded-lg border border-info-200 bg-info-50 p-3 text-sm text-info-900">
+                        <strong>Info</strong>
+                        <ul class="mt-2 list-disc pl-5">
+                            @foreach ($result['notices'] as $notice)
+                                <li>{{ $notice }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 @if (($result['warnings'] ?? []) !== [])
                     <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -125,6 +140,7 @@
                             <th class="py-2 pr-4">Date rows</th>
                             <th class="py-2 pr-4">Gebruiker</th>
                             <th class="py-2 pr-4">Duur</th>
+                            <th class="py-2 pr-4">Info</th>
                             <th class="py-2 pr-4">Warnings</th>
                         </tr>
                     </thead>
@@ -144,6 +160,20 @@
                                 <td class="py-3 pr-4">{{ $row['user'] }}</td>
                                 <td class="py-3 pr-4">{{ $row['duration'] }}</td>
                                 <td class="py-3 pr-4">
+                                    @if ($row['notices'] !== [])
+                                        <details>
+                                            <summary>{{ count($row['notices']) }}</summary>
+                                            <ul class="mt-2 list-disc pl-5">
+                                                @foreach ($row['notices'] as $notice)
+                                                    <li>{{ $notice }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </details>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td class="py-3 pr-4">
                                     @if ($row['warnings'] !== [])
                                         <details>
                                             <summary>{{ count($row['warnings']) }}</summary>
@@ -159,7 +189,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="13" class="py-4 text-gray-500">Nog geen imports gevonden.</td></tr>
+                            <tr><td colspan="14" class="py-4 text-gray-500">Nog geen imports gevonden.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

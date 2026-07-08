@@ -165,7 +165,8 @@ class SearchConsoleImportTest extends TestCase
             ->set('pagesCsv', $this->pagesCsv())
             ->set('queriesCsv', $this->queriesCsv())
             ->call('import')
-            ->assertSet('result.status', 'completed_with_warnings')
+            ->assertSet('result.status', 'completed')
+            ->assertSet('result.warnings', [])
             ->assertSet('result.pages', 1);
 
         $this->assertDatabaseMissing('gsc_page_snapshots', [

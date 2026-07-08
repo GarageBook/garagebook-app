@@ -173,7 +173,7 @@ class SearchConsoleInsightsService
                 ->all(),
             'dates' => GscDateSnapshot::query()
                 ->whereDate('date', $latestDate)
-                ->orderBy('data_date')
+                ->orderByDesc('data_date')
                 ->get()
                 ->map(fn (GscDateSnapshot $row): array => [
                     'date' => $row->data_date?->toDateString(),

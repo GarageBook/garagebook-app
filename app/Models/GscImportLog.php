@@ -16,6 +16,7 @@ class GscImportLog extends Model
         'duration_ms',
         'status',
         'warnings',
+        'notices',
         'errors',
     ];
 
@@ -27,6 +28,7 @@ class GscImportLog extends Model
             'queries_imported' => 'integer',
             'duration_ms' => 'integer',
             'warnings' => 'array',
+            'notices' => 'array',
             'errors' => 'array',
         ];
     }

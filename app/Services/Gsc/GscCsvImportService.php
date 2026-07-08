@@ -52,16 +52,23 @@ class GscCsvImportService
         $startedAt = microtime(true);
         $normalizedFiles = $this->normalizeFiles($files);
 
-        $session = GscImportSession::query()->create([
+        $sessionPayload = [
             'import_date' => $snapshotDate,
             'user_id' => $userId,
             'status' => 'pending',
             'total_files' => count($normalizedFiles),
             'warnings' => [],
             'errors' => [],
-        ]);
+        ];
+
+        if (Schema::hasColumn('gsc_import_sessions', 'notices')) {
+            $sessionPayload['notices'] = [];
+        }
+
+        $session = GscImportSession::query()->create($sessionPayload);
 
         $warnings = [];
+        $notices = [];
         $errors = [];
         $counts = [
             'pages' => 0,
@@ -72,20 +79,20 @@ class GscCsvImportService
             'date_rows' => 0,
             'processed_files' => 0,
             'skipped_files' => 0,
+            'intentionally_skipped_files' => 0,
         ];
 
         try {
             if (! $replace && $this->hasSnapshotsForDate($snapshotDate)) {
                 $message = 'Er bestaat al GSC-data voor deze datum. Kies bestaande data vervangen om opnieuw te importeren.';
-                $warnings[] = $message;
                 $counts['skipped_files'] = count($normalizedFiles);
 
-                return $this->finishSession($session, $startedAt, 'failed', $counts, $warnings, [$message]);
+                return $this->finishSession($session, $startedAt, 'failed', $counts, [], [], [$message]);
             }
 
             if ($replace) {
                 $this->deleteSnapshotsForDate($snapshotDate);
-                $warnings[] = 'Bestaande GSC-data voor '.$snapshotDate.' is vervangen.';
+                $notices[] = 'Bestaande GSC-data voor '.$snapshotDate.' is vervangen.';
             }
 
             foreach ($normalizedFiles as $file) {
@@ -110,14 +117,20 @@ class GscCsvImportService
                 }
 
                 if ($imported === null) {
-                    $warnings[] = $this->skippedFileWarning($file['name'], $file['path'], $type);
+                    if ($type === GscCsvTypeDetector::FILTERS) {
+                        $notices[] = $file['name'].': bewust overgeslagen (filters).';
+                        $counts['intentionally_skipped_files']++;
+                    } else {
+                        $warnings[] = $this->skippedFileWarning($file['name'], $file['path'], $type);
+                    }
+
                     $counts['skipped_files']++;
 
                     continue;
                 }
 
                 if ($this->normalizer->hasCompareColumns($this->typeDetector->headers($file['path']))) {
-                    $warnings[] = $file['name'].': Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.';
+                    $notices[] = $file['name'].': Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.';
                 }
 
                 match ($type) {
@@ -134,10 +147,10 @@ class GscCsvImportService
             }
 
             $status = $errors !== []
-                ? ($counts['processed_files'] > 0 ? 'completed_with_warnings' : 'failed')
+                ? 'failed'
                 : ($warnings !== [] ? 'completed_with_warnings' : 'completed');
 
-            return $this->finishSession($session, $startedAt, $status, $counts, $warnings, $errors);
+            return $this->finishSession($session, $startedAt, $status, $counts, $warnings, $notices, $errors);
         } finally {
             foreach ($normalizedFiles as $file) {
                 if ($file['delete_after'] && is_file($file['path'])) {
@@ -381,7 +394,7 @@ class GscCsvImportService
             ->all();
     }
 
-    private function finishSession(GscImportSession $session, float $startedAt, string $status, array $counts, array $warnings, array $errors): array
+    private function finishSession(GscImportSession $session, float $startedAt, string $status, array $counts, array $warnings, array $notices, array $errors): array
     {
         $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
         $payload = [
@@ -396,10 +409,16 @@ class GscCsvImportService
             'date_rows_imported' => $counts['date_rows'],
             'duration_ms' => $durationMs,
             'warnings' => $warnings,
+            'notices' => $notices,
             'errors' => $errors,
         ];
 
-        $session->update($payload);
+        $sessionPayload = $payload;
+        if (! Schema::hasColumn('gsc_import_sessions', 'notices')) {
+            unset($sessionPayload['notices']);
+        }
+
+        $session->update($sessionPayload);
 
         if (Schema::hasTable('gsc_import_logs')) {
             $logPayload = [
@@ -410,8 +429,13 @@ class GscCsvImportService
                 'duration_ms' => $durationMs,
                 'status' => $status,
                 'warnings' => $warnings,
+                'notices' => $notices,
                 'errors' => $errors,
             ];
+
+            if (! Schema::hasColumn('gsc_import_logs', 'notices')) {
+                unset($logPayload['notices']);
+            }
 
             if (Schema::hasColumn('gsc_import_logs', 'gsc_import_session_id')) {
                 $logPayload['gsc_import_session_id'] = $session->id;
@@ -420,7 +444,7 @@ class GscCsvImportService
             GscImportLog::query()->create($logPayload);
         }
 
-        return ['session_id' => $session->id, 'date' => $session->import_date?->toDateString()] + $payload;
+        return ['session_id' => $session->id, 'date' => $session->import_date?->toDateString(), 'intentionally_skipped_files' => $counts['intentionally_skipped_files'] ?? 0] + $payload;
     }
 
     private function skippedFileWarning(string $name, string $path, string $type): string

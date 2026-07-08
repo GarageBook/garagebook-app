@@ -167,6 +167,7 @@ class SearchConsoleImport extends Page
                 'status' => 'failed',
                 'errors' => [$exception->getMessage()],
                 'warnings' => [],
+                'notices' => [],
             ];
             $this->loadHistory();
 
@@ -199,6 +200,7 @@ class SearchConsoleImport extends Page
                 'user' => $session->user?->name ?: $session->user?->email ?: '-',
                 'duration' => number_format($session->duration_ms / 1000, 1, ',', '.').'s',
                 'warnings' => $session->warnings ?? [],
+                'notices' => $session->notices ?? [],
             ])
             ->all();
     }
@@ -221,7 +223,9 @@ class SearchConsoleImport extends Page
             'processed_files' => $summary['processed_files'] ?? 0,
             'skipped_files' => $summary['skipped_files'] ?? 0,
             'duration_seconds' => (($summary['duration_ms'] ?? 0) / 1000),
+            'intentionally_skipped_files' => $summary['intentionally_skipped_files'] ?? 0,
             'warnings' => $summary['warnings'] ?? [],
+            'notices' => $summary['notices'] ?? [],
             'errors' => $summary['errors'] ?? [],
         ];
     }

@@ -94,6 +94,50 @@ class GscBulkImportTest extends TestCase
         $this->assertStringContainsString('Waarom onbekend', $summary['warnings'][0]);
     }
 
+    public function test_filters_only_notice_does_not_mark_session_as_warning(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            ['path' => $this->writeCsv('filters.csv', ['Filter,Waarde', 'Land,Nederland']), 'name' => 'Filters.csv'],
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertSame([], $summary['warnings']);
+        $this->assertSame([], $summary['errors']);
+        $this->assertSame(1, $summary['skipped_files']);
+        $this->assertSame(1, $summary['intentionally_skipped_files']);
+        $this->assertStringContainsString('bewust overgeslagen (filters)', implode("\n", $summary['notices']));
+    }
+
+    public function test_compare_notice_does_not_mark_session_as_warning(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('compare-devices-notice.csv', [
+                $this->compareHeader('apparaat'),
+                'MOBILE,12,2,300,50,4%,4%,11.2,20.4',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertSame([], $summary['warnings']);
+        $this->assertSame([], $summary['errors']);
+        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['notices']));
+    }
+
+    public function test_import_exception_marks_session_as_failed(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('bad-date.csv', [
+                'datum,aantal klikken,vertoningen,ctr,positie',
+                'geen-datum,1,2,50%,1',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('failed', $summary['status']);
+        $this->assertSame([], $summary['warnings']);
+        $this->assertNotEmpty($summary['errors']);
+        $this->assertStringContainsString('bad-date.csv', $summary['errors'][0]);
+    }
+
     public function test_detects_search_appearance_with_aantal_klikken(): void
     {
         $this->assertDetected(GscCsvTypeDetector::SEARCH_APPEARANCE, 'zoekopmaak, aantal klikken, vertoningen, ctr, positie');
@@ -171,8 +215,9 @@ class GscBulkImportTest extends TestCase
             ]),
         ], '2026-07-08');
 
-        $this->assertSame('completed_with_warnings', $summary['status']);
-        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['warnings']));
+        $this->assertSame('completed', $summary['status']);
+        $this->assertSame([], $summary['warnings']);
+        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['notices']));
         $this->assertDatabaseHas('gsc_page_snapshots', [
             'path' => '/garage/compare-page',
             'clicks' => 12,
@@ -207,8 +252,9 @@ class GscBulkImportTest extends TestCase
             ]),
         ], '2026-07-08');
 
-        $this->assertSame('completed_with_warnings', $summary['status']);
-        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['warnings']));
+        $this->assertSame('completed', $summary['status']);
+        $this->assertSame([], $summary['warnings']);
+        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['notices']));
         $this->assertDatabaseHas('gsc_query_snapshots', [
             'query' => 'garagebook compare',
             'clicks' => 9,
@@ -295,7 +341,7 @@ class GscBulkImportTest extends TestCase
         $this->assertDatabaseMissing('gsc_page_snapshots', ['path' => '/garage/new']);
 
         $replaced = app(GscCsvImportService::class)->importBulkSession([$path], '2026-07-08', true);
-        $this->assertSame('completed_with_warnings', $replaced['status']);
+        $this->assertSame('completed', $replaced['status']);
         $this->assertDatabaseMissing('gsc_page_snapshots', ['path' => '/garage/old']);
         $this->assertDatabaseHas('gsc_page_snapshots', ['path' => '/garage/new']);
     }

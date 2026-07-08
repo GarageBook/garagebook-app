@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\GscCountrySnapshot;
+use App\Models\GscDateSnapshot;
 use App\Models\GscPageSnapshot;
 use App\Models\GscQuerySnapshot;
 use App\Models\User;
@@ -64,6 +66,65 @@ class SearchConsoleInsightsTest extends TestCase
         $this->assertStringContainsString('winners', $csv);
         $this->assertStringContainsString('losers', $csv);
         $this->assertStringContainsString('vehicle_authority_zero_click_pages', $csv);
+    }
+
+    public function test_countries_block_shows_top_10_by_default_and_full_list_in_details(): void
+    {
+        $this->seedCountriesAndDates();
+        $admin = User::factory()->admin()->create();
+
+        $dashboard = app(SearchConsoleInsightsService::class)->dashboard();
+        $this->assertSame('Land 12', $dashboard['dimensions']['countries'][0]['label']);
+
+        $html = $this->actingAs($admin)
+            ->get('/admin/search-console-insights')
+            ->assertOk()
+            ->assertSeeText('Alle landen tonen')
+            ->content();
+
+        $this->assertSame(10, substr_count($html, 'data-gsc-dimension-row="countries-default"'));
+        $this->assertSame(12, substr_count($html, 'data-gsc-dimension-row="countries-full"'));
+    }
+
+    public function test_date_trend_block_shows_compact_rows_and_full_list_in_details(): void
+    {
+        $this->seedCountriesAndDates();
+        $admin = User::factory()->admin()->create();
+
+        $dashboard = app(SearchConsoleInsightsService::class)->dashboard();
+        $this->assertSame('2026-07-12', $dashboard['dimensions']['dates'][0]['date']);
+
+        $html = $this->actingAs($admin)
+            ->get('/admin/search-console-insights')
+            ->assertOk()
+            ->assertSeeText('Volledige datumtrend tonen')
+            ->content();
+
+        $this->assertSame(10, substr_count($html, 'data-gsc-dimension-row="dates-default"'));
+        $this->assertSame(12, substr_count($html, 'data-gsc-dimension-row="dates-full"'));
+    }
+
+    private function seedCountriesAndDates(): void
+    {
+        for ($i = 1; $i <= 12; $i++) {
+            GscCountrySnapshot::query()->create([
+                'date' => '2026-07-08',
+                'country' => 'Land '.$i,
+                'clicks' => $i,
+                'impressions' => $i * 100,
+                'ctr' => 0.01,
+                'position' => 10,
+            ]);
+
+            GscDateSnapshot::query()->create([
+                'date' => '2026-07-08',
+                'data_date' => sprintf('2026-07-%02d', $i),
+                'clicks' => $i,
+                'impressions' => $i * 100,
+                'ctr' => 0.01,
+                'position' => 10,
+            ]);
+        }
     }
 
     private function seedSnapshots(): void

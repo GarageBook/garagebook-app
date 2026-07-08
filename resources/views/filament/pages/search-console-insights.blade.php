@@ -41,41 +41,21 @@
 
         <section class="grid gap-4 xl:grid-cols-2">
             @foreach([
-                'Apparaten' => $dashboard['dimensions']['devices'] ?? [],
-                'Landen' => $dashboard['dimensions']['countries'] ?? [],
-                'Zoekopmaak' => $dashboard['dimensions']['search_appearances'] ?? [],
-                'Datumtrend' => $dashboard['dimensions']['dates'] ?? [],
-            ] as $dimensionTitle => $dimensionRows)
+                'devices' => ['title' => 'Apparaten', 'rows' => $dashboard['dimensions']['devices'] ?? [], 'expand' => 'Alle apparaten tonen'],
+                'countries' => ['title' => 'Landen', 'rows' => $dashboard['dimensions']['countries'] ?? [], 'expand' => 'Alle landen tonen'],
+                'search-appearances' => ['title' => 'Zoekopmaak', 'rows' => $dashboard['dimensions']['search_appearances'] ?? [], 'expand' => 'Alle zoekopmaak tonen'],
+                'dates' => ['title' => 'Datumtrend', 'rows' => $dashboard['dimensions']['dates'] ?? [], 'expand' => 'Volledige datumtrend tonen', 'is_date' => true],
+            ] as $dimensionKey => $dimension)
                 <div class="{{ $card }}">
-                    <h3 class="mb-3 text-lg font-semibold">{{ $dimensionTitle }}</h3>
-                    @if($dimensionRows === [])
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Geen data geimporteerd voor deze dimensie.</p>
-                    @else
-                        <div class="overflow-x-auto">
-                            <table class="w-full min-w-[620px] text-left text-sm">
-                                <thead class="border-b border-gray-200 text-xs uppercase text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                                    <tr>
-                                        <th class="py-2 pr-4">{{ $dimensionTitle === 'Datumtrend' ? 'Datum' : 'Dimensie' }}</th>
-                                        <th class="py-2 pr-4">Clicks</th>
-                                        <th class="py-2 pr-4">Impressions</th>
-                                        <th class="py-2 pr-4">CTR</th>
-                                        <th class="py-2 pr-4">Positie</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                    @foreach($dimensionRows as $row)
-                                        <tr>
-                                            <td class="py-3 pr-4">{{ $row['label'] ?? $row['date'] ?? '-' }}</td>
-                                            <td class="py-3 pr-4">{{ $row['clicks'] ?? 0 }}</td>
-                                            <td class="py-3 pr-4">{{ $row['impressions'] ?? 0 }}</td>
-                                            <td class="py-3 pr-4">{{ isset($row['ctr']) ? $formatCtr($row['ctr']) : '-' }}</td>
-                                            <td class="py-3 pr-4">{{ $row['position'] ?? '-' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
+                    <h3 class="mb-3 text-lg font-semibold">{{ $dimension['title'] }}</h3>
+                    @include('filament.pages.partials.search-console-dimension-table', [
+                        'title' => $dimension['title'],
+                        'rows' => $dimension['rows'],
+                        'rowKey' => $dimensionKey,
+                        'limit' => 10,
+                        'expandLabel' => $dimension['expand'],
+                        'isDate' => $dimension['is_date'] ?? false,
+                    ])
                 </div>
             @endforeach
         </section>
