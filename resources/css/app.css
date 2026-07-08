@@ -1442,3 +1442,56 @@ samp,
     word-break: normal !important;
     overflow-wrap: normal !important;
 }
+
+/* Topic links section — homepage internal link grid */
+.gb-topic-links {
+    margin: 40px 0 0;
+}
+
+.gb-topic-links__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #1a1a1a;
+}
+
+.gb-topic-links__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.gb-topic-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 24px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.2s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.gb-topic-link:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+.gb-topic-link strong {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+}
+
+.gb-topic-link span {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .gb-topic-links__grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -5,15 +5,15 @@
     @include('partials.analytics-tracking')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digitaal onderhoudsboek voor je motor | GarageBook</title>
-    <meta name="description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
+    <title>Digitaal onderhoudsboekje voor auto en motor | GarageBook</title>
+    <meta name="description" content="Houd de onderhoudshistorie van je auto of motor digitaal bij met GarageBook. Bewaar beurten, facturen, foto's en kilometerstanden op één centrale plek. Gratis starten.">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="GarageBook">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Digitaal onderhoudsboek voor je motor | GarageBook">
-    <meta property="og:description" content="Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor digitaal bij in één overzichtelijke tijdlijn met GarageBook.">
+    <meta property="og:title" content="Digitaal onderhoudsboekje voor auto en motor | GarageBook">
+    <meta property="og:description" content="Houd de onderhoudshistorie van je auto of motor digitaal bij. Bewaar beurten, facturen, foto's en kilometerstanden op één plek met GarageBook.">
     <meta property="og:url" content="{{ url('/') }}">
     <meta name="twitter:card" content="summary_large_image">
     <script type="application/ld+json">
@@ -94,11 +94,11 @@
             <div class="gb-section-shell gb-section-grid gb-home-grid">
                 <div>
                     <h1 class="gb-home-title">
-                        Het digitale onderhoudsboek voor je motor
+                        Het digitale onderhoudsboek voor auto en motor
                     </h1>
 
                     <p class="gb-home-lead">
-                        Houd onderhoud, reparaties, kilometerstanden, foto's en facturen van je motor overzichtelijk bij in één digitale tijdlijn.
+                        Bouw een complete onderhoudshistorie op van je auto, motor of klassieker. Onderhoud, reparaties, kilometerstanden, foto's en facturen overzichtelijk in één digitale tijdlijn.
                     </p>
 
                     <div class="gb-home-actions">
@@ -209,6 +209,41 @@
                     </div>
                 </section>
 
+            </div>
+        </section>
+
+        <!-- INTERNAL LINKS -->
+        <section class="gb-home-section--compact">
+            <div class="gb-section-shell">
+                <nav class="gb-topic-links" aria-label="Gerelateerde onderwerpen">
+                    <h2 class="gb-topic-links__title">Meer over onderhoudshistorie en digitale onderhoudsboekjes</h2>
+                    <div class="gb-topic-links__grid">
+                        <a href="/onderhoudshistorie-auto" class="gb-topic-link">
+                            <strong>Onderhoudshistorie auto</strong>
+                            <span>Alles over het bijhouden en opvragen van de onderhoudshistorie van een auto.</span>
+                        </a>
+                        <a href="/digitaal-onderhoudsboekje-auto" class="gb-topic-link">
+                            <strong>Digitaal onderhoudsboekje auto</strong>
+                            <span>Vervang het papieren boekje door een digitale versie voor je auto.</span>
+                        </a>
+                        <a href="/onderhoudsboekje-motor" class="gb-topic-link">
+                            <strong>Onderhoudsboekje motor</strong>
+                            <span>Houd het onderhoudsboekje van je motor digitaal bij.</span>
+                        </a>
+                        <a href="/motor-onderhoud-app" class="gb-topic-link">
+                            <strong>Motor onderhoud app</strong>
+                            <span>De app voor motorrijders die hun rijder serieus bijhouden.</span>
+                        </a>
+                        <a href="/onderhoudsboekje-kwijt" class="gb-topic-link">
+                            <strong>Onderhoudsboekje kwijt?</strong>
+                            <span>Stappen om je onderhoudshistorie te reconstrueren.</span>
+                        </a>
+                        <a href="/digitaal-onderhoudsboekje" class="gb-topic-link">
+                            <strong>Digitaal onderhoudsboekje</strong>
+                            <span>Centrale voertuiggeschiedenis voor auto, motor en klassieker.</span>
+                        </a>
+                    </div>
+                </nav>
             </div>
         </section>
 
