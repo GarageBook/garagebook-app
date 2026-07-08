@@ -5,6 +5,57 @@
 @section('meta_robots', $page->indexable === false ? 'noindex,nofollow' : 'index,follow')
 @section('canonical_url', $page->canonical_url ?: url('/' . $page->slug))
 
+@php
+    $faqItems = $page->structured_data ?? [];
+    $hasFaq = is_array($faqItems) && count($faqItems) > 0;
+    $pageUrl = $page->canonical_url ?: url('/' . $page->slug);
+    $graph = [
+        [
+            '@type' => 'Organization',
+            'name' => 'GarageBook',
+            'url' => url('/'),
+            'logo' => asset('images/garagebook-logo.png'),
+            'sameAs' => [
+                'https://www.instagram.com/garagebook.global',
+                'https://linkedin.com/company/thegaragebook/',
+                'https://www.facebook.com/profile.php?id=61584164445375',
+            ],
+        ],
+        [
+            '@type' => 'WebSite',
+            'name' => 'GarageBook',
+            'url' => url('/'),
+            'inLanguage' => 'nl-NL',
+        ],
+        [
+            '@type' => 'WebPage',
+            'name' => $page->meta_title ?: $page->title,
+            'description' => $page->meta_description ?: null,
+            'url' => $pageUrl,
+            'inLanguage' => 'nl-NL',
+        ],
+    ];
+    if ($hasFaq) {
+        $graph[] = [
+            '@type' => 'FAQPage',
+            'mainEntity' => array_map(fn ($item) => [
+                '@type' => 'Question',
+                'name' => $item['question'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => strip_tags($item['answer']),
+                ],
+            ], $faqItems),
+        ];
+    }
+@endphp
+
+@section('structured_data')
+<script type="application/ld+json">
+{!! json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
+</script>
+@endsection
+
 @section('content')
 
 @php($featuredPageSlug = \App\Support\InternalContentLinks::FEATURED_PAGE_SLUG)

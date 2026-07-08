@@ -12,9 +12,16 @@ class PublicSeoPagesAvailabilityTest extends TestCase
 
     private const EXPECTED_SLUGS = [
         'digitaal-onderhoudsboekje',
+        'digitaal-onderhoudsboekje-auto',
+        'digitaal-onderhoudsboekje-motor',
         'motor-onderhoud-app',
         'motor-onderhoud-bijhouden',
+        'onderhoudsboekje-kwijt',
         'onderhoudsboekje-motor',
+        'onderhoudsgeschiedenis-auto',
+        'onderhoudshistorie-auto',
+        'onderhoudshistorie-motor',
+        'universeel-onderhoudsboekje',
     ];
 
     public function test_restored_public_seo_pages_resolve_via_existing_slug_route(): void
@@ -22,9 +29,9 @@ class PublicSeoPagesAvailabilityTest extends TestCase
         foreach (self::EXPECTED_SLUGS as $slug) {
             $page = Page::query()->where('slug', $slug)->first();
 
-            $this->assertNotNull($page, 'Expected seeded page missing for slug: ' . $slug);
+            $this->assertNotNull($page, 'Expected seeded page missing for slug: '.$slug);
 
-            $this->get('/' . $slug)
+            $this->get('/'.$slug)
                 ->assertOk()
                 ->assertSeeText($page->title);
         }
@@ -37,7 +44,7 @@ class PublicSeoPagesAvailabilityTest extends TestCase
         $response->assertOk();
 
         foreach (self::EXPECTED_SLUGS as $slug) {
-            $response->assertSee(url('/' . $slug), false);
+            $response->assertSee(url('/'.$slug), false);
         }
     }
 }

@@ -15,12 +15,14 @@ class Page extends Model
         'canonical_url',
         'indexable',
         'content',
+        'structured_data',
     ];
 
     protected function casts(): array
     {
         return [
             'indexable' => 'boolean',
+            'structured_data' => 'array',
         ];
     }
 }
