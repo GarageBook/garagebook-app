@@ -2,6 +2,7 @@
     $stats = $report['stats'];
     $conversions = $report['conversions'];
     $extraKpis = $report['extra_product_seo_kpis'] ?? [];
+    $seoOpportunities = $report['seo_opportunities'] ?? [];
     $interpretation = $report['interpretation'];
 @endphp
 <!DOCTYPE html>
@@ -71,6 +72,19 @@
         @foreach (($extraKpis['future_kpis'] ?? []) as $futureKpi)
             <li>{{ $futureKpi['label'] }}: {{ $futureKpi['value'] }}</li>
         @endforeach
+    </ul>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">Top 10 SEO-kansen</h2>
+    <ul>
+        @forelse ($seoOpportunities as $opportunity)
+            <li>
+                Score {{ $opportunity['impact_score'] }} — {{ $opportunity['title'] }}:
+                {{ $opportunity['path'] ?? $opportunity['query'] ?? '-' }}.
+                Actie: {{ $opportunity['recommended_action'] }}
+            </li>
+        @empty
+            <li>Geen SEO-kansen gevonden in de nieuwste Search Console import.</li>
+        @endforelse
     </ul>
 
     <h2 style="font-size: 16px; margin-top: 24px;">Korte interpretatie</h2>

@@ -39,6 +39,65 @@
             </div>
         </section>
 
+        <section class="{{ $card }}">
+            <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold">Top SEO Opportunities</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Rule-based prioriteiten uit de nieuwste Search Console import.</p>
+                </div>
+                <form method="GET" class="grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-5">
+                    <select name="type" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950">
+                        <option value="">Alle types</option>
+                        @foreach (($dashboard['opportunity_types'] ?? []) as $type)
+                            <option value="{{ $type['value'] }}" @selected(request('type') === $type['value'])>{{ $type['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <select name="page_type" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950">
+                        <option value="">Alle page types</option>
+                        @foreach (($dashboard['opportunity_page_types'] ?? []) as $pageType)
+                            <option value="{{ $pageType['value'] }}" @selected(request('page_type') === $pageType['value'])>{{ $pageType['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <input type="number" min="0" max="100" name="min_score" value="{{ request('min_score') }}" placeholder="Min. score" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950" />
+                    <input type="text" name="brand" value="{{ request('brand') }}" placeholder="Merk" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950" />
+                    <input type="date" name="date" value="{{ request('date') }}" class="rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950" />
+                    <div class="flex gap-2 xl:col-span-5 xl:justify-end">
+                        <x-filament::button type="submit" size="sm">Filter</x-filament::button>
+                        <x-filament::button tag="a" href="{{ url()->current() }}" color="gray" size="sm">Reset</x-filament::button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[1000px] text-left text-sm">
+                    <thead class="border-b border-gray-200 text-xs uppercase text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                        <tr>
+                            <th class="py-2 pr-4">Score</th>
+                            <th class="py-2 pr-4">Type</th>
+                            <th class="py-2 pr-4">Pagina</th>
+                            <th class="py-2 pr-4">Query</th>
+                            <th class="py-2 pr-4">Aanbeveling</th>
+                            <th class="py-2 pr-4">Moeite</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @forelse($dashboard['opportunities'] ?? [] as $row)
+                            <tr>
+                                <td class="py-3 pr-4 font-semibold">{{ $row['impact_score'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['title'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['path'] ?? '-' }}</td>
+                                <td class="py-3 pr-4">{{ $row['query'] ?? '-' }}</td>
+                                <td class="py-3 pr-4">{{ $row['recommended_action'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['effort'] }}</td>
+                            </tr>
+                        @empty
+                            <tr><td class="py-3 text-gray-500" colspan="6">Geen SEO opportunities gevonden.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section class="grid gap-4 xl:grid-cols-2">
             @include('filament.pages.partials.search-console-table', [
                 'title' => 'Pagina\'s net buiten top 10',

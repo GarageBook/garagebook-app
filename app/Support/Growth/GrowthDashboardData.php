@@ -11,6 +11,7 @@ use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Gsc\SeoOpportunityService;
 use App\Services\PublicGarageService;
 use App\Support\AnalyticsDataWindow;
 use Illuminate\Support\Carbon;
@@ -356,7 +357,6 @@ class GrowthDashboardData
         ];
     }
 
-
     public function prospectFollowUps(): array
     {
         if (! $this->hasTable('growth_prospects')) {
@@ -567,8 +567,18 @@ class GrowthDashboardData
             ],
             'conversions' => $conversions->all(),
             'extra_product_seo_kpis' => $extraKpis,
+            'seo_opportunities' => $this->weeklySeoOpportunities(),
             'interpretation' => $interpretation,
         ];
+    }
+
+    private function weeklySeoOpportunities(): array
+    {
+        if (! $this->hasTable('seo_opportunities') || ! $this->hasTable('gsc_page_snapshots') || ! $this->hasTable('gsc_query_snapshots')) {
+            return [];
+        }
+
+        return app(SeoOpportunityService::class)->weeklyTop(10);
     }
 
     private function weeklyProductSeoKpis(): array

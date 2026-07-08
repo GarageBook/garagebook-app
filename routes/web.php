@@ -3,6 +3,7 @@
 use App\Filament\Auth\Register;
 use App\Http\Controllers\Admin\SearchConsoleInsightsExportController;
 use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
+use App\Http\Controllers\Admin\SeoOpportunitiesExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\OutreachDemoIntroDismissController;
@@ -92,6 +93,9 @@ Route::get('/admin/seo-health-dashboard/export', SeoHealthDashboardExportControl
 
 Route::get('/admin/search-console-insights/export', SearchConsoleInsightsExportController::class)
     ->name('admin.search-console-insights.export');
+
+Route::get('/admin/search-console-insights/opportunities/export', SeoOpportunitiesExportController::class)
+    ->name('admin.seo-opportunities.export');
 
 Route::middleware('auth')->group(function () {
 

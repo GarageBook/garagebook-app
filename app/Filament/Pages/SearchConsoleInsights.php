@@ -17,6 +17,8 @@ class SearchConsoleInsights extends Page
 
     public array $dashboard = [];
 
+    public array $opportunityFilters = [];
+
     protected function getHeaderActions(): array
     {
         return [
@@ -25,6 +27,11 @@ class SearchConsoleInsights extends Page
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->url(route('admin.search-console-insights.export')),
+            Action::make('exportOpportunitiesCsv')
+                ->label('SEO Opportunities CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->url(route('admin.seo-opportunities.export', $this->opportunityFilters)),
         ];
     }
 
@@ -32,7 +39,10 @@ class SearchConsoleInsights extends Page
     {
         abort_unless(auth()->user()?->isAdmin() ?? false, 403);
 
-        $this->dashboard = $service->dashboard();
+        $this->opportunityFilters = collect(request()->only(['type', 'page_type', 'min_score', 'brand', 'date']))
+            ->filter(fn ($value): bool => filled($value))
+            ->all();
+        $this->dashboard = $service->dashboard($this->opportunityFilters);
     }
 
     public static function canAccess(): bool

@@ -9,10 +9,14 @@ use Illuminate\Support\Collection;
 
 class SearchConsoleInsightsService
 {
+    public function __construct(
+        private readonly SeoOpportunityService $opportunityService,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
-    public function dashboard(): array
+    public function dashboard(array $opportunityFilters = []): array
     {
         $latestDate = $this->latestDate();
         $previousDate = $latestDate ? $this->previousDate($latestDate) : null;
@@ -33,6 +37,9 @@ class SearchConsoleInsightsService
                     'average_position' => null,
                 ],
                 'priorities' => [],
+                'opportunities' => [],
+                'opportunity_types' => $this->opportunityService->types(),
+                'opportunity_page_types' => $this->opportunityService->pageTypes(),
             ];
         }
 
@@ -50,6 +57,9 @@ class SearchConsoleInsightsService
             'losers' => $this->positionChanges($latestDate, $previousDate, false),
             'vehicle_authority' => $this->vehicleAuthority($pages),
             'priorities' => $this->priorities($pages, $queries),
+            'opportunities' => $this->opportunityService->top($opportunityFilters),
+            'opportunity_types' => $this->opportunityService->types(),
+            'opportunity_page_types' => $this->opportunityService->pageTypes(),
         ];
     }
 
