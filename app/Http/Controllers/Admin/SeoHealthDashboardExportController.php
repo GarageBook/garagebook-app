@@ -10,6 +10,10 @@ class SeoHealthDashboardExportController extends Controller
 {
     public function __invoke(SeoHealthService $seoHealthService)
     {
+        if (! auth()->check()) {
+            return redirect('/admin/login');
+        }
+
         abort_unless(SeoHealthDashboard::canAccess(), 403);
 
         return response()->streamDownload(function () use ($seoHealthService): void {

@@ -54,6 +54,12 @@ class SeoHealthDashboardTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_guest_is_redirected_to_admin_login_for_seo_health_dashboard_csv(): void
+    {
+        $this->get('/admin/seo-health-dashboard/export')
+            ->assertRedirect('/admin/login');
+    }
+
     public function test_seo_health_dashboard_csv_has_download_headers_and_expected_columns(): void
     {
         $admin = User::factory()->admin()->create();
