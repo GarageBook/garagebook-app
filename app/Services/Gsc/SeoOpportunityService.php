@@ -2,8 +2,12 @@
 
 namespace App\Services\Gsc;
 
+use App\Models\GscCountrySnapshot;
+use App\Models\GscDateSnapshot;
+use App\Models\GscDeviceSnapshot;
 use App\Models\GscPageSnapshot;
 use App\Models\GscQuerySnapshot;
+use App\Models\GscSearchAppearanceSnapshot;
 use App\Models\SeoOpportunity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -23,6 +27,14 @@ class SeoOpportunityService
 
     public const TYPE_DECLINING = 'strong_decliner';
 
+    public const TYPE_MOBILE_CTR = 'mobile_ctr_gap';
+
+    public const TYPE_COUNTRY_LOW_CTR = 'country_low_ctr';
+
+    public const TYPE_SEARCH_APPEARANCE_LOW_CTR = 'search_appearance_low_ctr';
+
+    public const TYPE_DATE_TREND_DECLINE = 'date_trend_decline';
+
     /**
      * @return list<array<string, string>>
      */
@@ -35,6 +47,10 @@ class SeoOpportunityService
             ['value' => self::TYPE_VEHICLE_AUTHORITY, 'label' => 'Vehicle Authority'],
             ['value' => self::TYPE_RISING, 'label' => 'Sterke stijgers'],
             ['value' => self::TYPE_DECLINING, 'label' => 'Sterke dalers'],
+            ['value' => self::TYPE_MOBILE_CTR, 'label' => 'Mobiele CTR-kloof'],
+            ['value' => self::TYPE_COUNTRY_LOW_CTR, 'label' => 'Land met lage CTR'],
+            ['value' => self::TYPE_SEARCH_APPEARANCE_LOW_CTR, 'label' => 'Zoekopmaak met lage CTR'],
+            ['value' => self::TYPE_DATE_TREND_DECLINE, 'label' => 'Dalende datumtrend'],
         ];
     }
 
@@ -134,6 +150,10 @@ class SeoOpportunityService
         $date = collect([
             GscPageSnapshot::query()->max('date'),
             GscQuerySnapshot::query()->max('date'),
+            GscCountrySnapshot::query()->max('date'),
+            GscDeviceSnapshot::query()->max('date'),
+            GscSearchAppearanceSnapshot::query()->max('date'),
+            GscDateSnapshot::query()->max('date'),
         ])->filter()->max();
 
         return $date ? Carbon::parse($date)->toDateString() : null;
@@ -226,6 +246,10 @@ class SeoOpportunityService
             }
         }
 
+        foreach ($this->dimensionOpportunities($date) as $opportunity) {
+            $opportunities[] = $opportunity;
+        }
+
         foreach ($changes as $change) {
             if ($change['position_delta'] >= 5) {
                 $opportunities[] = $this->changeOpportunity(
@@ -259,6 +283,100 @@ class SeoOpportunityService
             ->sortByDesc('impact_score')
             ->values()
             ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function dimensionOpportunities(string $date): array
+    {
+        $opportunities = [];
+        $devices = GscDeviceSnapshot::query()->whereDate('date', $date)->get()->keyBy(fn (GscDeviceSnapshot $row): string => mb_strtolower($row->device));
+        $mobile = $devices->get('mobile') ?? $devices->get('mobiel');
+        $desktop = $devices->get('desktop');
+
+        if ($mobile && $desktop && $mobile->impressions >= 50 && (float) $mobile->ctr + 0.02 < (float) $desktop->ctr) {
+            $score = $this->impactScore($mobile->impressions, (float) $mobile->ctr, $mobile->position !== null ? (float) $mobile->position : null, 18);
+            $opportunities[] = $this->dimensionOpportunity(
+                $date,
+                self::TYPE_MOBILE_CTR,
+                'Mobiele CTR blijft achter op desktop',
+                'Mobiele vertoningen presteren duidelijk slechter dan desktop.',
+                'device:'.$mobile->device,
+                null,
+                'device',
+                'Controleer mobiele title/meta/snippet en boven-de-vouw content.',
+                'Medium',
+                $score,
+                $this->metadata($mobile->impressions, $mobile->clicks, (float) $mobile->ctr, $mobile->position !== null ? (float) $mobile->position : null, [
+                    'desktop_ctr' => (float) $desktop->ctr,
+                ]),
+            );
+        }
+
+        foreach (GscCountrySnapshot::query()->whereDate('date', $date)->where('impressions', '>', 100)->get() as $country) {
+            if ((float) $country->ctr < 0.02) {
+                $score = $this->impactScore($country->impressions, (float) $country->ctr, $country->position !== null ? (float) $country->position : null, 12);
+                $opportunities[] = $this->dimensionOpportunity($date, self::TYPE_COUNTRY_LOW_CTR, 'Veel impressies in land met lage CTR', 'Dit land krijgt veel vertoningen maar relatief weinig clicks.', 'country:'.$country->country, null, null, 'Verbeter Nederlandse title/meta description.', 'Low', $score, $this->metadata($country->impressions, $country->clicks, (float) $country->ctr, $country->position !== null ? (float) $country->position : null));
+            }
+        }
+
+        foreach (GscSearchAppearanceSnapshot::query()->whereDate('date', $date)->where('impressions', '>', 100)->get() as $appearance) {
+            if ((float) $appearance->ctr < 0.02) {
+                $score = $this->impactScore($appearance->impressions, (float) $appearance->ctr, $appearance->position !== null ? (float) $appearance->position : null, 12);
+                $opportunities[] = $this->dimensionOpportunity($date, self::TYPE_SEARCH_APPEARANCE_LOW_CTR, 'Zoekopmaak met lage CTR', 'Deze search appearance krijgt veel vertoningen maar weinig clicks.', 'appearance:'.$appearance->appearance, null, null, 'Controleer rich result presentatie.', 'Medium', $score, $this->metadata($appearance->impressions, $appearance->clicks, (float) $appearance->ctr, $appearance->position !== null ? (float) $appearance->position : null));
+            }
+        }
+
+        $dateRows = GscDateSnapshot::query()->whereDate('date', $date)->orderBy('data_date')->get();
+        if ($dateRows->count() >= 4) {
+            $firstHalf = $dateRows->take((int) floor($dateRows->count() / 2));
+            $secondHalf = $dateRows->slice($firstHalf->count());
+            $firstClicks = (int) $firstHalf->sum('clicks');
+            $secondClicks = (int) $secondHalf->sum('clicks');
+            $firstCtr = (float) $firstHalf->avg('ctr');
+            $secondCtr = (float) $secondHalf->avg('ctr');
+
+            if ($firstClicks > 0 && $secondClicks < $firstClicks * 0.75) {
+                $impressions = (int) $secondHalf->sum('impressions');
+                $score = $this->impactScore($impressions, $secondCtr, (float) $secondHalf->avg('position'), 20);
+                $opportunities[] = $this->dimensionOpportunity($date, self::TYPE_DATE_TREND_DECLINE, 'Dalende datumtrend', 'Clicks dalen duidelijk in de laatste periode van de import.', 'date_trend', null, null, 'Onderzoek recente ranking/CTR-daling.', 'High', $score, [
+                    'impressions' => $impressions,
+                    'clicks' => $secondClicks,
+                    'ctr' => $secondCtr,
+                    'position' => (float) $secondHalf->avg('position'),
+                    'previous_clicks' => $firstClicks,
+                    'previous_ctr' => $firstCtr,
+                    'score_formula' => 'min(45, impressions/10) + low-CTR bonus up to 25 + position 8-20 bonus up to 25 + type bonus',
+                ]);
+            }
+        }
+
+        return $opportunities;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, mixed>
+     */
+    private function dimensionOpportunity(string $date, string $type, string $title, string $description, string $query, ?string $path, ?string $pageType, string $action, string $effort, int $score, array $metadata): array
+    {
+        return [
+            'date' => $date,
+            'type' => $type,
+            'title' => $title,
+            'description' => $description,
+            'impact_score' => $score,
+            'effort' => $effort,
+            'priority' => $this->priority($score),
+            'page_url' => null,
+            'path' => $path,
+            'query' => $query,
+            'page_type' => $pageType,
+            'brand' => null,
+            'recommended_action' => $action,
+            'metadata' => $metadata,
+        ];
     }
 
     private function impactScore(int $impressions, float $ctr, ?float $position, int $bonus = 0): int

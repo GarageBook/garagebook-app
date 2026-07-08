@@ -45,10 +45,10 @@ class SearchConsoleImportTest extends TestCase
             ->set('queriesCsv', $this->queriesCsv())
             ->call('import')
             ->assertHasNoErrors()
-            ->assertSet('result.status', 'success')
+            ->assertSet('result.status', 'completed')
             ->assertSet('result.pages', 1)
             ->assertSet('result.queries', 1)
-            ->assertNotified('Search Console import voltooid');
+            ->assertNotified('Search Console import afgerond');
 
         $this->assertDatabaseHas('gsc_page_snapshots', [
             'date' => '2026-07-08 00:00:00',
@@ -70,7 +70,7 @@ class SearchConsoleImportTest extends TestCase
             'pages_imported' => 1,
             'queries_imported' => 1,
             'user_id' => $admin->id,
-            'status' => 'success',
+            'status' => 'completed',
         ]);
     }
 
@@ -84,8 +84,6 @@ class SearchConsoleImportTest extends TestCase
             ->call('import')
             ->assertHasErrors([
                 'date' => 'required',
-                'pagesCsv' => 'required',
-                'queriesCsv' => 'required',
             ]);
     }
 
@@ -127,8 +125,8 @@ class SearchConsoleImportTest extends TestCase
             ->set('pagesCsv', $this->pagesCsv())
             ->set('queriesCsv', $this->queriesCsv())
             ->call('import')
-            ->assertSet('result.status', 'skipped')
-            ->assertNotified('Import overgeslagen');
+            ->assertSet('result.status', 'failed')
+            ->assertNotified('Search Console import afgerond');
 
         $this->assertDatabaseHas('gsc_page_snapshots', [
             'path' => '/existing',
@@ -140,7 +138,7 @@ class SearchConsoleImportTest extends TestCase
 
         $this->assertDatabaseHas('gsc_import_logs', [
             'date' => '2026-07-08 00:00:00',
-            'status' => 'skipped',
+            'status' => 'failed',
         ]);
     }
 
@@ -167,7 +165,7 @@ class SearchConsoleImportTest extends TestCase
             ->set('pagesCsv', $this->pagesCsv())
             ->set('queriesCsv', $this->queriesCsv())
             ->call('import')
-            ->assertSet('result.status', 'success')
+            ->assertSet('result.status', 'completed_with_warnings')
             ->assertSet('result.pages', 1);
 
         $this->assertDatabaseMissing('gsc_page_snapshots', [
@@ -193,7 +191,7 @@ class SearchConsoleImportTest extends TestCase
             ->set('pagesCsv', $this->pagesCsv())
             ->set('queriesCsv', $this->queriesCsv())
             ->call('import')
-            ->assertSet('result.status', 'success');
+            ->assertSet('result.status', 'completed');
     }
 
     private function pagesCsv(): UploadedFile

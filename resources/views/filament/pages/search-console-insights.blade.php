@@ -39,6 +39,47 @@
             </div>
         </section>
 
+        <section class="grid gap-4 xl:grid-cols-2">
+            @foreach([
+                'Apparaten' => $dashboard['dimensions']['devices'] ?? [],
+                'Landen' => $dashboard['dimensions']['countries'] ?? [],
+                'Zoekopmaak' => $dashboard['dimensions']['search_appearances'] ?? [],
+                'Datumtrend' => $dashboard['dimensions']['dates'] ?? [],
+            ] as $dimensionTitle => $dimensionRows)
+                <div class="{{ $card }}">
+                    <h3 class="mb-3 text-lg font-semibold">{{ $dimensionTitle }}</h3>
+                    @if($dimensionRows === [])
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Geen data geimporteerd voor deze dimensie.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[620px] text-left text-sm">
+                                <thead class="border-b border-gray-200 text-xs uppercase text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                                    <tr>
+                                        <th class="py-2 pr-4">{{ $dimensionTitle === 'Datumtrend' ? 'Datum' : 'Dimensie' }}</th>
+                                        <th class="py-2 pr-4">Clicks</th>
+                                        <th class="py-2 pr-4">Impressions</th>
+                                        <th class="py-2 pr-4">CTR</th>
+                                        <th class="py-2 pr-4">Positie</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach($dimensionRows as $row)
+                                        <tr>
+                                            <td class="py-3 pr-4">{{ $row['label'] ?? $row['date'] ?? '-' }}</td>
+                                            <td class="py-3 pr-4">{{ $row['clicks'] ?? 0 }}</td>
+                                            <td class="py-3 pr-4">{{ $row['impressions'] ?? 0 }}</td>
+                                            <td class="py-3 pr-4">{{ isset($row['ctr']) ? $formatCtr($row['ctr']) : '-' }}</td>
+                                            <td class="py-3 pr-4">{{ $row['position'] ?? '-' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </section>
+
         <section class="{{ $card }}">
             <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                 <div>

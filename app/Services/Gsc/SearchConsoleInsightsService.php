@@ -2,8 +2,12 @@
 
 namespace App\Services\Gsc;
 
+use App\Models\GscCountrySnapshot;
+use App\Models\GscDateSnapshot;
+use App\Models\GscDeviceSnapshot;
 use App\Models\GscPageSnapshot;
 use App\Models\GscQuerySnapshot;
+use App\Models\GscSearchAppearanceSnapshot;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -37,6 +41,7 @@ class SearchConsoleInsightsService
                     'average_position' => null,
                 ],
                 'priorities' => [],
+                'dimensions' => $this->emptyDimensions(),
                 'opportunities' => [],
                 'opportunity_types' => $this->opportunityService->types(),
                 'opportunity_page_types' => $this->opportunityService->pageTypes(),
@@ -57,6 +62,7 @@ class SearchConsoleInsightsService
             'losers' => $this->positionChanges($latestDate, $previousDate, false),
             'vehicle_authority' => $this->vehicleAuthority($pages),
             'priorities' => $this->priorities($pages, $queries),
+            'dimensions' => $this->dimensions($latestDate),
             'opportunities' => $this->opportunityService->top($opportunityFilters),
             'opportunity_types' => $this->opportunityService->types(),
             'opportunity_page_types' => $this->opportunityService->pageTypes(),
@@ -85,6 +91,10 @@ class SearchConsoleInsightsService
         $date = collect([
             GscPageSnapshot::query()->max('date'),
             GscQuerySnapshot::query()->max('date'),
+            GscCountrySnapshot::query()->max('date'),
+            GscDeviceSnapshot::query()->max('date'),
+            GscSearchAppearanceSnapshot::query()->max('date'),
+            GscDateSnapshot::query()->max('date'),
         ])->filter()->max();
 
         return $date ? Carbon::parse($date)->toDateString() : null;
@@ -121,6 +131,72 @@ class SearchConsoleInsightsService
             'position' => round((float) $pages->avg('position'), 2),
             'pages' => $pages->count(),
             'queries' => $queries->count(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function emptyDimensions(): array
+    {
+        return [
+            'devices' => [],
+            'countries' => [],
+            'search_appearances' => [],
+            'dates' => [],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dimensions(string $latestDate): array
+    {
+        return [
+            'devices' => GscDeviceSnapshot::query()
+                ->whereDate('date', $latestDate)
+                ->orderByDesc('impressions')
+                ->get()
+                ->map(fn (GscDeviceSnapshot $row): array => $this->dimensionRow($row, 'device'))
+                ->all(),
+            'countries' => GscCountrySnapshot::query()
+                ->whereDate('date', $latestDate)
+                ->orderByDesc('impressions')
+                ->get()
+                ->map(fn (GscCountrySnapshot $row): array => $this->dimensionRow($row, 'country'))
+                ->all(),
+            'search_appearances' => GscSearchAppearanceSnapshot::query()
+                ->whereDate('date', $latestDate)
+                ->orderByDesc('impressions')
+                ->get()
+                ->map(fn (GscSearchAppearanceSnapshot $row): array => $this->dimensionRow($row, 'appearance'))
+                ->all(),
+            'dates' => GscDateSnapshot::query()
+                ->whereDate('date', $latestDate)
+                ->orderBy('data_date')
+                ->get()
+                ->map(fn (GscDateSnapshot $row): array => [
+                    'date' => $row->data_date?->toDateString(),
+                    'clicks' => $row->clicks,
+                    'impressions' => $row->impressions,
+                    'ctr' => (float) $row->ctr,
+                    'position' => $row->position !== null ? (float) $row->position : null,
+                ])
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function dimensionRow(object $row, string $labelColumn): array
+    {
+        return [
+            'label' => $row->{$labelColumn},
+            'clicks' => $row->clicks,
+            'impressions' => $row->impressions,
+            'ctr' => (float) $row->ctr,
+            'position' => $row->position !== null ? (float) $row->position : null,
         ];
     }
 

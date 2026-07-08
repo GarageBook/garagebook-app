@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class GscImportLog extends Model
 {
     protected $fillable = [
+        'gsc_import_session_id',
         'date',
         'pages_imported',
         'queries_imported',
@@ -28,6 +29,11 @@ class GscImportLog extends Model
             'warnings' => 'array',
             'errors' => 'array',
         ];
+    }
+
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(GscImportSession::class, 'gsc_import_session_id');
     }
 
     public function user(): BelongsTo

@@ -2,9 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\GscImportLog;
-use App\Models\GscPageSnapshot;
-use App\Models\GscQuerySnapshot;
+use App\Models\GscImportSession;
 use App\Services\Gsc\GscCsvImportService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -28,11 +26,16 @@ class SearchConsoleImport extends Page
 
     public string $date = '';
 
+    /** @var list<TemporaryUploadedFile> */
+    public array $csvFiles = [];
+
     public ?TemporaryUploadedFile $pagesCsv = null;
 
     public ?TemporaryUploadedFile $queriesCsv = null;
 
     public string $overwrite = 'no';
+
+    public bool $replace = false;
 
     public ?array $result = null;
 
@@ -85,74 +88,86 @@ class SearchConsoleImport extends Page
     {
         $this->validate([
             'date' => ['required', 'date'],
-            'pagesCsv' => ['required', 'file', 'mimes:csv', 'max:20480'],
-            'queriesCsv' => ['required', 'file', 'mimes:csv', 'max:20480'],
+            'csvFiles' => ['nullable', 'array', 'max:25'],
+            'csvFiles.*' => ['file', 'mimes:csv', 'max:20480'],
+            'pagesCsv' => ['nullable', 'file', 'mimes:csv', 'max:20480'],
+            'queriesCsv' => ['nullable', 'file', 'mimes:csv', 'max:20480'],
             'overwrite' => ['required', 'in:no,yes'],
+            'replace' => ['boolean'],
         ]);
 
-        $date = Carbon::parse($this->date)->toDateString();
-        $startedAt = microtime(true);
-        $log = GscImportLog::query()->create([
-            'date' => $date,
-            'user_id' => auth()->id(),
-            'status' => 'pending',
-        ]);
-
-        if ($this->hasSnapshotsForDate($date) && $this->overwrite !== 'yes') {
-            $message = 'Er bestaat al GSC-data voor deze datum. Kies overschrijven om bestaande data te vervangen.';
-            $this->finishLog($log, $startedAt, 'skipped', 0, 0, [$message], []);
-            $this->result = $this->resultPayload($date, 0, 0, $startedAt, [$message], [], 'skipped');
-            $this->loadHistory();
-
-            Notification::make()
-                ->title('Import overgeslagen')
-                ->body($message)
-                ->warning()
-                ->send();
+        if ($this->csvFiles === [] && ! $this->pagesCsv && ! $this->queriesCsv) {
+            $this->addError('csvFiles', 'Upload minimaal een CSV-bestand.');
 
             return;
         }
 
-        $storedPagesPath = $this->pagesCsv?->store('gsc-imports', 'local');
-        $storedQueriesPath = $this->queriesCsv?->store('gsc-imports', 'local');
+        $date = Carbon::parse($this->date)->toDateString();
+        $storedFiles = [];
 
         try {
-            $summary = $importer->import(
-                $storedPagesPath ? Storage::disk('local')->path($storedPagesPath) : null,
-                $storedQueriesPath ? Storage::disk('local')->path($storedQueriesPath) : null,
-                $date,
-                $this->overwrite === 'yes',
-            );
+            foreach ($this->csvFiles as $file) {
+                $storedPath = $file->store('gsc-imports', 'local');
+                $storedFiles[] = [
+                    'path' => Storage::disk('local')->path($storedPath),
+                    'name' => $file->getClientOriginalName(),
+                    'delete_after' => true,
+                ];
+            }
+
+            if ($this->pagesCsv) {
+                $storedPath = $this->pagesCsv->store('gsc-imports', 'local');
+                $storedFiles[] = [
+                    'path' => Storage::disk('local')->path($storedPath),
+                    'name' => $this->pagesCsv->getClientOriginalName(),
+                    'delete_after' => true,
+                ];
+            }
+
+            if ($this->queriesCsv) {
+                $storedPath = $this->queriesCsv->store('gsc-imports', 'local');
+                $storedFiles[] = [
+                    'path' => Storage::disk('local')->path($storedPath),
+                    'name' => $this->queriesCsv->getClientOriginalName(),
+                    'delete_after' => true,
+                ];
+            }
+
+            $summary = $importer->importBulkSession($storedFiles, $date, $this->replace || $this->overwrite === 'yes', auth()->id());
 
             Cache::flush();
 
-            if ($storedPagesPath) {
-                Storage::disk('local')->delete($storedPagesPath);
-            }
-
-            if ($storedQueriesPath) {
-                Storage::disk('local')->delete($storedQueriesPath);
-            }
-
-            $this->finishLog($log, $startedAt, 'success', $summary['pages'], $summary['queries'], [], []);
-            $this->result = $this->resultPayload($date, $summary['pages'], $summary['queries'], $startedAt, [], [], 'success');
-            $this->reset('pagesCsv', 'queriesCsv');
+            $this->result = $this->resultPayload($summary);
+            $this->reset('csvFiles', 'pagesCsv', 'queriesCsv');
             $this->overwrite = 'no';
+            $this->replace = false;
             $this->loadHistory();
 
-            Notification::make()
-                ->title('Search Console import voltooid')
+            $notification = Notification::make()
+                ->title('Search Console import afgerond')
                 ->body(sprintf(
-                    '%s pagina\'s geimporteerd. %s zoekwoorden geimporteerd. Import voltooid in %s seconden.',
-                    number_format($summary['pages'], 0, ',', '.'),
-                    number_format($summary['queries'], 0, ',', '.'),
-                    number_format($this->result['duration_seconds'], 1, ',', '.'),
-                ))
-                ->success()
-                ->send();
+                    '%s pagina\'s, %s zoekwoorden, %s landen, %s apparaten en %s datumregels verwerkt in %s seconden.',
+                    number_format($summary['pages_imported'], 0, ',', '.'),
+                    number_format($summary['queries_imported'], 0, ',', '.'),
+                    number_format($summary['countries_imported'], 0, ',', '.'),
+                    number_format($summary['devices_imported'], 0, ',', '.'),
+                    number_format($summary['date_rows_imported'], 0, ',', '.'),
+                    number_format($summary['duration_ms'] / 1000, 1, ',', '.'),
+                ));
+
+            $notification = match ($summary['status']) {
+                'completed' => $notification->success(),
+                'completed_with_warnings' => $notification->warning(),
+                default => $notification->danger(),
+            };
+
+            $notification->send();
         } catch (Throwable $exception) {
-            $this->finishLog($log, $startedAt, 'failed', 0, 0, [], [$exception->getMessage()]);
-            $this->result = $this->resultPayload($date, 0, 0, $startedAt, [], [$exception->getMessage()], 'failed');
+            $this->result = [
+                'status' => 'failed',
+                'errors' => [$exception->getMessage()],
+                'warnings' => [],
+            ];
             $this->loadHistory();
 
             Notification::make()
@@ -163,74 +178,51 @@ class SearchConsoleImport extends Page
         }
     }
 
-    private function hasSnapshotsForDate(string $date): bool
-    {
-        return GscPageSnapshot::query()->whereDate('date', $date)->exists()
-            || GscQuerySnapshot::query()->whereDate('date', $date)->exists();
-    }
-
     private function loadHistory(): void
     {
-        $this->history = GscImportLog::query()
+        $this->history = GscImportSession::query()
             ->with('user:id,name,email')
             ->latest()
             ->limit(10)
             ->get()
-            ->map(fn (GscImportLog $log): array => [
-                'date' => $log->date?->toDateString(),
-                'pages' => $log->pages_imported,
-                'queries' => $log->queries_imported,
-                'user' => $log->user?->name ?: $log->user?->email ?: '-',
-                'duration' => number_format($log->duration_ms / 1000, 1, ',', '.').'s',
-                'status' => $log->status,
+            ->map(fn (GscImportSession $session): array => [
+                'date' => $session->import_date?->toDateString(),
+                'status' => $session->status,
+                'processed_files' => $session->processed_files,
+                'skipped_files' => $session->skipped_files,
+                'pages' => $session->pages_imported,
+                'queries' => $session->queries_imported,
+                'countries' => $session->countries_imported,
+                'devices' => $session->devices_imported,
+                'search_appearances' => $session->search_appearances_imported,
+                'date_rows' => $session->date_rows_imported,
+                'user' => $session->user?->name ?: $session->user?->email ?: '-',
+                'duration' => number_format($session->duration_ms / 1000, 1, ',', '.').'s',
+                'warnings' => $session->warnings ?? [],
             ])
             ->all();
     }
 
-    private function finishLog(
-        GscImportLog $log,
-        float $startedAt,
-        string $status,
-        int $pages,
-        int $queries,
-        array $warnings,
-        array $errors,
-    ): void {
-        $log->update([
-            'pages_imported' => $pages,
-            'queries_imported' => $queries,
-            'duration_ms' => $this->durationMs($startedAt),
-            'status' => $status,
-            'warnings' => $warnings,
-            'errors' => $errors,
-        ]);
-    }
-
-    private function resultPayload(
-        string $date,
-        int $pages,
-        int $queries,
-        float $startedAt,
-        array $warnings,
-        array $errors,
-        string $status,
-    ): array {
-        $durationMs = $this->durationMs($startedAt);
-
-        return [
-            'date' => $date,
-            'pages' => $pages,
-            'queries' => $queries,
-            'duration_ms' => $durationMs,
-            'duration_seconds' => $durationMs / 1000,
-            'warnings' => $warnings,
-            'errors' => $errors,
-            'status' => $status,
-        ];
-    }
-
-    private function durationMs(float $startedAt): int
+    /**
+     * @param  array<string, mixed>  $summary
+     * @return array<string, mixed>
+     */
+    private function resultPayload(array $summary): array
     {
-        return (int) round((microtime(true) - $startedAt) * 1000);
+        return [
+            'status' => $summary['status'],
+            'session_id' => $summary['session_id'] ?? null,
+            'pages' => $summary['pages_imported'] ?? 0,
+            'queries' => $summary['queries_imported'] ?? 0,
+            'countries' => $summary['countries_imported'] ?? 0,
+            'devices' => $summary['devices_imported'] ?? 0,
+            'search_appearances' => $summary['search_appearances_imported'] ?? 0,
+            'date_rows' => $summary['date_rows_imported'] ?? 0,
+            'processed_files' => $summary['processed_files'] ?? 0,
+            'skipped_files' => $summary['skipped_files'] ?? 0,
+            'duration_seconds' => (($summary['duration_ms'] ?? 0) / 1000),
+            'warnings' => $summary['warnings'] ?? [],
+            'errors' => $summary['errors'] ?? [],
+        ];
     }
 }
