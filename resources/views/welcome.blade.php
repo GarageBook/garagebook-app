@@ -15,7 +15,11 @@
     <meta property="og:title" content="Digitaal onderhoudsboekje voor auto en motor | GarageBook">
     <meta property="og:description" content="Houd de onderhoudshistorie van je auto of motor digitaal bij. Bewaar beurten, facturen, foto's en kilometerstanden op één plek met GarageBook.">
     <meta property="og:url" content="{{ url('/') }}">
+    <meta property="og:image" content="{{ asset('images/garagebook-sleutelen-motor-garage.webp') }}">
+    <meta property="og:image:width" content="1536">
+    <meta property="og:image:height" content="1024">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{{ asset('images/garagebook-sleutelen-motor-garage.webp') }}">
     <script type="application/ld+json">
         {!! json_encode([
             '@' . 'context' => 'https://schema.org',

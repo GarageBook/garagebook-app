@@ -15,8 +15,12 @@
     <meta property="og:title" content="@yield('og_title', trim($__env->yieldContent('title', 'GarageBook')))">
     <meta property="og:description" content="@yield('og_description', trim($__env->yieldContent('meta_description', 'GarageBook helpt motorrijders om onderhoud, historie, upgrades en belangrijke momenten van hun motor overzichtelijk vast te leggen.')))">
     <meta property="og:url" content="@yield('canonical_url', url()->current())">
+    <meta property="og:image" content="@yield('og_image', asset('images/garagebook-sleutelen-motor-garage.webp'))">
+    <meta property="og:image:width" content="1536">
+    <meta property="og:image:height" content="1024">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="@yield('twitter_url', $__env->yieldContent('canonical_url', url()->current()))">
+    <meta name="twitter:image" content="@yield('og_image', asset('images/garagebook-sleutelen-motor-garage.webp'))">
     @hasSection('structured_data')
         @yield('structured_data')
     @else
