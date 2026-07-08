@@ -26,23 +26,32 @@ class GscCsvTypeDetector
 
     public function detect(string $path, ?string $filename = null): string
     {
-        $normalized = $this->headers($path);
+        $headers = $this->headers($path);
+        $profile = $this->normalizer->profile($headers);
         $name = $filename ? $this->normalize($filename) : $this->normalize(basename($path));
 
-        if ($this->hasMetricColumns($normalized)) {
-            return match (true) {
-                $this->hasAny($normalized, ['zoekopdracht', 'query']) => self::QUERIES,
-                $this->hasAny($normalized, ['pagina', 'page']) => self::PAGES,
-                $this->hasAny($normalized, ['land', 'country']) => self::COUNTRIES,
-                $this->hasAny($normalized, ['apparaat', 'device']) => self::DEVICES,
-                $this->hasAny($normalized, ['zoekopmaak', 'search appearance', 'search_appearance']) => self::SEARCH_APPEARANCE,
-                $this->hasAny($normalized, ['datum', 'date']) => self::DATES,
-                default => self::UNKNOWN,
-            };
+        if ($profile['missing_required'] === []) {
+            $type = $this->typeFromDimensions($profile['dimension_candidates']);
+
+            if ($type !== self::UNKNOWN) {
+                return $type;
+            }
         }
 
         if (str_contains($name, 'filter')) {
             return self::FILTERS;
+        }
+
+        if ($profile['missing_required'] === []) {
+            return match (true) {
+                str_contains($name, 'pagina') || str_contains($name, 'page') => self::PAGES,
+                str_contains($name, 'zoekopdracht') || str_contains($name, 'query') => self::QUERIES,
+                str_contains($name, 'land') || str_contains($name, 'countr') => self::COUNTRIES,
+                str_contains($name, 'apparaat') || str_contains($name, 'device') => self::DEVICES,
+                str_contains($name, 'zoekopmaak') || str_contains($name, 'appearance') => self::SEARCH_APPEARANCE,
+                str_contains($name, 'diagram') || str_contains($name, 'date') || str_contains($name, 'datum') => self::DATES,
+                default => self::UNKNOWN,
+            };
         }
 
         return self::UNKNOWN;
@@ -56,23 +65,25 @@ class GscCsvTypeDetector
         return $this->normalizer->headers($path);
     }
 
-    private function hasMetricColumns(array $headers): bool
+    /**
+     * @param  list<string>  $dimensions
+     */
+    private function typeFromDimensions(array $dimensions): string
     {
-        return $this->hasAny($headers, ['klikken', 'clicks'])
-            && $this->hasAny($headers, ['vertoningen', 'impressions'])
-            && in_array('ctr', $headers, true)
-            && $this->hasAny($headers, ['positie', 'position']);
-    }
-
-    private function hasAny(array $headers, array $needles): bool
-    {
-        foreach ($needles as $needle) {
-            if (in_array($needle, $headers, true)) {
-                return true;
+        foreach ([
+            'queries' => self::QUERIES,
+            'pages' => self::PAGES,
+            'countries' => self::COUNTRIES,
+            'devices' => self::DEVICES,
+            'search_appearance' => self::SEARCH_APPEARANCE,
+            'dates' => self::DATES,
+        ] as $dimension => $type) {
+            if (in_array($dimension, $dimensions, true)) {
+                return $type;
             }
         }
 
-        return false;
+        return self::UNKNOWN;
     }
 
     private function normalize(string $value): string

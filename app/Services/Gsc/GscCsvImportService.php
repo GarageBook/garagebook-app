@@ -116,6 +116,10 @@ class GscCsvImportService
                     continue;
                 }
 
+                if ($this->normalizer->hasCompareColumns($this->typeDetector->headers($file['path']))) {
+                    $warnings[] = $file['name'].': Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.';
+                }
+
                 match ($type) {
                     GscCsvTypeDetector::PAGES => $counts['pages'] += $imported,
                     GscCsvTypeDetector::QUERIES => $counts['queries'] += $imported,
@@ -172,7 +176,7 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $pageUrl = $this->value($row, ['pagina', 'page']);
+            $pageUrl = $this->value($row, ['pagina', "pagina's", 'paginas', 'page', 'pages', 'toppagina', "toppagina's", 'toppaginas', 'top pages', 'top page']);
             $pagePath = $this->pageTypeDetector->pathFromUrl($pageUrl);
 
             if ($pagePath === null) {
@@ -198,8 +202,8 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $query = $this->value($row, ['zoekopdracht', 'query']);
-            $pageUrl = $this->value($row, ['pagina', 'page'], false);
+            $query = $this->value($row, ['zoekopdracht', 'zoekopdrachten', 'meest uitgevoerde zoekopdracht', 'meest uitgevoerde zoekopdrachten', 'query', 'queries', 'top queries', 'top query']);
+            $pageUrl = $this->value($row, ['pagina', "pagina's", 'paginas', 'page', 'pages', 'toppagina', "toppagina's", 'toppaginas', 'top pages', 'top page'], false);
             $pagePath = $this->pageTypeDetector->pathFromUrl($pageUrl);
 
             if ($query === '') {
@@ -222,17 +226,17 @@ class GscCsvImportService
 
     private function importCountries(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['land', 'country'], 'country', GscCountrySnapshot::class);
+        return $this->importDimension($path, $date, ['land', 'landen', 'country', 'countries'], 'country', GscCountrySnapshot::class);
     }
 
     private function importDevices(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['apparaat', 'device'], 'device', GscDeviceSnapshot::class);
+        return $this->importDimension($path, $date, ['apparaat', 'apparaten', 'device', 'devices'], 'device', GscDeviceSnapshot::class);
     }
 
     private function importSearchAppearances(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['zoekopmaak', 'search appearance'], 'appearance', GscSearchAppearanceSnapshot::class);
+        return $this->importDimension($path, $date, ['zoekopmaak', 'zoekweergave', 'search appearance', 'search appearances'], 'appearance', GscSearchAppearanceSnapshot::class);
     }
 
     private function importDates(string $path, string $date): int
@@ -240,7 +244,7 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $dataDate = $this->value($row, ['datum', 'date']);
+            $dataDate = $this->value($row, ['datum', 'date', 'day']);
 
             if ($dataDate === '') {
                 continue;
@@ -316,10 +320,10 @@ class GscCsvImportService
     private function metricPayload(array $row): array
     {
         return [
-            'clicks' => $this->integer($this->value($row, ['klikken', 'clicks'])),
-            'impressions' => $this->integer($this->value($row, ['vertoningen', 'impressions'])),
+            'clicks' => $this->integer($this->value($row, ['clicks', 'klikken', 'aantal klikken'])),
+            'impressions' => $this->integer($this->value($row, ['impressions', 'vertoningen'])),
             'ctr' => $this->ctr($this->value($row, ['ctr'])),
-            'position' => $this->decimal($this->value($row, ['positie', 'position'])),
+            'position' => $this->decimal($this->value($row, ['position', 'positie', 'gemiddelde positie', 'average position'])),
         ];
     }
 
@@ -426,10 +430,17 @@ class GscCsvImportService
         }
 
         $headers = $this->typeDetector->headers($path);
+        $profile = $this->normalizer->profile($headers);
         $headerList = $headers === [] ? '-' : implode(', ', $headers);
+        $dimensions = $profile['dimension_candidates'] === [] ? '-' : implode(', ', $profile['dimension_candidates']);
+        $metrics = $profile['metric_candidates'] === [] ? '-' : implode(', ', $profile['metric_candidates']);
+        $missing = $profile['missing_required'] === [] ? '-' : implode(', ', $profile['missing_required']);
 
         return "Bestand: {$name}
 Headers: {$headerList}
+Herkende dimensiekandidaten: {$dimensions}
+Herkende metriekandidaten: {$metrics}
+Ontbrekende vereiste velden: {$missing}
 Waarom onbekend: niet herkend als ondersteunde GSC-export.";
     }
 }

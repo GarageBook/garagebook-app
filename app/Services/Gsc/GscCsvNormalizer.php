@@ -41,6 +41,77 @@ class GscCsvNormalizer
     }
 
     /**
+     * @return array{headers:list<string>,dimension_candidates:list<string>,metric_candidates:list<string>,missing_required:list<string>,has_compare_columns:bool}
+     */
+    public function profile(array $headers): array
+    {
+        $normalized = array_map(fn (string $header): string => $this->normalizeHeader($header), $headers);
+        $dimensionCandidates = [];
+        $metricCandidates = [];
+        $hasCompareColumns = false;
+
+        foreach ($normalized as $header) {
+            if ($dimension = $this->canonicalDimension($header)) {
+                $dimensionCandidates[] = $dimension;
+            }
+
+            if ($this->hasDateRangePrefix($header)) {
+                $hasCompareColumns = true;
+            }
+
+            if ($metric = $this->canonicalMetric($header)) {
+                $metricCandidates[] = $metric;
+            }
+        }
+
+        $metricCandidates = array_values(array_unique($metricCandidates));
+        $missing = array_values(array_diff(['clicks', 'impressions', 'ctr', 'position'], $metricCandidates));
+
+        return [
+            'headers' => $normalized,
+            'dimension_candidates' => array_values(array_unique($dimensionCandidates)),
+            'metric_candidates' => $metricCandidates,
+            'missing_required' => $missing,
+            'has_compare_columns' => $hasCompareColumns,
+        ];
+    }
+
+    public function canonicalDimension(string $header): ?string
+    {
+        return match ($this->normalizeHeader($header)) {
+            'pagina', "pagina's", 'paginas', 'page', 'pages', 'toppagina', "toppagina's", 'toppaginas', 'top pages', 'top page' => 'pages',
+            'zoekopdracht', 'zoekopdrachten', 'meest uitgevoerde zoekopdracht', 'meest uitgevoerde zoekopdrachten', 'query', 'queries', 'top queries', 'top query' => 'queries',
+            'land', 'landen', 'country', 'countries' => 'countries',
+            'apparaat', 'apparaten', 'device', 'devices' => 'devices',
+            'zoekopmaak', 'zoekweergave', 'search appearance', 'search appearances' => 'search_appearance',
+            'datum', 'date', 'day' => 'dates',
+            default => null,
+        };
+    }
+
+    public function canonicalMetric(string $header): ?string
+    {
+        return match ($this->metricHeader($header)) {
+            'klikken', 'aantal klikken', 'clicks' => 'clicks',
+            'vertoningen', 'impressions' => 'impressions',
+            'ctr' => 'ctr',
+            'positie', 'position', 'gemiddelde positie', 'average position' => 'position',
+            default => null,
+        };
+    }
+
+    public function hasCompareColumns(array|string $headers): bool
+    {
+        foreach ((array) $headers as $header) {
+            if ($this->hasDateRangePrefix($this->normalizeHeader((string) $header))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @return iterable<int, array<string, string>>
      */
     public function rows(string $path): iterable
@@ -72,9 +143,7 @@ class GscCsvNormalizer
                     continue;
                 }
 
-                $values = array_pad($row, count($headers), '');
-
-                yield array_combine($headers, $values) ?: [];
+                yield $this->combineRow($headers, $row);
             }
         } finally {
             fclose($handle);
@@ -152,6 +221,50 @@ class GscCsvNormalizer
         }
 
         return $value;
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @param  list<string>  $row
+     * @return array<string, string>
+     */
+    private function combineRow(array $headers, array $row): array
+    {
+        $combined = [];
+        $metricSeen = [];
+        $values = array_pad($row, count($headers), '');
+
+        foreach ($headers as $index => $header) {
+            $value = $values[$index] ?? '';
+
+            if (! array_key_exists($header, $combined)) {
+                $combined[$header] = $value;
+            }
+
+            if ($metric = $this->canonicalMetric($header)) {
+                if (! array_key_exists($metric, $metricSeen)) {
+                    $combined[$metric] = $value;
+                    $metricSeen[$metric] = true;
+                }
+            }
+        }
+
+        return $combined;
+    }
+
+    private function metricHeader(string $header): string
+    {
+        return $this->stripDateRangePrefix($this->normalizeHeader($header));
+    }
+
+    private function stripDateRangePrefix(string $header): string
+    {
+        return preg_replace('/^\d{1,2}\s+\d{1,2}\s+\d{4}\s+\d{1,2}\s+\d{1,2}\s+\d{4}\s+/u', '', $header) ?? $header;
+    }
+
+    private function hasDateRangePrefix(string $header): bool
+    {
+        return preg_match('/^\d{1,2}\s+\d{1,2}\s+\d{4}\s+\d{1,2}\s+\d{1,2}\s+\d{4}\s+/u', $header) === 1;
     }
 
     private function stripBom(string $value): string

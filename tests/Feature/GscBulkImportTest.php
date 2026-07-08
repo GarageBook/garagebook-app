@@ -88,7 +88,149 @@ class GscBulkImportTest extends TestCase
         $this->assertSame(1, $summary['skipped_files']);
         $this->assertStringContainsString("Bestand: Pagina's.csv", $summary['warnings'][0]);
         $this->assertStringContainsString('Headers: pagina, klikken, vertoningen, ctr', $summary['warnings'][0]);
+        $this->assertStringContainsString('Herkende dimensiekandidaten: pages', $summary['warnings'][0]);
+        $this->assertStringContainsString('Herkende metriekandidaten: clicks, impressions, ctr', $summary['warnings'][0]);
+        $this->assertStringContainsString('Ontbrekende vereiste velden: position', $summary['warnings'][0]);
         $this->assertStringContainsString('Waarom onbekend', $summary['warnings'][0]);
+    }
+
+    public function test_detects_search_appearance_with_aantal_klikken(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::SEARCH_APPEARANCE, 'zoekopmaak, aantal klikken, vertoningen, ctr, positie');
+    }
+
+    public function test_detects_devices_with_aantal_klikken(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::DEVICES, 'apparaat, aantal klikken, vertoningen, ctr, positie');
+    }
+
+    public function test_detects_countries_with_aantal_klikken(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::COUNTRIES, 'land, aantal klikken, vertoningen, ctr, positie');
+    }
+
+    public function test_detects_pages_with_toppaginas(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::PAGES, "toppagina's, aantal klikken, vertoningen, ctr, positie");
+    }
+
+    public function test_detects_queries_with_meest_uitgevoerde_zoekopdrachten(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::QUERIES, 'meest uitgevoerde zoekopdrachten, aantal klikken, vertoningen, ctr, positie');
+    }
+
+    public function test_detects_dates_with_datum(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::DATES, 'datum, aantal klikken, vertoningen, ctr, positie');
+    }
+
+    public function test_detects_compare_devices(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::DEVICES, $this->compareHeader('apparaat'));
+    }
+
+    public function test_detects_compare_countries(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::COUNTRIES, $this->compareHeader('land'));
+    }
+
+    public function test_detects_compare_pages(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::PAGES, $this->compareHeader("toppagina's"));
+    }
+
+    public function test_detects_compare_queries(): void
+    {
+        $this->assertDetected(GscCsvTypeDetector::QUERIES, $this->compareHeader('meest uitgevoerde zoekopdrachten'));
+    }
+
+    public function test_imports_normal_dutch_pages_export(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('normal-pages.csv', [
+                "toppagina's, aantal klikken, vertoningen, ctr, positie",
+                'https://app.garagebook.nl/garage/nl-export,12,300,4%,11.2',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertDatabaseHas('gsc_page_snapshots', [
+            'path' => '/garage/nl-export',
+            'clicks' => 12,
+            'impressions' => 300,
+        ]);
+        $this->assertSame(0.04, (float) GscPageSnapshot::query()->where('path', '/garage/nl-export')->value('ctr'));
+    }
+
+    public function test_imports_compare_dutch_pages_export(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('compare-pages.csv', [
+                $this->compareHeader("toppagina's"),
+                'https://app.garagebook.nl/garage/compare-page,12,2,300,50,4%,4%,11.2,20.4',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('completed_with_warnings', $summary['status']);
+        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['warnings']));
+        $this->assertDatabaseHas('gsc_page_snapshots', [
+            'path' => '/garage/compare-page',
+            'clicks' => 12,
+            'impressions' => 300,
+        ]);
+        $this->assertSame(11.2, (float) GscPageSnapshot::query()->where('path', '/garage/compare-page')->value('position'));
+    }
+
+    public function test_imports_normal_dutch_queries_export(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('normal-queries.csv', [
+                'meest uitgevoerde zoekopdrachten, aantal klikken, vertoningen, ctr, positie',
+                'garagebook onderhoud,7,140,5%,9.4',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertDatabaseHas('gsc_query_snapshots', [
+            'query' => 'garagebook onderhoud',
+            'clicks' => 7,
+            'impressions' => 140,
+        ]);
+    }
+
+    public function test_imports_compare_dutch_queries_export(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('compare-queries.csv', [
+                $this->compareHeader('meest uitgevoerde zoekopdrachten'),
+                'garagebook compare,9,1,180,20,5%,5%,8.1,16.2',
+            ]),
+        ], '2026-07-08');
+
+        $this->assertSame('completed_with_warnings', $summary['status']);
+        $this->assertStringContainsString('Vergelijkingskolommen gedetecteerd; alleen nieuwste periode geïmporteerd.', implode("\n", $summary['warnings']));
+        $this->assertDatabaseHas('gsc_query_snapshots', [
+            'query' => 'garagebook compare',
+            'clicks' => 9,
+            'impressions' => 180,
+        ]);
+        $this->assertSame(8.1, (float) GscQuerySnapshot::query()->where('query', 'garagebook compare')->value('position'));
+    }
+
+    public function test_imports_devices_countries_search_appearance_dates(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            $this->writeCsv('normal-devices.csv', ['apparaat, aantal klikken, vertoningen, ctr, positie', 'MOBILE,2,100,2%,7.2']),
+            $this->writeCsv('normal-countries.csv', ['land, aantal klikken, vertoningen, ctr, positie', 'Nederland,3,150,2%,8.3']),
+            $this->writeCsv('normal-appearance.csv', ['zoekopmaak, aantal klikken, vertoningen, ctr, positie', 'Productresultaten,4,200,2%,9.4']),
+            $this->writeCsv('normal-dates.csv', ['datum, aantal klikken, vertoningen, ctr, positie', '2026-07-01,5,250,2%,10.5']),
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertDatabaseHas('gsc_device_snapshots', ['device' => 'MOBILE', 'clicks' => 2, 'impressions' => 100]);
+        $this->assertDatabaseHas('gsc_country_snapshots', ['country' => 'Nederland', 'clicks' => 3, 'impressions' => 150]);
+        $this->assertDatabaseHas('gsc_search_appearance_snapshots', ['appearance' => 'Productresultaten', 'clicks' => 4, 'impressions' => 200]);
+        $this->assertDatabaseHas('gsc_date_snapshots', ['data_date' => '2026-07-01 00:00:00', 'clicks' => 5, 'impressions' => 250]);
     }
 
     public function test_bulk_upload_imports_multiple_csv_types_and_skips_unknown_files(): void
@@ -217,6 +359,27 @@ class GscBulkImportTest extends TestCase
             'pages_imported' => 1,
             'devices_imported' => 1,
         ]);
+    }
+
+    private function assertDetected(string $expectedType, string $header): void
+    {
+        $detector = app(GscCsvTypeDetector::class);
+
+        $this->assertSame($expectedType, $detector->detect($this->writeCsv(md5($header).'.csv', [$header, $this->dummyRowForHeader($header)]), 'Export.csv'));
+    }
+
+    private function compareHeader(string $dimension): string
+    {
+        return $dimension.', 25 06 2026 01 07 2026 aantal klikken, 18 06 2026 24 06 2026 aantal klikken, 25 06 2026 01 07 2026 vertoningen, 18 06 2026 24 06 2026 vertoningen, 25 06 2026 01 07 2026 ctr, 18 06 2026 24 06 2026 ctr, 25 06 2026 01 07 2026 positie, 18 06 2026 24 06 2026 positie';
+    }
+
+    private function dummyRowForHeader(string $header): string
+    {
+        $columns = substr_count($header, ',') + 1;
+        $values = array_fill(0, $columns, '1');
+        $values[0] = str_contains($header, 'pagina') ? 'https://app.garagebook.nl/garage/dummy' : 'dummy';
+
+        return implode(',', $values);
     }
 
     private function fixturePath(string $filename): string
