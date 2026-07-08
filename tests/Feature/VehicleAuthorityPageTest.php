@@ -34,6 +34,11 @@ class VehicleAuthorityPageTest extends TestCase
         return User::factory()->create(['is_outreach_demo' => false]);
     }
 
+    private function sync(): void
+    {
+        $this->artisan('garagebook:vehicle-authority:sync')->assertSuccessful();
+    }
+
     // -------------------------------------------------------------------------
     // Route
     // -------------------------------------------------------------------------
@@ -50,11 +55,15 @@ class VehicleAuthorityPageTest extends TestCase
             'maintenance_date' => '2024-01-15',
         ]);
 
+        $this->sync();
+
         $this->get('/onderhoud/yamaha-mt-07')->assertOk();
     }
 
     public function test_returns_404_for_unknown_model(): void
     {
+        $this->sync();
+
         $this->get('/onderhoud/does-not-exist-anywhere')->assertNotFound();
     }
 
@@ -62,6 +71,8 @@ class VehicleAuthorityPageTest extends TestCase
     {
         $demoUser = User::factory()->outreachDemo()->create();
         $this->makePublicVehicle($demoUser, 'Kawasaki', 'Z900', ['public_slug' => 'demo-z900']);
+
+        $this->sync();
 
         $this->get('/onderhoud/kawasaki-z900')->assertNotFound();
     }
@@ -77,6 +88,8 @@ class VehicleAuthorityPageTest extends TestCase
             'public_slug' => null,
         ]);
 
+        $this->sync();
+
         $this->get('/onderhoud/honda-cb500f')->assertNotFound();
     }
 
@@ -88,6 +101,8 @@ class VehicleAuthorityPageTest extends TestCase
     {
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
+
+        $this->sync();
 
         $this->get('/onderhoud/yamaha-mt-07')
             ->assertOk()
@@ -106,6 +121,8 @@ class VehicleAuthorityPageTest extends TestCase
             'maintenance_date' => '2024-03-01',
         ]);
 
+        $this->sync();
+
         $this->get('/onderhoud/yamaha-mt-07')
             ->assertOk()
             ->assertSee('/garage/yamaha-mt07-public', false);
@@ -120,6 +137,8 @@ class VehicleAuthorityPageTest extends TestCase
             ]);
         }
 
+        $this->sync();
+
         $response = $this->get('/onderhoud/honda-cb650r')->assertOk();
 
         $count = substr_count($response->getContent(), '/garage/honda-cb650r-');
@@ -132,6 +151,8 @@ class VehicleAuthorityPageTest extends TestCase
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07', ['public_slug' => 'yamaha-mt07-a']);
         $this->makePublicVehicle($user, 'Yamaha', 'MT-09', ['public_slug' => 'yamaha-mt09-a']);
 
+        $this->sync();
+
         $this->get('/onderhoud/yamaha-mt-07')
             ->assertOk()
             ->assertSee('/onderhoud/yamaha-mt-09', false);
@@ -142,6 +163,8 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $this->get('/onderhoud/yamaha-mt-07')
             ->assertOk()
             ->assertSee('Hoe houd ik het onderhoud van een Yamaha MT-07 bij?');
@@ -151,6 +174,8 @@ class VehicleAuthorityPageTest extends TestCase
     {
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
+
+        $this->sync();
 
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
 
@@ -169,6 +194,8 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $this->get('/onderhoud/yamaha-mt-07')
             ->assertOk()
             ->assertSee(url('/onderhoud/yamaha-mt-07'), false);
@@ -183,6 +210,8 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
 
         $this->assertStringContainsString('"@type": "WebPage"', $response->getContent());
@@ -192,6 +221,8 @@ class VehicleAuthorityPageTest extends TestCase
     {
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
+
+        $this->sync();
 
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
 
@@ -203,6 +234,8 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
 
         $this->assertStringContainsString('"@type": "FAQPage"', $response->getContent());
@@ -213,10 +246,11 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
         $content = $response->getContent();
 
-        // Each type must appear at most once in the @graph
         $webPageCount = substr_count($content, '"@type": "WebPage"');
         $faqCount = substr_count($content, '"@type": "FAQPage"');
 
@@ -225,13 +259,15 @@ class VehicleAuthorityPageTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // Sitemap
+    // Sitemap (sitemap-onderhoud.xml — legacy slug-based)
     // -------------------------------------------------------------------------
 
     public function test_sitemap_onderhoud_returns_xml(): void
     {
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
+
+        $this->sync();
 
         $this->get('/sitemap-onderhoud.xml')
             ->assertOk()
@@ -243,6 +279,8 @@ class VehicleAuthorityPageTest extends TestCase
         $user = $this->regularUser();
         $this->makePublicVehicle($user, 'Yamaha', 'MT-07');
 
+        $this->sync();
+
         $this->get('/sitemap-onderhoud.xml')
             ->assertOk()
             ->assertSee(url('/onderhoud/yamaha-mt-07'), false);
@@ -253,8 +291,7 @@ class VehicleAuthorityPageTest extends TestCase
         $demoUser = User::factory()->outreachDemo()->create();
         $this->makePublicVehicle($demoUser, 'Suzuki', 'GSX-R750', ['public_slug' => 'demo-gsxr']);
 
-        $this->get('/sitemap-onderhoud.xml')
-            ->assertOk();
+        $this->sync();
 
         $response = $this->get('/sitemap-onderhoud.xml');
         $this->assertStringNotContainsString(
@@ -269,7 +306,6 @@ class VehicleAuthorityPageTest extends TestCase
 
     public function test_onderhoud_route_does_not_break_page_catch_all(): void
     {
-        // A page with slug "informatie" should still be accessible
         Page::query()->create([
             'title' => 'Informatie',
             'slug' => 'informatie',

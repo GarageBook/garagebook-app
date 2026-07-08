@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\VehicleAuthorityIndexService;
 use App\Services\VehicleAuthorityService;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -10,6 +11,7 @@ class VehicleAuthorityController extends Controller
 {
     public function __construct(
         private readonly VehicleAuthorityService $vehicleAuthorityService,
+        private readonly VehicleAuthorityIndexService $indexService,
     ) {}
 
     public function show(string $slug): View
@@ -27,6 +29,15 @@ class VehicleAuthorityController extends Controller
 
         return response()
             ->view('sitemap-onderhoud', compact('slugs'))
+            ->header('Content-Type', 'application/xml');
+    }
+
+    public function authorityIndexSitemap(): Response
+    {
+        $models = $this->indexService->indexableModels();
+
+        return response()
+            ->view('sitemap-vehicle-authority', compact('models'))
             ->header('Content-Type', 'application/xml');
     }
 }

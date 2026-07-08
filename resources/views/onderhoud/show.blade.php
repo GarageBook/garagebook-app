@@ -154,7 +154,13 @@
         </div>
         @endif
 
-        {{-- Gerelateerde voertuigen --}}
+        {{-- Categorie --}}
+        @if($category ?? null)
+        <h2>Categorie</h2>
+        <p>De {{ $brand }} {{ $model }} valt onder de categorie <strong>{{ $category }}</strong>.</p>
+        @endif
+
+        {{-- Gerelateerde voertuigen (max 8, gesorteerd op populariteit) --}}
         @if($related_models->isNotEmpty())
         <h2>Andere {{ $brand }}-modellen in GarageBook</h2>
         <div class="gb-vehicle-authority-related">

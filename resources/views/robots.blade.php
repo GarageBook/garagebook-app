@@ -3,3 +3,4 @@ Allow: /
 
 Sitemap: {{ url('/sitemap.xml') }}
 Sitemap: {{ url('/sitemap-garages.xml') }}
+Sitemap: {{ url('/sitemap-vehicle-authority.xml') }}

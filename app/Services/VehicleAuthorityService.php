@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Vehicle;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class VehicleAuthorityService
 {
@@ -18,10 +17,9 @@ class VehicleAuthorityService
         ['url' => '/universeel-onderhoudsboekje', 'title' => 'Universeel onderhoudsboekje', 'description' => 'Voordelen, nadelen en digitale alternatieven.'],
     ];
 
-    public function modelSlug(string $brand, string $model): string
-    {
-        return Str::slug($brand.' '.$model);
-    }
+    public function __construct(
+        private readonly VehicleAuthorityIndexService $indexService,
+    ) {}
 
     public function resolveBySlug(string $slug): ?array
     {
@@ -35,20 +33,19 @@ class VehicleAuthorityService
      */
     public function allModelSlugs(): Collection
     {
-        return Cache::remember('vehicle-authority:model-slugs', self::CACHE_TTL, fn () => $this->queryModelSlugs());
+        return $this->indexService->allIndexableSlugs();
     }
 
     private function build(string $slug): ?array
     {
-        $modelMap = $this->buildModelMap();
-        $info = $modelMap[$slug] ?? null;
+        $entry = $this->indexService->resolveBySlug($slug);
 
-        if ($info === null) {
+        if ($entry === null) {
             return null;
         }
 
-        $brand = $info['brand'];
-        $model = $info['model'];
+        $brand = $entry->brand;
+        $model = $entry->model;
 
         $vehicles = Vehicle::query()
             ->join('users', 'vehicles.user_id', '=', 'users.id')
@@ -74,40 +71,13 @@ class VehicleAuthorityService
             'brand' => $brand,
             'model' => $model,
             'slug' => $slug,
+            'category' => $entry->category,
             'year_range' => $this->yearRange($vehicles),
             'public_vehicles' => $vehicles,
-            'related_models' => $this->relatedModels($brand, $model),
+            'related_models' => $this->indexService->relatedModels($brand, $model, 8),
             'related_pages' => self::RELATED_PAGES,
             'faq_items' => $this->faqItems($brand, $model),
         ];
-    }
-
-    /**
-     * @return array<string, array{brand: string, model: string}>
-     */
-    private function buildModelMap(): array
-    {
-        return Cache::remember('vehicle-authority:model-map', self::CACHE_TTL, function () {
-            return Vehicle::query()
-                ->join('users', 'vehicles.user_id', '=', 'users.id')
-                ->where('vehicles.is_public', true)
-                ->where('users.is_outreach_demo', false)
-                ->whereNotNull('vehicles.public_slug')
-                ->whereNotNull('vehicles.brand')
-                ->whereNotNull('vehicles.model')
-                ->where('vehicles.brand', '!=', '')
-                ->where('vehicles.model', '!=', '')
-                ->select('vehicles.brand', 'vehicles.model')
-                ->distinct()
-                ->get()
-                ->mapWithKeys(fn ($v) => [
-                    $this->modelSlug($v->brand, $v->model) => [
-                        'brand' => $v->brand,
-                        'model' => $v->model,
-                    ],
-                ])
-                ->all();
-        });
     }
 
     /**
@@ -125,31 +95,6 @@ class VehicleAuthorityService
         $max = $years->last();
 
         return $min === $max ? (string) $min : "{$min}–{$max}";
-    }
-
-    /**
-     * @return Collection<int, array{brand: string, model: string, slug: string}>
-     */
-    private function relatedModels(string $brand, string $currentModel): Collection
-    {
-        return Vehicle::query()
-            ->join('users', 'vehicles.user_id', '=', 'users.id')
-            ->where('vehicles.brand', $brand)
-            ->where('vehicles.model', '!=', $currentModel)
-            ->where('vehicles.is_public', true)
-            ->where('users.is_outreach_demo', false)
-            ->whereNotNull('vehicles.public_slug')
-            ->whereNotNull('vehicles.model')
-            ->where('vehicles.model', '!=', '')
-            ->select('vehicles.brand', 'vehicles.model')
-            ->distinct()
-            ->limit(5)
-            ->get()
-            ->map(fn ($v) => [
-                'brand' => $v->brand,
-                'model' => $v->model,
-                'slug' => $this->modelSlug($v->brand, $v->model),
-            ]);
     }
 
     /**
@@ -179,27 +124,5 @@ class VehicleAuthorityService
                 'answer' => "Ja. Kopers zijn bereid meer te betalen voor een {$brand} {$model} met aantoonbare onderhoudshistorie. Een complete tijdlijn in GarageBook maakt je aanbieding geloofwaardiger en versnelt het verkoopproces.",
             ],
         ];
-    }
-
-    /**
-     * @return Collection<int, string>
-     */
-    private function queryModelSlugs(): Collection
-    {
-        return Vehicle::query()
-            ->join('users', 'vehicles.user_id', '=', 'users.id')
-            ->where('vehicles.is_public', true)
-            ->where('users.is_outreach_demo', false)
-            ->whereNotNull('vehicles.public_slug')
-            ->whereNotNull('vehicles.brand')
-            ->whereNotNull('vehicles.model')
-            ->where('vehicles.brand', '!=', '')
-            ->where('vehicles.model', '!=', '')
-            ->select('vehicles.brand', 'vehicles.model')
-            ->distinct()
-            ->get()
-            ->map(fn ($v) => $this->modelSlug($v->brand, $v->model))
-            ->unique()
-            ->values();
     }
 }

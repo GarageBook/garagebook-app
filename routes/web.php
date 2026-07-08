@@ -154,6 +154,9 @@ Route::get('/sitemap-garages.xml', [PublicGarageController::class, 'sitemap'])
 Route::get('/sitemap-onderhoud.xml', [VehicleAuthorityController::class, 'sitemap'])
     ->name('sitemap.onderhoud');
 
+Route::get('/sitemap-vehicle-authority.xml', [VehicleAuthorityController::class, 'authorityIndexSitemap'])
+    ->name('sitemap.vehicle-authority');
+
 /*
 |--------------------------------------------------------------------------
 | VEHICLE AUTHORITY PAGES
