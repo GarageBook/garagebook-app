@@ -36,6 +36,61 @@ class GscBulkImportTest extends TestCase
         $this->assertSame('unknown', $detector->detect($this->writeCsv('unknown.csv', ['Kolom;Waarde'])));
     }
 
+    public function test_detector_recognizes_standard_dutch_gsc_exports_from_headers(): void
+    {
+        $detector = app(GscCsvTypeDetector::class);
+
+        $cases = [
+            "Pagina's.csv" => GscCsvTypeDetector::PAGES,
+            'Zoekopdrachten.csv' => GscCsvTypeDetector::QUERIES,
+            'Landen.csv' => GscCsvTypeDetector::COUNTRIES,
+            'Apparaten.csv' => GscCsvTypeDetector::DEVICES,
+            'Zoekopmaak.csv' => GscCsvTypeDetector::SEARCH_APPEARANCE,
+            'Diagram.csv' => GscCsvTypeDetector::DATES,
+        ];
+
+        foreach ($cases as $filename => $expectedType) {
+            $this->assertSame($expectedType, $detector->detect($this->fixturePath($filename), 'Export.csv'));
+        }
+    }
+
+    public function test_bulk_import_uses_standard_dutch_gsc_fixture_headers(): void
+    {
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            ['path' => $this->fixturePath("Pagina's.csv"), 'name' => "Pagina's.csv"],
+            ['path' => $this->fixturePath('Zoekopdrachten.csv'), 'name' => 'Zoekopdrachten.csv'],
+            ['path' => $this->fixturePath('Landen.csv'), 'name' => 'Landen.csv'],
+            ['path' => $this->fixturePath('Apparaten.csv'), 'name' => 'Apparaten.csv'],
+            ['path' => $this->fixturePath('Zoekopmaak.csv'), 'name' => 'Zoekopmaak.csv'],
+            ['path' => $this->fixturePath('Diagram.csv'), 'name' => 'Diagram.csv'],
+        ], '2026-07-08');
+
+        $this->assertSame('completed', $summary['status']);
+        $this->assertSame(6, $summary['processed_files']);
+        $this->assertSame(0, $summary['skipped_files']);
+        $this->assertSame(1, GscPageSnapshot::query()->count());
+        $this->assertSame(1, GscQuerySnapshot::query()->count());
+        $this->assertSame(1, GscCountrySnapshot::query()->count());
+        $this->assertSame(1, GscDeviceSnapshot::query()->count());
+        $this->assertSame(1, GscSearchAppearanceSnapshot::query()->count());
+        $this->assertSame(1, GscDateSnapshot::query()->count());
+    }
+
+    public function test_unknown_bulk_import_warning_includes_detected_headers(): void
+    {
+        $path = $this->writeCsv('unknown-warning.csv', ['Pagina;Klikken;Vertoningen;CTR', 'https://app.garagebook.nl/garage/a;1;2;50%']);
+
+        $summary = app(GscCsvImportService::class)->importBulkSession([
+            ['path' => $path, 'name' => "Pagina's.csv"],
+        ], '2026-07-08');
+
+        $this->assertSame('completed_with_warnings', $summary['status']);
+        $this->assertSame(1, $summary['skipped_files']);
+        $this->assertStringContainsString("Bestand: Pagina's.csv", $summary['warnings'][0]);
+        $this->assertStringContainsString('Headers: pagina, klikken, vertoningen, ctr', $summary['warnings'][0]);
+        $this->assertStringContainsString('Waarom onbekend', $summary['warnings'][0]);
+    }
+
     public function test_bulk_upload_imports_multiple_csv_types_and_skips_unknown_files(): void
     {
         Storage::fake('local');
@@ -162,6 +217,11 @@ class GscBulkImportTest extends TestCase
             'pages_imported' => 1,
             'devices_imported' => 1,
         ]);
+    }
+
+    private function fixturePath(string $filename): string
+    {
+        return base_path('tests/Fixtures/gsc/'.$filename);
     }
 
     private function uploadedCsv(string $name, array $lines): UploadedFile

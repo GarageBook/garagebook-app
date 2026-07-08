@@ -2,8 +2,6 @@
 
 namespace App\Services\Gsc;
 
-use SplFileObject;
-
 class GscCsvTypeDetector
 {
     public const PAGES = 'pages';
@@ -22,10 +20,13 @@ class GscCsvTypeDetector
 
     public const UNKNOWN = 'unknown';
 
+    public function __construct(
+        private readonly GscCsvNormalizer $normalizer,
+    ) {}
+
     public function detect(string $path, ?string $filename = null): string
     {
-        $headers = $this->headers($path);
-        $normalized = array_map(fn (string $header): string => $this->normalize($header), $headers);
+        $normalized = $this->headers($path);
         $name = $filename ? $this->normalize($filename) : $this->normalize(basename($path));
 
         if ($this->hasMetricColumns($normalized)) {
@@ -52,23 +53,7 @@ class GscCsvTypeDetector
      */
     public function headers(string $path): array
     {
-        if (! is_file($path)) {
-            return [];
-        }
-
-        $file = new SplFileObject($path);
-        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $file->setCsvControl($this->detectDelimiter($path));
-
-        foreach ($file as $row) {
-            if ($row === [null] || $row === false) {
-                continue;
-            }
-
-            return array_map(fn ($value): string => trim((string) $value), $row);
-        }
-
-        return [];
+        return $this->normalizer->headers($path);
     }
 
     private function hasMetricColumns(array $headers): bool
@@ -92,20 +77,6 @@ class GscCsvTypeDetector
 
     private function normalize(string $value): string
     {
-        return trim(mb_strtolower(str_replace(['-', '_'], ' ', $value)));
-    }
-
-    private function detectDelimiter(string $path): string
-    {
-        $handle = fopen($path, 'r');
-
-        if (! $handle) {
-            return ',';
-        }
-
-        $line = (string) fgets($handle);
-        fclose($handle);
-
-        return substr_count($line, ';') > substr_count($line, ',') ? ';' : ',';
+        return $this->normalizer->normalizeHeader($value);
     }
 }

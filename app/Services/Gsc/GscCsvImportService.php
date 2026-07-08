@@ -13,7 +13,6 @@ use App\Models\GscSearchAppearanceSnapshot;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
-use SplFileObject;
 use Throwable;
 
 class GscCsvImportService
@@ -21,6 +20,7 @@ class GscCsvImportService
     public function __construct(
         private readonly GscPageTypeDetector $pageTypeDetector,
         private readonly GscCsvTypeDetector $typeDetector,
+        private readonly GscCsvNormalizer $normalizer,
     ) {}
 
     /**
@@ -110,7 +110,7 @@ class GscCsvImportService
                 }
 
                 if ($imported === null) {
-                    $warnings[] = $file['name'].': overgeslagen ('.$type.').';
+                    $warnings[] = $this->skippedFileWarning($file['name'], $file['path'], $type);
                     $counts['skipped_files']++;
 
                     continue;
@@ -172,7 +172,7 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $pageUrl = $this->value($row, ['Pagina', 'Page']);
+            $pageUrl = $this->value($row, ['pagina', 'page']);
             $pagePath = $this->pageTypeDetector->pathFromUrl($pageUrl);
 
             if ($pagePath === null) {
@@ -198,8 +198,8 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $query = $this->value($row, ['Zoekopdracht', 'Query']);
-            $pageUrl = $this->value($row, ['Pagina', 'Page'], false);
+            $query = $this->value($row, ['zoekopdracht', 'query']);
+            $pageUrl = $this->value($row, ['pagina', 'page'], false);
             $pagePath = $this->pageTypeDetector->pathFromUrl($pageUrl);
 
             if ($query === '') {
@@ -222,17 +222,17 @@ class GscCsvImportService
 
     private function importCountries(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['Land', 'Country'], 'country', GscCountrySnapshot::class);
+        return $this->importDimension($path, $date, ['land', 'country'], 'country', GscCountrySnapshot::class);
     }
 
     private function importDevices(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['Apparaat', 'Device'], 'device', GscDeviceSnapshot::class);
+        return $this->importDimension($path, $date, ['apparaat', 'device'], 'device', GscDeviceSnapshot::class);
     }
 
     private function importSearchAppearances(string $path, string $date): int
     {
-        return $this->importDimension($path, $date, ['Zoekopmaak', 'Search appearance'], 'appearance', GscSearchAppearanceSnapshot::class);
+        return $this->importDimension($path, $date, ['zoekopmaak', 'search appearance'], 'appearance', GscSearchAppearanceSnapshot::class);
     }
 
     private function importDates(string $path, string $date): int
@@ -240,7 +240,7 @@ class GscCsvImportService
         $count = 0;
 
         foreach ($this->readRows($path) as $row) {
-            $dataDate = $this->value($row, ['Datum', 'Date']);
+            $dataDate = $this->value($row, ['datum', 'date']);
 
             if ($dataDate === '') {
                 continue;
@@ -287,49 +287,7 @@ class GscCsvImportService
      */
     private function readRows(string $path): iterable
     {
-        if (! is_file($path)) {
-            throw new RuntimeException("CSV-bestand niet gevonden: {$path}");
-        }
-
-        $file = new SplFileObject($path);
-        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY);
-        $file->setCsvControl($this->detectDelimiter($path));
-
-        $headers = null;
-
-        foreach ($file as $row) {
-            if ($row === [null] || $row === false) {
-                continue;
-            }
-
-            $row = array_map(fn ($value): string => trim((string) $value), $row);
-
-            if ($headers === null) {
-                $headers = $row;
-
-                continue;
-            }
-
-            if (count(array_filter($row, fn (string $value): bool => $value !== '')) === 0) {
-                continue;
-            }
-
-            yield array_combine($headers, array_pad($row, count($headers), '')) ?: [];
-        }
-    }
-
-    private function detectDelimiter(string $path): string
-    {
-        $handle = fopen($path, 'r');
-
-        if (! $handle) {
-            return ',';
-        }
-
-        $line = (string) fgets($handle);
-        fclose($handle);
-
-        return substr_count($line, ';') > substr_count($line, ',') ? ';' : ',';
+        return $this->normalizer->rows($path);
     }
 
     /**
@@ -358,10 +316,10 @@ class GscCsvImportService
     private function metricPayload(array $row): array
     {
         return [
-            'clicks' => $this->integer($this->value($row, ['Klikken', 'Clicks'])),
-            'impressions' => $this->integer($this->value($row, ['Vertoningen', 'Impressions'])),
-            'ctr' => $this->ctr($this->value($row, ['CTR'])),
-            'position' => $this->decimal($this->value($row, ['Positie', 'Position'])),
+            'clicks' => $this->integer($this->value($row, ['klikken', 'clicks'])),
+            'impressions' => $this->integer($this->value($row, ['vertoningen', 'impressions'])),
+            'ctr' => $this->ctr($this->value($row, ['ctr'])),
+            'position' => $this->decimal($this->value($row, ['positie', 'position'])),
         ];
     }
 
@@ -459,5 +417,19 @@ class GscCsvImportService
         }
 
         return ['session_id' => $session->id, 'date' => $session->import_date?->toDateString()] + $payload;
+    }
+
+    private function skippedFileWarning(string $name, string $path, string $type): string
+    {
+        if ($type === GscCsvTypeDetector::FILTERS) {
+            return $name.': bewust overgeslagen (filters).';
+        }
+
+        $headers = $this->typeDetector->headers($path);
+        $headerList = $headers === [] ? '-' : implode(', ', $headers);
+
+        return "Bestand: {$name}
+Headers: {$headerList}
+Waarom onbekend: niet herkend als ondersteunde GSC-export.";
     }
 }
