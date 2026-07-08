@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Services\Seo\SeoHealthService;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 
@@ -15,6 +16,17 @@ class SeoHealthDashboard extends Page
     protected string $view = 'filament.pages.seo-health-dashboard';
 
     public array $report = [];
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('exportCsv')
+                ->label('Export CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->url(route('admin.seo-health-dashboard.export')),
+        ];
+    }
 
     public function mount(SeoHealthService $seoHealthService): void
     {

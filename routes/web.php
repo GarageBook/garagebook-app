@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Auth\Register;
+use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
 use App\Http\Controllers\OutreachDemoIntroDismissController;
@@ -85,6 +86,9 @@ Route::get('/maintenance/pdf', function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/admin/seo-health-dashboard/export', SeoHealthDashboardExportController::class)
+        ->name('admin.seo-health-dashboard.export');
+
     Route::get('/documents/{document}', [VehicleDocumentController::class, 'show'])
         ->name('vehicle-documents.show');
 
