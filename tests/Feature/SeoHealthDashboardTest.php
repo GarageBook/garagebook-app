@@ -32,6 +32,12 @@ class SeoHealthDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertHeaderMissing('Location');
+        $this->assertSame('filament.admin.pages.seo-health-dashboard', request()->route()?->getName());
+        $response->assertSeeText('SEO Health');
+        $response->assertDontSee('/garage/honda-c50', false);
+        $response->assertDontSee('location.href =', false);
+        $response->assertDontSee('location.replace', false);
+        $response->assertDontSee('http-equiv="refresh"', false);
     }
 
     public function test_seo_health_navigation_item_points_to_admin_dashboard(): void
@@ -47,7 +53,9 @@ class SeoHealthDashboardTest extends TestCase
             ->values();
 
         $this->assertCount(1, $navigationItems);
-        $this->assertSame('/admin/seo-health-dashboard', $navigationItems[0]->getUrl());
+        $this->assertStringEndsWith('/admin/seo-health-dashboard', $navigationItems[0]->getUrl());
+        $this->assertSame(192, $navigationItems[0]->getSort());
+        $this->assertSame('Beheer', $navigationItems[0]->getGroup());
         $this->assertStringNotContainsString('/garage/', $navigationItems[0]->getUrl());
     }
 
@@ -58,13 +66,13 @@ class SeoHealthDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin');
 
         $response->assertOk();
-        $response->assertSee('href="/admin/seo-health-dashboard"', false);
+        $response->assertSee('/admin/seo-health-dashboard', false);
         $response->assertDontSee('href="/garage/honda-c50"', false);
 
         $links = $this->seoHealthLinks($response->getContent());
 
         $this->assertCount(1, $links, 'Expected exactly one rendered SEO Health navigation link: '.json_encode($links));
-        $this->assertSame('/admin/seo-health-dashboard', $links[0]);
+        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]);
         $this->assertStringNotContainsString('/garage/', $links[0]);
     }
 
