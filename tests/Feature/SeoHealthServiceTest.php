@@ -82,6 +82,28 @@ class SeoHealthServiceTest extends TestCase
         $this->assertContains('korte/lege logomschrijving', $row['reasons']);
     }
 
+    public function test_dashboard_public_links_use_the_vehicle_public_slug(): void
+    {
+        $user = User::factory()->create(['email' => 'owner@example.com']);
+        $vehicle = $this->createPublicVehicle($user, '1974-honda-c50-super-cub');
+        $vehicle->forceFill([
+            'brand' => 'Honda',
+            'model' => 'C50',
+            'year' => 1974,
+        ])->save();
+
+        $report = app(SeoHealthService::class)->report();
+        $row = collect($report['weak_pages'])->firstWhere('vehicle', '1974 Honda C50');
+
+        $this->assertNotNull($row);
+        $this->assertSame('1974-honda-c50-super-cub', $row['slug']);
+        $this->assertSame(
+            route('public-garage.show', ['publicSlug' => '1974-honda-c50-super-cub']),
+            $row['public_url']
+        );
+        $this->assertFalse(str_ends_with($row['public_url'], '/garage/honda-c50'));
+    }
+
     public function test_public_vehicle_without_maintenance_or_photo_is_indexable(): void
     {
         $user = User::factory()->create();

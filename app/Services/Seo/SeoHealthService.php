@@ -201,7 +201,7 @@ class SeoHealthService
 
         foreach ($vehicles->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug)) as $vehicle) {
             $canonicalUrl = $this->publicGarageService->canonicalUrl($vehicle);
-            $response = $this->dispatchGaragePath('/garage/'.$vehicle->public_slug);
+            $response = $this->dispatchGaragePath($this->publicGaragePath($vehicle));
             $html = $this->responseBody($response);
             $inspection = $this->inspectGarageHtml($html);
             $url = $canonicalUrl;
@@ -256,7 +256,7 @@ class SeoHealthService
                 }
             }
 
-            $queryResponse = $this->dispatchGaragePath('/garage/'.$vehicle->public_slug.'?seo_audit=1');
+            $queryResponse = $this->dispatchGaragePath($this->publicGaragePath($vehicle, ['seo_audit' => '1']));
             if (! $queryResponse->isRedirection() || $queryResponse->headers->get('Location') !== $canonicalUrl) {
                 $result['querystring_issue_urls'][] = $url;
             }
@@ -363,6 +363,13 @@ class SeoHealthService
             ...Arr::wrap($sitemapInspections['noindex_urls']),
             ...$sitemapNotEligible->all(),
         ])->unique()->values()->all();
+    }
+
+    private function publicGaragePath(Vehicle $vehicle, array $query = []): string
+    {
+        $path = route('public-garage.show', ['publicSlug' => $vehicle->public_slug], false);
+
+        return $query === [] ? $path : $path.'?'.http_build_query($query);
     }
 
     private function dispatchGaragePath(string $path): Response

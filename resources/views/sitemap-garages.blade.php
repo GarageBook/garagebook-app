@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 @foreach($vehicles as $vehicle)
     <url>
-        <loc>{{ url('/garage/' . $vehicle->public_slug) }}</loc>
+        <loc>{{ route('public-garage.show', ['publicSlug' => $vehicle->public_slug]) }}</loc>
         <lastmod>{{ $vehicle->updated_at?->toAtomString() }}</lastmod>
     </url>
 @endforeach
