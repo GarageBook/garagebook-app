@@ -49,10 +49,6 @@ class AdminPanelProvider extends PanelProvider
                 Route::get('register/geratel', GeratelRegister::class)->name('auth.register.geratel');
             })
             ->passwordReset()
-            ->spa()
-            ->spaUrlExceptions([
-                '*/admin/seo-health-dashboard',
-            ])
             ->defaultThemeMode(ThemeMode::Light)
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors([

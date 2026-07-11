@@ -46,14 +46,6 @@ class SeoHealthDashboardTest extends TestCase
         );
     }
 
-    public function test_admin_panel_provider_excludes_seo_health_from_spa_navigation(): void
-    {
-        $this->assertStringContainsString(
-            "'*/admin/seo-health-dashboard'",
-            file_get_contents(app_path('Providers/Filament/AdminPanelProvider.php'))
-        );
-    }
-
     public function test_admin_navigation_contains_one_seo_health_item(): void
     {
         $admin = User::factory()->admin()->create();
