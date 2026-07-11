@@ -19,6 +19,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Facades\FilamentView;
@@ -63,6 +64,14 @@ class AdminPanelProvider extends PanelProvider
                 SeoHealthDashboard::class,
                 SearchConsoleImport::class,
                 SearchConsoleInsights::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('SEO Health')
+                    ->url('/admin/seo-health-dashboard')
+                    ->icon('heroicon-o-magnifying-glass')
+                    ->group('Beheer')
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false)
+                    ->sort(100),
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
                 BlogResource::class,

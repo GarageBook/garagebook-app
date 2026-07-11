@@ -13,6 +13,10 @@ fi
 "$@"
 
 php artisan optimize:clear
+php artisan filament:clear-cached-components
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 php artisan garagebook:seo-audit
 php artisan garagebook:seo-audit-public-garages
 php artisan garagebook:deployment-smoke-test

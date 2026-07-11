@@ -5,13 +5,10 @@ namespace App\Filament\Pages;
 use App\Services\Seo\SeoHealthService;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
-use Filament\Support\Icons\Heroicon;
 
 class SeoHealthDashboard extends Page
 {
-    protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedMagnifyingGlassCircle;
-
-    protected static ?int $navigationSort = 192;
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $slug = 'seo-health-dashboard';
 
@@ -40,26 +37,6 @@ class SeoHealthDashboard extends Page
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
-    }
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return auth()->user()?->isAdmin() ?? false;
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('app.navigation.management');
-    }
-
-    public static function getNavigationUrl(): string
-    {
-        return static::getUrl(panel: 'admin');
-    }
-
-    public static function getNavigationLabel(): string
-    {
-        return 'SEO Health';
     }
 
     public function getHeading(): string

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Pages\SeoHealthDashboard;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -39,14 +39,16 @@ class SeoHealthDashboardTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        $navigationItem = collect(SeoHealthDashboard::getNavigationItems())
-            ->first(fn ($item) => $item->getLabel() === 'SEO Health');
+        $navigationItems = collect(Filament::getNavigation())
+            ->flatMap(fn ($group) => $group->getItems())
+            ->filter(fn ($item) => $item->getLabel() === 'SEO Health')
+            ->values();
 
-        $this->assertNotNull($navigationItem);
-        $this->assertSame(SeoHealthDashboard::getUrl(panel: 'admin'), $navigationItem->getUrl());
-        $this->assertStringContainsString('/admin/seo-health-dashboard', $navigationItem->getUrl());
-        $this->assertStringNotContainsString('/garage/', $navigationItem->getUrl());
+        $this->assertCount(1, $navigationItems);
+        $this->assertSame('/admin/seo-health-dashboard', $navigationItems[0]->getUrl());
+        $this->assertStringNotContainsString('/garage/', $navigationItems[0]->getUrl());
     }
 
     public function test_admin_navigation_html_links_seo_health_to_admin_dashboard(): void
@@ -56,11 +58,13 @@ class SeoHealthDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin');
 
         $response->assertOk();
+        $response->assertSee('href="/admin/seo-health-dashboard"', false);
+        $response->assertDontSee('href="/garage/honda-c50"', false);
 
         $links = $this->seoHealthLinks($response->getContent());
 
         $this->assertCount(1, $links, 'Expected exactly one rendered SEO Health navigation link: '.json_encode($links));
-        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]);
+        $this->assertSame('/admin/seo-health-dashboard', $links[0]);
         $this->assertStringNotContainsString('/garage/', $links[0]);
     }
 
