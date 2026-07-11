@@ -1,24 +1,4 @@
-<x-filament-panels::layout>
-    <div class="fi-page">
-        <div class="fi-page-header-main-ctn">
-            <div class="fi-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 class="fi-header-heading text-2xl font-bold tracking-tight text-gray-950 dark:text-white">SEO Health</h1>
-                    <p class="fi-header-subheading mt-2 text-sm text-gray-500 dark:text-gray-400">Read-only controle van publieke garagepagina's, sitemap, canonical en structured data.</p>
-                </div>
-
-                <x-filament::button
-                    tag="a"
-                    href="{{ route('admin.seo-health-dashboard.export') }}"
-                    color="gray"
-                    icon="heroicon-o-arrow-down-tray"
-                >
-                    Export CSV
-                </x-filament::button>
-            </div>
-
-            <div class="fi-page-main">
-                <div class="fi-page-content">
+<x-filament-panels::page>
     @php
         $status = $report['status'] ?? 'fail';
         $statusClasses = [
@@ -147,8 +127,4 @@
             @endif
         </section>
     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</x-filament-panels::layout>
+</x-filament-panels::page>

@@ -2,8 +2,7 @@
 
 use App\Filament\Auth\Register;
 use App\Http\Controllers\Admin\SearchConsoleInsightsExportController;
-use App\Http\Controllers\Admin\SeoHealthDashboardController;
-use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
+use App\Http\Controllers\Admin\SeoHealthOverviewExportController;
 use App\Http\Controllers\Admin\SeoOpportunitiesExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
@@ -21,7 +20,6 @@ use App\Models\Page;
 use App\Models\Vehicle;
 use App\Support\InternalContentLinks;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -51,12 +49,6 @@ Route::get('/lifecycle-emails/unsubscribe/{user}', LifecycleEmailUnsubscribeCont
 Route::get('/website', function () {
     return redirect('/', 301);
 })->name('website');
-
-Route::middleware([
-    'auth',
-    SetUpPanel::class.':admin',
-])->get('/admin/seo-health-dashboard', SeoHealthDashboardController::class)
-    ->name('admin.seo-health-dashboard');
 
 Route::get('/garage/{publicSlug}', [PublicGarageController::class, 'show'])
     ->name('public-garage.show');
@@ -96,7 +88,7 @@ Route::get('/maintenance/pdf', function () {
     );
 });
 
-Route::get('/admin/seo-health-export', SeoHealthDashboardExportController::class)
+Route::get('/admin/seo-health-dashboard/export', SeoHealthOverviewExportController::class)
     ->name('admin.seo-health-dashboard.export');
 
 Route::get('/admin/search-console-insights/export', SearchConsoleInsightsExportController::class)
