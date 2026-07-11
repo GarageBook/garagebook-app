@@ -13,8 +13,6 @@ class SeoHealthDashboard extends Page
 
     protected static ?int $navigationSort = 192;
 
-    protected static ?string $slug = 'seo-health-dashboard';
-
     protected string $view = 'filament.pages.seo-health-dashboard';
 
     public array $report = [];

@@ -54,7 +54,7 @@ class PublicGarageService
     {
         $publicSlug = $vehicle->public_slug ?: $this->ensurePublicSlug($vehicle);
 
-        return route('public-garage.show', ['publicSlug' => $publicSlug]);
+        return rtrim((string) config('app.url'), '/').'/garage/'.$publicSlug;
     }
 
     public function ensurePublicSlug(Vehicle $vehicle): string
