@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\SeoHealthDashboard;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,6 +21,44 @@ class SeoHealthDashboardTest extends TestCase
             ->assertSeeText('SEO Health')
             ->assertSeeText('Indexability overview')
             ->assertSeeText('Sitemap health');
+    }
+
+    public function test_seo_health_dashboard_admin_route_returns_ok_without_redirect(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)
+            ->get('/admin/seo-health-dashboard');
+
+        $response->assertOk();
+        $response->assertHeaderMissing('Location');
+    }
+
+    public function test_seo_health_navigation_item_points_to_admin_dashboard(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        $navigationItem = collect(SeoHealthDashboard::getNavigationItems())
+            ->first(fn ($item) => $item->getLabel() === 'SEO Health');
+
+        $this->assertNotNull($navigationItem);
+        $this->assertSame(SeoHealthDashboard::getUrl(panel: 'admin'), $navigationItem->getUrl());
+        $this->assertStringContainsString('/admin/seo-health-dashboard', $navigationItem->getUrl());
+        $this->assertStringNotContainsString('/garage/', $navigationItem->getUrl());
+    }
+
+    public function test_admin_navigation_html_links_seo_health_to_admin_dashboard(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->get('/admin');
+
+        $response->assertOk();
+        $response->assertSee('/admin/seo-health-dashboard', false);
+        $response->assertDontSee('href="/garage/honda-c50"', false);
+        $response->assertDontSee('href="https://app.garagebook.nl/garage/honda-c50"', false);
     }
 
     public function test_regular_user_cannot_view_seo_health_dashboard(): void

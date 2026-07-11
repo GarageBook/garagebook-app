@@ -13,6 +13,8 @@ class SeoHealthDashboard extends Page
 
     protected static ?int $navigationSort = 192;
 
+    protected static ?string $slug = 'seo-health-dashboard';
+
     protected string $view = 'filament.pages.seo-health-dashboard';
 
     public array $report = [];
@@ -48,6 +50,11 @@ class SeoHealthDashboard extends Page
     public static function getNavigationGroup(): ?string
     {
         return __('app.navigation.management');
+    }
+
+    public static function getNavigationUrl(): string
+    {
+        return static::getUrl(panel: 'admin');
     }
 
     public static function getNavigationLabel(): string
