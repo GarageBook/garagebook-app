@@ -56,9 +56,12 @@ class SeoHealthDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin');
 
         $response->assertOk();
-        $response->assertSee('/admin/seo-health-dashboard', false);
-        $response->assertDontSee('href="/garage/honda-c50"', false);
-        $response->assertDontSee('href="https://app.garagebook.nl/garage/honda-c50"', false);
+
+        $links = $this->seoHealthLinks($response->getContent());
+
+        $this->assertCount(1, $links, 'Expected exactly one rendered SEO Health navigation link: '.json_encode($links));
+        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]);
+        $this->assertStringNotContainsString('/garage/', $links[0]);
     }
 
     public function test_regular_user_cannot_view_seo_health_dashboard(): void
@@ -118,5 +121,29 @@ class SeoHealthDashboardTest extends TestCase
         $this->assertStringContainsString('section,metric,value,details,url,status', $csv);
         $this->assertStringContainsString('status,"SEO Health status"', $csv);
         $this->assertStringContainsString('indexability_overview,"Total Vehicles"', $csv);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function seoHealthLinks(string $html): array
+    {
+        $document = new \DOMDocument;
+
+        libxml_use_internal_errors(true);
+        $document->loadHTML($html);
+        libxml_clear_errors();
+
+        $links = [];
+
+        foreach ($document->getElementsByTagName('a') as $anchor) {
+            if (trim(preg_replace('/\\s+/', ' ', $anchor->textContent)) !== 'SEO Health') {
+                continue;
+            }
+
+            $links[] = $anchor->getAttribute('href');
+        }
+
+        return $links;
     }
 }
