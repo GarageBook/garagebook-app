@@ -2,7 +2,7 @@
 
 use App\Filament\Auth\Register;
 use App\Http\Controllers\Admin\SearchConsoleInsightsExportController;
-use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
+use App\Http\Controllers\Admin\SeoHealthOverviewExportController;
 use App\Http\Controllers\Admin\SeoOpportunitiesExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailUnsubscribeController;
@@ -88,7 +88,7 @@ Route::get('/maintenance/pdf', function () {
     );
 });
 
-Route::get('/admin/seo-health-dashboard/export', SeoHealthDashboardExportController::class)
+Route::get('/admin/seo-health-dashboard/export', SeoHealthOverviewExportController::class)
     ->name('admin.seo-health-dashboard.export');
 
 Route::get('/admin/search-console-insights/export', SearchConsoleInsightsExportController::class)

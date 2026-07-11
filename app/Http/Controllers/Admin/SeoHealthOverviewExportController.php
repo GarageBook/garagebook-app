@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Filament\Pages\SeoHealthDashboard;
+use App\Filament\Pages\SeoHealthOverview;
 use App\Http\Controllers\Controller;
 use App\Services\Seo\SeoHealthService;
 
-class SeoHealthDashboardExportController extends Controller
+class SeoHealthOverviewExportController extends Controller
 {
     public function __invoke(SeoHealthService $seoHealthService)
     {
@@ -14,7 +14,7 @@ class SeoHealthDashboardExportController extends Controller
             return redirect('/admin/login');
         }
 
-        abort_unless(SeoHealthDashboard::canAccess(), 403);
+        abort_unless(SeoHealthOverview::canAccess(), 403);
 
         return response()->streamDownload(function () use ($seoHealthService): void {
             echo "\xEF\xBB\xBF";

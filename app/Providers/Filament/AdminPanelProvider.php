@@ -10,7 +10,7 @@ use App\Filament\Pages\GrowthDashboard;
 use App\Filament\Pages\LocalizationOverview;
 use App\Filament\Pages\SearchConsoleImport;
 use App\Filament\Pages\SearchConsoleInsights;
-use App\Filament\Pages\SeoHealthDashboard;
+use App\Filament\Pages\SeoHealthOverview;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use App\Http\Middleware\CaptureAnalyticsAttribution;
@@ -60,7 +60,7 @@ class AdminPanelProvider extends PanelProvider
                 AnalyticsDashboard::class,
                 GrowthDashboard::class,
                 LocalizationOverview::class,
-                SeoHealthDashboard::class,
+                SeoHealthOverview::class,
                 SearchConsoleImport::class,
                 SearchConsoleInsights::class,
             ])

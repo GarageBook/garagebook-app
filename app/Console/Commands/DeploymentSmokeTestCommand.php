@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Filament\Pages\SeoHealthDashboard;
+use App\Filament\Pages\SeoHealthOverview;
 use App\Models\User;
 use App\Services\PublicGarageService;
 use App\Services\Seo\SeoHealthService;
@@ -35,7 +35,7 @@ class DeploymentSmokeTestCommand extends Command
 
         if ($admin instanceof User) {
             $this->assertRouteIsOk('admin dashboard', '/admin', $admin);
-            $this->assertSeoHealthDashboardIsOk($admin);
+            $this->assertSeoHealthOverviewIsOk($admin);
         }
 
         Auth::forgetGuards();
@@ -106,7 +106,7 @@ class DeploymentSmokeTestCommand extends Command
         $this->line('✓ '.$label.': '.$path);
     }
 
-    private function assertSeoHealthDashboardIsOk(User $user): void
+    private function assertSeoHealthOverviewIsOk(User $user): void
     {
         $guardName = (string) config('auth.defaults.guard', 'web');
 
@@ -115,7 +115,7 @@ class DeploymentSmokeTestCommand extends Command
         Auth::guard($guardName)->setUser($user);
 
         try {
-            if (! SeoHealthDashboard::canAccess()) {
+            if (! SeoHealthOverview::canAccess()) {
                 $this->recordFailure('seo health dashboard', '/admin/seo-health-dashboard', 403);
 
                 return;

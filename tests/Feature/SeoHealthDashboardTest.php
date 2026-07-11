@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\SeoHealthOverview;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +34,16 @@ class SeoHealthDashboardTest extends TestCase
         $response->assertOk();
         $response->assertHeaderMissing('Location');
         $response->assertSee('SEO Health');
+        $response->assertDontSee('Honda C50');
         $response->assertDontSee('/garage/honda-c50');
+    }
+
+    public function test_seo_health_overview_url_uses_admin_dashboard_path(): void
+    {
+        $this->assertStringEndsWith(
+            '/admin/seo-health-dashboard',
+            SeoHealthOverview::getUrl(panel: 'admin')
+        );
     }
 
     public function test_admin_navigation_contains_one_seo_health_item(): void
