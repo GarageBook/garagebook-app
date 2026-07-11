@@ -10,7 +10,6 @@ use App\Filament\Pages\GrowthDashboard;
 use App\Filament\Pages\LocalizationOverview;
 use App\Filament\Pages\SearchConsoleImport;
 use App\Filament\Pages\SearchConsoleInsights;
-use App\Filament\Pages\SeoHealthOverview;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use App\Http\Middleware\CaptureAnalyticsAttribution;
@@ -19,6 +18,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Facades\FilamentView;
@@ -60,9 +60,15 @@ class AdminPanelProvider extends PanelProvider
                 AnalyticsDashboard::class,
                 GrowthDashboard::class,
                 LocalizationOverview::class,
-                SeoHealthOverview::class,
                 SearchConsoleImport::class,
                 SearchConsoleInsights::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('SEO Health')
+                    ->url('/admin/seo-health-dashboard')
+                    ->group('Beheer')
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false)
+                    ->sort(192),
             ])
             ->resources([ // 👈 TOEGEVOEGD (BELANGRIJK)
                 BlogResource::class,

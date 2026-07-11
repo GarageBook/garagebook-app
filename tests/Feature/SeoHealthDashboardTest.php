@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Pages\SeoHealthOverview;
+use App\Http\Controllers\Admin\SeoHealthDashboardController;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,19 +12,17 @@ class SeoHealthDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_view_seo_health_dashboard(): void
+    public function test_seo_health_dashboard_route_uses_controller_action(): void
     {
-        $admin = User::factory()->admin()->create();
+        $routes = collect(app('router')->getRoutes())
+            ->filter(fn ($route) => $route->uri() === 'admin/seo-health-dashboard')
+            ->values();
 
-        $this->actingAs($admin)
-            ->get('/admin/seo-health-dashboard')
-            ->assertOk()
-            ->assertSeeText('SEO Health')
-            ->assertSeeText('Indexability overview')
-            ->assertSeeText('Sitemap health');
+        $this->assertCount(1, $routes);
+        $this->assertSame(SeoHealthDashboardController::class, $routes[0]->getActionName());
     }
 
-    public function test_admin_route_returns_seo_health_dashboard_without_redirect(): void
+    public function test_admin_can_view_seo_health_dashboard(): void
     {
         $admin = User::factory()->admin()->create();
 
@@ -33,17 +31,12 @@ class SeoHealthDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertHeaderMissing('Location');
+        $response->assertViewIs('admin.seo-health-dashboard');
         $response->assertSee('SEO Health');
+        $response->assertSeeText('Indexability overview');
+        $response->assertSeeText('Sitemap health');
         $response->assertDontSee('Honda C50');
         $response->assertDontSee('/garage/honda-c50');
-    }
-
-    public function test_seo_health_overview_url_uses_admin_dashboard_path(): void
-    {
-        $this->assertStringEndsWith(
-            '/admin/seo-health-dashboard',
-            SeoHealthOverview::getUrl(panel: 'admin')
-        );
     }
 
     public function test_admin_navigation_contains_one_seo_health_item(): void
@@ -59,7 +52,7 @@ class SeoHealthDashboardTest extends TestCase
             ->values();
 
         $this->assertCount(1, $navigationItems);
-        $this->assertStringEndsWith('/admin/seo-health-dashboard', $navigationItems[0]->getUrl());
+        $this->assertSame('/admin/seo-health-dashboard', $navigationItems[0]->getUrl());
         $this->assertSame('Beheer', $navigationItems[0]->getGroup());
         $this->assertSame(192, $navigationItems[0]->getSort());
 
@@ -70,7 +63,7 @@ class SeoHealthDashboardTest extends TestCase
         $links = $this->seoHealthLinks($response->getContent());
 
         $this->assertCount(1, $links);
-        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]['href']);
+        $this->assertSame('/admin/seo-health-dashboard', $links[0]['href']);
         $this->assertStringContainsString('/admin/seo-health-dashboard', $links[0]['html']);
         $this->assertStringNotContainsString('wire:navigate', $links[0]['html']);
     }
@@ -91,7 +84,7 @@ class SeoHealthDashboardTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->get('/admin/seo-health-dashboard/export')
+            ->get('/admin/seo-health-export')
             ->assertOk()
             ->assertDownload('seo-health-dashboard-'.now()->format('Y-m-d').'.csv');
     }
@@ -103,13 +96,13 @@ class SeoHealthDashboardTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get('/admin/seo-health-dashboard/export')
+            ->get('/admin/seo-health-export')
             ->assertForbidden();
     }
 
     public function test_guest_is_redirected_to_admin_login_for_seo_health_dashboard_csv(): void
     {
-        $this->get('/admin/seo-health-dashboard/export')
+        $this->get('/admin/seo-health-export')
             ->assertRedirect('/admin/login');
     }
 
@@ -118,7 +111,7 @@ class SeoHealthDashboardTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)
-            ->get('/admin/seo-health-dashboard/export')
+            ->get('/admin/seo-health-export')
             ->assertOk();
 
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
