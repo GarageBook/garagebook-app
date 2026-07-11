@@ -46,6 +46,14 @@ class SeoHealthDashboardTest extends TestCase
         );
     }
 
+    public function test_admin_panel_provider_excludes_seo_health_from_spa_navigation(): void
+    {
+        $this->assertStringContainsString(
+            "'*/admin/seo-health-dashboard'",
+            file_get_contents(app_path('Providers/Filament/AdminPanelProvider.php'))
+        );
+    }
+
     public function test_admin_navigation_contains_one_seo_health_item(): void
     {
         $admin = User::factory()->admin()->create();
@@ -70,7 +78,9 @@ class SeoHealthDashboardTest extends TestCase
         $links = $this->seoHealthLinks($response->getContent());
 
         $this->assertCount(1, $links);
-        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]);
+        $this->assertStringEndsWith('/admin/seo-health-dashboard', $links[0]['href']);
+        $this->assertStringContainsString('/admin/seo-health-dashboard', $links[0]['html']);
+        $this->assertStringNotContainsString('wire:navigate', $links[0]['html']);
     }
 
     public function test_regular_user_cannot_view_seo_health_dashboard(): void
@@ -133,7 +143,7 @@ class SeoHealthDashboardTest extends TestCase
     }
 
     /**
-     * @return list<string>
+     * @return list<array{href:string,html:string}>
      */
     private function seoHealthLinks(string $html): array
     {
@@ -150,7 +160,10 @@ class SeoHealthDashboardTest extends TestCase
                 continue;
             }
 
-            $links[] = $anchor->getAttribute('href');
+            $links[] = [
+                'href' => $anchor->getAttribute('href'),
+                'html' => $document->saveHTML($anchor),
+            ];
         }
 
         return $links;
