@@ -2,7 +2,6 @@
 
 use App\Filament\Auth\Register;
 use App\Http\Controllers\Admin\SearchConsoleInsightsExportController;
-use App\Http\Controllers\Admin\SeoHealthDashboardController;
 use App\Http\Controllers\Admin\SeoHealthDashboardExportController;
 use App\Http\Controllers\Admin\SeoOpportunitiesExportController;
 use App\Http\Controllers\Lifecycle\LifecycleEmailClickController;
@@ -15,6 +14,7 @@ use App\Http\Controllers\PublicImageController;
 use App\Http\Controllers\TripPhotoController;
 use App\Http\Controllers\VehicleAuthorityController;
 use App\Http\Controllers\VehicleDocumentController;
+use App\Livewire\Admin\SeoHealthDashboardPage;
 use App\Models\Blog;
 use App\Models\MaintenanceLog;
 use App\Models\Page;
@@ -55,7 +55,7 @@ Route::get('/website', function () {
 Route::middleware([
     'auth',
     SetUpPanel::class.':admin',
-])->get('/admin/seo-health-dashboard', SeoHealthDashboardController::class)
+])->get('/admin/seo-health-dashboard', SeoHealthDashboardPage::class)
     ->name('admin.seo-health-dashboard');
 
 Route::get('/garage/{publicSlug}', [PublicGarageController::class, 'show'])
