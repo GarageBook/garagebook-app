@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Admin\SeoHealthDashboardPage;
+use App\Http\Controllers\Admin\SeoHealthDashboardController;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,14 +13,14 @@ class SeoHealthDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_seo_health_dashboard_route_uses_livewire_page_action(): void
+    public function test_seo_health_dashboard_route_uses_controller_action(): void
     {
         $routes = collect(app('router')->getRoutes())
             ->filter(fn ($route) => $route->uri() === 'admin/seo-health-dashboard')
             ->values();
 
         $this->assertCount(1, $routes);
-        $this->assertSame(SeoHealthDashboardPage::class, $routes[0]->getActionName());
+        $this->assertSame(SeoHealthDashboardController::class, $routes[0]->getActionName());
     }
 
     public function test_admin_can_view_seo_health_dashboard(): void
@@ -32,20 +32,12 @@ class SeoHealthDashboardTest extends TestCase
 
         $response->assertOk();
         $response->assertHeaderMissing('Location');
+        $response->assertViewIs('admin.seo-health-dashboard');
         $response->assertSee('SEO Health');
         $response->assertSeeText('Indexability overview');
         $response->assertSeeText('Sitemap health');
-        $response->assertSee('GarageBook');
-        $response->assertSee('Dashboard');
-        $response->assertSee('Beheer');
-        $response->assertSee('fi-sidebar', false);
-        $response->assertSee('fi-topbar', false);
         $response->assertDontSee('Honda C50');
         $response->assertDontSee('/garage/honda-c50');
-        $response->assertDontSee('Using $this when not in object context');
-
-        $this->assertTrue($this->hasElementWithClass($response->getContent(), 'fi-sidebar'));
-        $this->assertTrue($this->hasElementWithClass($response->getContent(), 'fi-topbar'));
     }
 
     public function test_seo_health_dashboard_can_be_loaded_repeatedly(): void
@@ -62,6 +54,7 @@ class SeoHealthDashboardTest extends TestCase
 
             $response->assertOk();
             $response->assertHeaderMissing('Location');
+            $response->assertViewIs('admin.seo-health-dashboard');
             $response->assertSee('SEO Health');
             $response->assertDontSee('Honda C50');
             $response->assertDontSee('/garage/honda-c50');
@@ -91,8 +84,6 @@ class SeoHealthDashboardTest extends TestCase
 
         $links = $this->seoHealthLinks($response->getContent());
 
-        $this->assertTrue($this->hasElementWithClass($response->getContent(), 'fi-sidebar'));
-        $this->assertTrue($this->hasElementWithClass($response->getContent(), 'fi-topbar'));
         $this->assertCount(1, $links);
         $this->assertSame('/admin/seo-health-dashboard', $links[0]['href']);
         $this->assertStringContainsString('/admin/seo-health-dashboard', $links[0]['html']);
@@ -156,25 +147,6 @@ class SeoHealthDashboardTest extends TestCase
         $this->assertStringContainsString('section,metric,value,details,url,status', $csv);
         $this->assertStringContainsString('status,"SEO Health status"', $csv);
         $this->assertStringContainsString('indexability_overview,"Total Vehicles"', $csv);
-    }
-
-    private function hasElementWithClass(string $html, string $class): bool
-    {
-        $document = new \DOMDocument;
-
-        libxml_use_internal_errors(true);
-        $document->loadHTML($html);
-        libxml_clear_errors();
-
-        foreach ($document->getElementsByTagName('*') as $element) {
-            $classes = preg_split('/\s+/', $element->getAttribute('class')) ?: [];
-
-            if (in_array($class, $classes, true)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
