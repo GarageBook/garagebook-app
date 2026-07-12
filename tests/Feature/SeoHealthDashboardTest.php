@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\SeoHealthDashboardController;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class SeoHealthDashboardTest extends TestCase
@@ -37,6 +38,27 @@ class SeoHealthDashboardTest extends TestCase
         $response->assertSeeText('Sitemap health');
         $response->assertDontSee('Honda C50');
         $response->assertDontSee('/garage/honda-c50');
+    }
+
+    public function test_seo_health_dashboard_can_be_loaded_repeatedly(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->withoutExceptionHandling();
+
+        foreach (range(1, 3) as $attempt) {
+            Artisan::call('view:clear');
+
+            $response = $this->actingAs($admin)
+                ->get('/admin/seo-health-dashboard');
+
+            $response->assertOk();
+            $response->assertHeaderMissing('Location');
+            $response->assertViewIs('admin.seo-health-dashboard');
+            $response->assertSee('SEO Health');
+            $response->assertDontSee('Honda C50');
+            $response->assertDontSee('/garage/honda-c50');
+        }
     }
 
     public function test_admin_navigation_contains_one_seo_health_item(): void

@@ -1,4 +1,4 @@
-<x-filament-panels::layout>
+<x-filament-panels::layout.base :livewire="null">
     <div class="fi-page">
         <div class="fi-page-header-main-ctn">
             <div class="fi-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -151,4 +151,4 @@
             </div>
         </div>
     </div>
-</x-filament-panels::layout>
+</x-filament-panels::layout.base>
