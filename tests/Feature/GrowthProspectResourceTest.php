@@ -9,6 +9,7 @@ use App\Filament\Resources\GrowthProspects\Pages\ImportGrowthProspects;
 use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Mail\GrowthProspectOutreachMail;
 use App\Models\GrowthCampaign;
+use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
 use App\Models\OutreachCampaign;
 use App\Models\OutreachProspect;
@@ -820,68 +821,104 @@ class GrowthProspectResourceTest extends TestCase
         }
     }
 
-    public function test_motorclub_campaign_tabs_use_growth_campaign_relation_counts(): void
+    public function test_motorclub_tabs_match_import_status_fields(): void
     {
         $admin = User::factory()->admin()->create();
         $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
         $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
         $community = GrowthCampaign::factory()->create(['name' => 'Community2026', 'slug' => 'community2026']);
 
-        $clubProspects = GrowthProspect::factory()->count(21)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
-        $classicProspects = GrowthProspect::factory()->count(9)->create(['campaign_id' => $classic->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
-        $communityProspect = GrowthProspect::factory()->create(['campaign_id' => $community->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
+        $clubContactable = GrowthProspect::factory()->count(10)->create($this->contactableMotorclubState($club));
+        $classicContactable = GrowthProspect::factory()->count(3)->create($this->contactableMotorclubState($classic));
+        $clubMissingEmail = GrowthProspect::factory()->count(10)->create($this->manualReviewMissingEmailMotorclubState($club));
+        $classicMissingEmail = GrowthProspect::factory()->count(6)->create($this->manualReviewMissingEmailMotorclubState($classic));
+        $personalEmail = GrowthProspect::factory()->create($this->manualReviewPersonalEmailMotorclubState($club));
         $legacyCampaign = OutreachCampaign::factory()->create(['slug' => 'growth-club2026']);
         OutreachProspect::factory()->count(4)->create(['outreach_campaign_id' => $legacyCampaign->id]);
 
-        Livewire::actingAs($admin)
-            ->test(ListGrowthProspects::class)
-            ->set('tableRecordsPerPage', 50)
-            ->set('activeTab', 'ready_club2026')
-            ->assertCanSeeTableRecords($clubProspects)
-            ->assertCanNotSeeTableRecords($classicProspects->merge([$communityProspect]));
+        $allMotorclubs = $clubContactable
+            ->merge($classicContactable)
+            ->merge($clubMissingEmail)
+            ->merge($classicMissingEmail)
+            ->merge([$personalEmail]);
+        $manualReview = $clubMissingEmail->merge($classicMissingEmail)->merge([$personalEmail]);
+        $needsEmail = $manualReview;
 
-        Livewire::actingAs($admin)
-            ->test(ListGrowthProspects::class)
-            ->set('tableRecordsPerPage', 50)
-            ->set('activeTab', 'ready_classic2026')
-            ->assertCanSeeTableRecords($classicProspects)
-            ->assertCanNotSeeTableRecords($clubProspects->merge([$communityProspect]));
-
-        Livewire::actingAs($admin)
-            ->test(ListGrowthProspects::class)
-            ->set('tableRecordsPerPage', 50)
-            ->set('activeTab', 'ready_community2026')
-            ->assertCanSeeTableRecords([$communityProspect])
-            ->assertCanNotSeeTableRecords($clubProspects->merge($classicProspects));
-    }
-
-    public function test_all_prospects_is_default_and_manual_review_tab_is_campaign_independent(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
-        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
-
-        $enriched = GrowthProspect::factory()->count(13)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_ENRICHED, 'status' => GrowthProspect::LIFECYCLE_ENRICHED]);
-        $manualClub = GrowthProspect::factory()->count(8)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'verification_required' => true]);
-        $manualClassic = GrowthProspect::factory()->count(9)->create(['campaign_id' => $classic->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'verification_required' => true]);
-        $archived = GrowthProspect::factory()->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_ARCHIVED, 'status' => 'archived']);
-
-        $allActive = $enriched->merge($manualClub)->merge($manualClassic);
-        $manual = $manualClub->merge($manualClassic);
+        $this->assertSame(30, $allMotorclubs->count());
+        $this->assertSame(21, $allMotorclubs->where('campaign_id', $club->id)->count());
+        $this->assertSame(9, $allMotorclubs->where('campaign_id', $classic->id)->count());
+        $this->assertSame(13, $clubContactable->merge($classicContactable)->count());
+        $this->assertSame(17, $manualReview->count());
+        $this->assertSame(16, $clubMissingEmail->merge($classicMissingEmail)->count());
 
         Livewire::actingAs($admin)
             ->test(ListGrowthProspects::class)
             ->set('tableRecordsPerPage', 50)
             ->assertSet('activeTab', 'all')
-            ->assertCanSeeTableRecords($allActive)
-            ->assertCanNotSeeTableRecords([$archived]);
+            ->assertCanSeeTableRecords($allMotorclubs);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'contactable_club2026')
+            ->assertCanSeeTableRecords($clubContactable)
+            ->assertCanNotSeeTableRecords($classicContactable->merge($manualReview));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'contactable_classic2026')
+            ->assertCanSeeTableRecords($classicContactable)
+            ->assertCanNotSeeTableRecords($clubContactable->merge($manualReview));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'needs_email')
+            ->assertCanSeeTableRecords($needsEmail)
+            ->assertCanNotSeeTableRecords($clubContactable->merge($classicContactable));
 
         Livewire::actingAs($admin)
             ->test(ListGrowthProspects::class)
             ->set('tableRecordsPerPage', 50)
             ->set('activeTab', 'manual_review')
-            ->assertCanSeeTableRecords($manual)
-            ->assertCanNotSeeTableRecords($enriched->merge([$archived]));
+            ->assertCanSeeTableRecords($manualReview)
+            ->assertCanNotSeeTableRecords($clubContactable->merge($classicContactable));
+        $communityReady = GrowthProspect::factory()->create($this->readyMotorclubState($community));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'ready_community2026')
+            ->assertCanSeeTableRecords([$communityReady])
+            ->assertCanNotSeeTableRecords($allMotorclubs);
+    }
+
+    public function test_ready_tabs_only_show_records_explicitly_ready_for_their_growth_campaign(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
+        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
+
+        $clubReady = GrowthProspect::factory()->create($this->readyMotorclubState($club));
+        $clubEnriched = GrowthProspect::factory()->create($this->contactableMotorclubState($club));
+        $classicReady = GrowthProspect::factory()->create($this->readyMotorclubState($classic));
+        $sentAlready = GrowthProspect::factory()->create($this->readyMotorclubState($club));
+
+        GrowthOutreachEvent::query()->create([
+            'growth_prospect_id' => $sentAlready->id,
+            'campaign_id' => $club->id,
+            'campaign_slug' => 'club2026',
+            'event_type' => GrowthOutreachEvent::TYPE_SENT,
+            'occurred_at' => now(),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'ready_club2026')
+            ->assertCanSeeTableRecords([$clubReady])
+            ->assertCanNotSeeTableRecords([$clubEnriched, $classicReady, $sentAlready]);
     }
 
     public function test_campaign_filter_uses_campaign_id_relation_and_excludes_legacy_outreach_prospects(): void
@@ -903,5 +940,64 @@ class GrowthProspectResourceTest extends TestCase
             ->assertCanSeeTableRecords([$clubProspect])
             ->assertCanNotSeeTableRecords([$classicProspect])
             ->assertDontSeeText('Legacy Growth Club');
+    }
+
+    private function contactableMotorclubState(GrowthCampaign $campaign): array
+    {
+        return [
+            'campaign_id' => $campaign->id,
+            'last_campaign_slug' => $campaign->slug,
+            'prospect_type' => 'community',
+            'email' => fake()->unique()->companyEmail(),
+            'normalized_email' => null,
+            'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
+            'verification_required' => false,
+            'status' => GrowthProspect::LIFECYCLE_ENRICHED,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_ENRICHED,
+            'skip_reason' => null,
+            'source_type' => 'docs_motorclubs',
+        ];
+    }
+
+    private function readyMotorclubState(GrowthCampaign $campaign): array
+    {
+        return array_merge($this->contactableMotorclubState($campaign), [
+            'status' => GrowthProspect::LIFECYCLE_READY,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_READY,
+        ]);
+    }
+
+    private function manualReviewMissingEmailMotorclubState(GrowthCampaign $campaign): array
+    {
+        return [
+            'campaign_id' => $campaign->id,
+            'last_campaign_slug' => $campaign->slug,
+            'prospect_type' => 'community',
+            'email' => null,
+            'normalized_email' => null,
+            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+            'verification_required' => true,
+            'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+            'skip_reason' => 'missing_email',
+            'source_type' => 'docs_motorclubs',
+        ];
+    }
+
+    private function manualReviewPersonalEmailMotorclubState(GrowthCampaign $campaign): array
+    {
+        return [
+            'campaign_id' => $campaign->id,
+            'last_campaign_slug' => $campaign->slug,
+            'prospect_type' => 'community',
+            'email' => 'persoon@gmail.com',
+            'normalized_email' => 'persoon@gmail.com',
+            'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
+            'verification_required' => true,
+            'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW,
+            'skip_reason' => 'personal_email',
+            'source_type' => 'docs_motorclubs',
+        ];
     }
 }

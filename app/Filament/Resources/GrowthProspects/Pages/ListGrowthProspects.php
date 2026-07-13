@@ -24,10 +24,16 @@ class ListGrowthProspects extends ListRecords
             'ready_community2026' => Tab::make('Ready for Community2026')
                 ->badge(fn (): int => $this->readyForCampaignCount('community2026'))
                 ->modifyQueryUsing(fn (Builder $query): Builder => $this->readyForCampaignQuery($query, 'community2026')),
-            'ready_club2026' => Tab::make('Ready for Club2026')
+            'contactable_club2026' => Tab::make('Contacteerbaar Club2026')
+                ->badge(fn (): int => $this->contactableForCampaignCount('club2026'))
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->contactableForCampaignQuery($query, 'club2026')),
+            'contactable_classic2026' => Tab::make('Contacteerbaar Classic2026')
+                ->badge(fn (): int => $this->contactableForCampaignCount('classic2026'))
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->contactableForCampaignQuery($query, 'classic2026')),
+            'ready_club2026' => Tab::make('Ready Club2026')
                 ->badge(fn (): int => $this->readyForCampaignCount('club2026'))
                 ->modifyQueryUsing(fn (Builder $query): Builder => $this->readyForCampaignQuery($query, 'club2026')),
-            'ready_classic2026' => Tab::make('Ready for Classic2026')
+            'ready_classic2026' => Tab::make('Ready Classic2026')
                 ->badge(fn (): int => $this->readyForCampaignCount('classic2026'))
                 ->modifyQueryUsing(fn (Builder $query): Builder => $this->readyForCampaignQuery($query, 'classic2026')),
             'needs_email' => Tab::make('Needs email')
@@ -77,13 +83,50 @@ class ListGrowthProspects extends ListRecords
         return $this->readyForCampaignQuery(GrowthProspect::query(), $campaignSlug)->count();
     }
 
+    private function contactableForCampaignQuery(Builder $query, string $campaignSlug): Builder
+    {
+        return $this->contactableProspectsQuery($query)
+            ->whereHas('campaign', fn (Builder $query): Builder => $query->where('slug', $campaignSlug));
+    }
+
+    private function contactableForCampaignCount(string $campaignSlug): int
+    {
+        return $this->contactableForCampaignQuery(GrowthProspect::query(), $campaignSlug)->count();
+    }
+
     private function readyProspectsQuery(Builder $query): Builder
     {
-        return $query
+        return $this->sendableBaseQuery($query)
             ->where('lifecycle_status', GrowthProspect::LIFECYCLE_READY)
+            ->where('verification_required', false);
+    }
+
+    private function contactableProspectsQuery(Builder $query): Builder
+    {
+        return $this->sendableBaseQuery($query)
+            ->whereIn('lifecycle_status', [GrowthProspect::LIFECYCLE_ENRICHED, GrowthProspect::LIFECYCLE_READY]);
+    }
+
+    private function sendableBaseQuery(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
             ->whereIn('email_status', [GrowthProspect::EMAIL_STATUS_FOUND, GrowthProspect::EMAIL_STATUS_VERIFIED])
-            ->where('verification_required', false)
-            ->whereNull('duplicate_of_id');
+            ->whereNull('duplicate_of_id')
+            ->where(function (Builder $query): void {
+                $query->whereNull('skip_reason')
+                    ->orWhereNotIn('skip_reason', ['personal_email', 'duplicate', 'archived', 'invalid_email', 'missing_email', 'manual_review_required']);
+            })
+            ->where(function (Builder $query): void {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'archived');
+            })
+            ->where(function (Builder $query): void {
+                $query->whereNull('lifecycle_status')
+                    ->orWhere('lifecycle_status', '!=', GrowthProspect::LIFECYCLE_ARCHIVED);
+            })
+            ->whereDoesntHave('outreachEvents', fn (Builder $query): Builder => $query->where('event_type', GrowthOutreachEvent::TYPE_SENT));
     }
 
     private function baseActiveProspectsQuery(): Builder
@@ -105,9 +148,10 @@ class ListGrowthProspects extends ListRecords
     private function needsEmailQuery(Builder $query): Builder
     {
         return $query->where(function (Builder $query): void {
-            $query->where(function (Builder $query): void {
-                $query->whereNull('email')->orWhere('email', '');
-            })->orWhere('email_status', GrowthProspect::EMAIL_STATUS_MISSING);
+            $query->whereNull('email')
+                ->orWhere('email', '')
+                ->orWhere('email_status', GrowthProspect::EMAIL_STATUS_INVALID)
+                ->orWhere('skip_reason', 'personal_email');
         });
     }
 
@@ -124,8 +168,10 @@ class ListGrowthProspects extends ListRecords
     {
         return $query->where(function (Builder $query): void {
             $query->where('lifecycle_status', GrowthProspect::LIFECYCLE_MANUAL_REVIEW)
+                ->orWhere('status', GrowthProspect::LIFECYCLE_MANUAL_REVIEW)
                 ->orWhere('verification_required', true)
-                ->orWhere('skip_reason', 'manual_review_required');
+                ->orWhere('skip_reason', 'manual_review_required')
+                ->orWhere('skip_reason', 'personal_email');
         });
     }
 

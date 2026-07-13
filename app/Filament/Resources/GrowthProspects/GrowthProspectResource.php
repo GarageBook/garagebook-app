@@ -273,7 +273,6 @@ class GrowthProspectResource extends Resource
                     ->label('Campagne')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
                     ->placeholder('-'),
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Prioriteit')
