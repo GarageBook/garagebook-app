@@ -46,6 +46,11 @@ class MotorclubImportResult
     public array $sourceInconsistencies = [];
 
     /**
+     * @var array<string, int>
+     */
+    public array $fieldChanges = [];
+
+    /**
      * @var array<int, string>
      */
     public array $errors = [];
@@ -73,6 +78,16 @@ class MotorclubImportResult
     public function addRecord(array $record): void
     {
         $this->records[] = $record;
+    }
+
+    /**
+     * @param  array<string, array{from:mixed,to:mixed}>  $changes
+     */
+    public function addFieldChanges(array $changes): void
+    {
+        foreach (array_keys($changes) as $field) {
+            $this->fieldChanges[$field] = ($this->fieldChanges[$field] ?? 0) + 1;
+        }
     }
 
     public function addSourceInconsistency(string $name, string $field, string $csvValue, string $markdownValue): void

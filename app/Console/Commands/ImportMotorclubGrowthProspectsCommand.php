@@ -89,6 +89,14 @@ class ImportMotorclubGrowthProspectsCommand extends Command
             $this->line($subtype.': '.$count);
         }
 
+        if ($result->fieldChanges !== []) {
+            $this->newLine();
+            $this->line('Veldwijzigingen:');
+            foreach ($result->fieldChanges as $field => $count) {
+                $this->line($field.': '.$count);
+            }
+        }
+
         if ($result->sourceInconsistencies !== []) {
             $this->newLine();
             $this->warn('Broninconsistenties tussen CSV en Markdown:');
@@ -103,13 +111,13 @@ class ImportMotorclubGrowthProspectsCommand extends Command
             );
         }
 
-        $attention = array_values(array_filter($result->records, static fn (array $record): bool => $record['reasons'] !== [] || in_array($record['action'], ['existing', 'duplicates', 'invalid', 'excluded'], true)));
+        $attention = array_values(array_filter($result->records, static fn (array $record): bool => $record['reasons'] !== [] || ($record['changes'] ?? []) !== [] || in_array($record['action'], ['existing', 'duplicates', 'invalid', 'excluded'], true)));
 
         if ($attention !== []) {
             $this->newLine();
             $this->warn('Records voor controle:');
             $this->table(
-                ['Naam', 'Campagne', 'Subtype', 'Actie', 'Status', 'Redenen'],
+                ['Naam', 'Campagne', 'Subtype', 'Actie', 'Status', 'Redenen', 'Wijzigingen'],
                 array_map(static fn (array $record): array => [
                     $record['name'],
                     $record['campaign'],
@@ -117,6 +125,11 @@ class ImportMotorclubGrowthProspectsCommand extends Command
                     $record['action'],
                     $record['status'],
                     implode(', ', $record['reasons']),
+                    implode(', ', array_map(
+                        static fn (string $field, array $change): string => $field.': '.(is_array($change['from'] ?? null) ? json_encode($change['from']) : (string) ($change['from'] ?? 'null')).' -> '.(is_array($change['to'] ?? null) ? json_encode($change['to']) : (string) ($change['to'] ?? 'null')),
+                        array_keys($record['changes'] ?? []),
+                        $record['changes'] ?? [],
+                    )),
                 ], $attention),
             );
         }

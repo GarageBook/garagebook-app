@@ -3,6 +3,7 @@
 namespace App\Services\Growth\Motorclubs;
 
 use App\Models\GrowthCampaign;
+use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
 use App\Models\OutreachEmailLog;
 use App\Models\OutreachEvent;
@@ -94,9 +95,13 @@ class MotorclubImportService
             $result->incrementCampaign($normalized['campaign_slug']);
             $result->incrementSubtype($normalized['prospect_subtype']);
 
-            $assessment = $this->assess($normalized, $campaigns[$normalized['campaign_slug']] ?? null);
+            $existing = $this->findExisting($normalized);
+            $effective = $existing instanceof GrowthProspect
+                ? $this->effectiveRowForExisting($existing, $normalized)
+                : $normalized;
+            $assessment = $this->assess($effective, $campaigns[$normalized['campaign_slug']] ?? null);
             $result->increment($assessment['email_bucket']);
-            if (! blank($normalized['email'])) {
+            if (! blank($effective['email'])) {
                 $result->increment('email_present');
             }
 
@@ -108,20 +113,29 @@ class MotorclubImportService
                 $result->increment($assessment['status_bucket']);
             }
 
-            $existing = $this->findExisting($normalized);
             $legacyMatches = $this->legacyMatches($normalized);
             $fuzzyMatches = $this->fuzzyMatches($normalized, $existing);
-            $action = $this->actionFor($normalized, $assessment, $existing, $legacyMatches, $force);
+            $action = $this->actionFor($effective, $assessment, $existing, $legacyMatches, $force);
+            $changes = [];
+
+            if ($existing instanceof GrowthProspect) {
+                $changes = $this->changesFor($existing, $this->synchronizationPayload($existing, $normalized, $campaigns[$normalized['campaign_slug']]));
+
+                if ($changes !== []) {
+                    $action = 'updates';
+                    $result->addFieldChanges($changes);
+                }
+            }
 
             $result->increment($action);
 
             $record = [
                 'name' => $normalized['name'],
-                'website' => $normalized['website'],
-                'email' => $normalized['email'],
+                'website' => $effective['website'],
+                'email' => $effective['email'],
                 'campaign' => $normalized['campaign_slug'],
                 'subtype' => $normalized['prospect_subtype'],
-                'status' => $normalized['lifecycle_status'],
+                'status' => $effective['lifecycle_status'],
                 'action' => $action,
                 'reasons' => array_values(array_unique(array_merge(
                     $assessment['reasons'],
@@ -131,6 +145,7 @@ class MotorclubImportService
                 'existing_id' => $existing?->id,
                 'legacy_matches' => $legacyMatches,
                 'fuzzy_matches' => $fuzzyMatches,
+                'changes' => $changes,
             ];
 
             $result->addRecord($record);
@@ -564,29 +579,128 @@ class MotorclubImportService
      */
     private function updateExisting(GrowthProspect $prospect, array $row, GrowthCampaign $campaign): void
     {
-        $payload = $this->payload($row, $campaign);
+        $prospect->fill($this->synchronizationPayload($prospect, $row, $campaign))->save();
+    }
 
-        foreach ($payload as $field => $value) {
-            if (in_array($field, ['last_contacted_at', 'next_follow_up_at'], true)) {
-                continue;
-            }
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function synchronizationPayload(GrowthProspect $prospect, array $row, GrowthCampaign $campaign): array
+    {
+        $effective = $this->effectiveRowForExisting($prospect, $row);
+        $payload = $this->payload($effective, $campaign);
 
-            if (filled($prospect->{$field}) && ! in_array($field, [
-                'campaign_id',
-                'last_campaign_id',
-                'last_campaign_slug',
-                'skip_reason',
-                'quality_score',
-                'quality_flags',
-                'quality_verdict',
-                'quality_reason',
-                'notes',
-            ], true)) {
+        foreach (['name', 'website', 'organization_key', 'normalized_domain', 'category', 'subcategory', 'region', 'estimated_reach', 'newsletter_status', 'primary_contact_channel', 'contact_name', 'priority', 'warmth', 'score', 'partner_slug', 'source_url', 'notes', 'why_interesting', 'approach_strategy'] as $field) {
+            if (filled($prospect->{$field}) && blank($payload[$field] ?? null)) {
                 unset($payload[$field]);
             }
         }
 
-        $prospect->fill($payload)->save();
+        if ($prospect->email_status === GrowthProspect::EMAIL_STATUS_VERIFIED && ($payload['email_status'] ?? null) === GrowthProspect::EMAIL_STATUS_FOUND) {
+            $payload['email_status'] = GrowthProspect::EMAIL_STATUS_VERIFIED;
+        }
+
+        if ($this->hasProtectedHistory($prospect)) {
+            unset($payload['status'], $payload['lifecycle_status'], $payload['skip_reason'], $payload['verification_required']);
+        }
+
+        if ($prospect->duplicate_of_id !== null) {
+            unset($payload['duplicate_of_id']);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function effectiveRowForExisting(GrowthProspect $prospect, array $row): array
+    {
+        if (blank($row['email'] ?? null) && filled($prospect->email)) {
+            $row['email'] = $this->normalizer->normalizeEmail($prospect->email);
+            $row['normalized_email'] = $row['email'];
+            $row['email_status'] = filter_var((string) $row['email'], FILTER_VALIDATE_EMAIL) === false
+                ? GrowthProspect::EMAIL_STATUS_INVALID
+                : GrowthProspect::EMAIL_STATUS_FOUND;
+        }
+
+        if (blank($row['website'] ?? null) && filled($prospect->website)) {
+            $row['website'] = $this->normalizer->normalizeWebsite($prospect->website);
+            $row['normalized_domain'] = $this->normalizer->normalizeDomain($row['website']);
+        }
+
+        $personalEmail = $this->isPersonalEmail($row['email'] ?? null);
+        $emailStatus = $row['email_status'];
+        $manualReview = blank($row['email']) || $emailStatus === GrowthProspect::EMAIL_STATUS_INVALID || $personalEmail || blank($row['website']);
+
+        $row['verification_required'] = $manualReview;
+        $row['status'] = $manualReview ? GrowthProspect::LIFECYCLE_MANUAL_REVIEW : GrowthProspect::LIFECYCLE_ENRICHED;
+        $row['lifecycle_status'] = $row['status'];
+        $row['quality_score'] = $manualReview ? 60 : 85;
+        $row['quality_flags'] = $this->qualityFlags($row['email'] ?? null, $emailStatus, $personalEmail, $row['website'] ?? null);
+        $row['quality_verdict'] = 'manual_review';
+        $row['quality_reason'] = $manualReview ? 'manual review before first outreach' : 'validated source, not auto-ready';
+        $row['skip_reason'] = $this->skipReason($row['email'] ?? null, $emailStatus, $personalEmail, $row['website'] ?? null);
+        $row['has_personal_email'] = $personalEmail;
+
+        return $row;
+    }
+
+    private function hasProtectedHistory(GrowthProspect $prospect): bool
+    {
+        if ($prospect->lifecycle_status === GrowthProspect::LIFECYCLE_ARCHIVED || $prospect->status === 'archived') {
+            return true;
+        }
+
+        if ($prospect->duplicate_of_id !== null) {
+            return true;
+        }
+
+        if (in_array($prospect->skip_reason, ['duplicate', 'archived', 'unsubscribed', 'bounced', 'blocked'], true)) {
+            return true;
+        }
+
+        if (in_array($prospect->status, ['unsubscribed', 'bounced', 'blocked'], true)) {
+            return true;
+        }
+
+        return $prospect->outreachEvents()
+            ->where('event_type', GrowthOutreachEvent::TYPE_SENT)
+            ->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, array{from:mixed,to:mixed}>
+     */
+    private function changesFor(GrowthProspect $prospect, array $payload): array
+    {
+        $changes = [];
+
+        foreach ($payload as $field => $value) {
+            $current = $prospect->{$field};
+
+            if ($current instanceof \BackedEnum) {
+                $current = $current->value;
+            }
+
+            if (is_array($current) || is_array($value)) {
+                if (json_encode($current) === json_encode($value)) {
+                    continue;
+                }
+            } elseif ((string) ($current ?? '') === (string) ($value ?? '')) {
+                continue;
+            }
+
+            $changes[$field] = [
+                'from' => $current,
+                'to' => $value,
+            ];
+        }
+
+        return $changes;
     }
 
     /**

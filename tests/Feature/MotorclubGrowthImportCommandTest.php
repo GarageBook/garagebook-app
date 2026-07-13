@@ -112,7 +112,7 @@ class MotorclubGrowthImportCommandTest extends TestCase
             '--markdown' => $markdown,
             '--dry-run' => true,
         ])
-            ->expectsOutput('existing: 1')
+            ->expectsOutput('updates: 1')
             ->assertSuccessful();
     }
 
@@ -132,7 +132,7 @@ class MotorclubGrowthImportCommandTest extends TestCase
             '--markdown' => $markdown,
             '--dry-run' => true,
         ])
-            ->expectsOutput('existing: 1')
+            ->expectsOutput('updates: 1')
             ->assertSuccessful();
     }
 
@@ -286,6 +286,243 @@ class MotorclubGrowthImportCommandTest extends TestCase
         $data = GrowthProspectResource::club2026OutreachPreviewData(collect([$classic]));
 
         $this->assertSame(0, $data['sendableCount']);
+    }
+
+    public function test_existing_public_email_record_is_resynchronized_from_stale_missing_email_state(): void
+    {
+        $this->seedCampaigns();
+        $campaign = GrowthCampaign::query()->where('slug', 'club2026')->firstOrFail();
+        $existing = GrowthProspect::factory()->create([
+            'name' => 'Motorclub Noord',
+            'website' => 'https://motorclub-noord.example',
+            'normalized_domain' => 'motorclub-noord.example',
+            'email' => 'info@motorclub-noord.example',
+            'normalized_email' => 'info@motorclub-noord.example',
+            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+            'status' => GrowthProspect::LIFECYCLE_CONTACTED,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+            'skip_reason' => 'missing_email',
+            'campaign_id' => $campaign->id,
+            'source_type' => 'docs_motorclubs',
+        ]);
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Motorclub Noord', 'https://motorclub-noord.example', 'info@motorclub-noord.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+        ]);
+
+        $this->artisan('garagebook:growth:import-motorclubs', [
+            '--file' => $csv,
+            '--markdown' => $markdown,
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('updates: 1')
+            ->assertSuccessful();
+
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_MISSING, $existing->fresh()->email_status);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $existing->refresh();
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_FOUND, $existing->email_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_ENRICHED, $existing->lifecycle_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_ENRICHED, $existing->status);
+        $this->assertNull($existing->skip_reason);
+    }
+
+    public function test_existing_record_without_email_remains_manual_review_missing_email(): void
+    {
+        $this->seedCampaigns();
+        GrowthProspect::factory()->create([
+            'name' => 'Club Zonder Mail',
+            'website' => 'https://club-zonder-mail.example',
+            'normalized_domain' => 'club-zonder-mail.example',
+            'email' => null,
+            'normalized_email' => null,
+            'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
+            'status' => GrowthProspect::LIFECYCLE_NEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+            'skip_reason' => null,
+            'source_type' => 'docs_motorclubs',
+        ]);
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Club Zonder Mail', 'https://club-zonder-mail.example', '', 'Merkclub', 'BMW', 'Club2026'),
+        ]);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $prospect = GrowthProspect::query()->where('name', 'Club Zonder Mail')->firstOrFail();
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_MISSING, $prospect->email_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, $prospect->lifecycle_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, $prospect->status);
+        $this->assertSame('missing_email', $prospect->skip_reason);
+    }
+
+    public function test_existing_personal_email_remains_blocked_for_manual_review(): void
+    {
+        $this->seedCampaigns();
+        GrowthProspect::factory()->create([
+            'name' => 'Persoonlijke Club',
+            'website' => 'https://persoonlijke-club.example',
+            'normalized_domain' => 'persoonlijke-club.example',
+            'email' => 'clubbeheer@gmail.com',
+            'normalized_email' => 'clubbeheer@gmail.com',
+            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+            'status' => GrowthProspect::LIFECYCLE_NEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+            'skip_reason' => 'missing_email',
+        ]);
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Persoonlijke Club', 'https://persoonlijke-club.example', 'clubbeheer@gmail.com', 'Merkclub', 'Yamaha', 'Club2026'),
+        ]);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $prospect = GrowthProspect::query()->where('name', 'Persoonlijke Club')->firstOrFail();
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_FOUND, $prospect->email_status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_MANUAL_REVIEW, $prospect->lifecycle_status);
+        $this->assertSame('personal_email', $prospect->skip_reason);
+    }
+
+    public function test_verified_email_is_not_downgraded_to_found(): void
+    {
+        $this->seedCampaigns();
+        GrowthProspect::factory()->create([
+            'name' => 'Verified Club',
+            'website' => 'https://verified-club.example',
+            'normalized_domain' => 'verified-club.example',
+            'email' => 'info@verified-club.example',
+            'normalized_email' => 'info@verified-club.example',
+            'email_status' => GrowthProspect::EMAIL_STATUS_VERIFIED,
+            'status' => GrowthProspect::LIFECYCLE_NEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+        ]);
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Verified Club', 'https://verified-club.example', 'info@verified-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+        ]);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_VERIFIED, GrowthProspect::query()->where('name', 'Verified Club')->firstOrFail()->email_status);
+    }
+
+    public function test_protected_history_statuses_are_not_reset_by_resync(): void
+    {
+        $this->seedCampaigns();
+        $campaign = GrowthCampaign::query()->where('slug', 'club2026')->firstOrFail();
+        $archived = GrowthProspect::factory()->create([
+            'name' => 'Archived Club',
+            'website' => 'https://archived-club.example',
+            'normalized_domain' => 'archived-club.example',
+            'email' => 'info@archived-club.example',
+            'normalized_email' => 'info@archived-club.example',
+            'status' => 'archived',
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_ARCHIVED,
+            'skip_reason' => 'archived',
+        ]);
+        $duplicate = GrowthProspect::factory()->create([
+            'name' => 'Duplicate Club',
+            'website' => 'https://duplicate-club.example',
+            'normalized_domain' => 'duplicate-club.example',
+            'email' => 'info@duplicate-club.example',
+            'normalized_email' => 'info@duplicate-club.example',
+            'duplicate_of_id' => $archived->id,
+            'skip_reason' => 'duplicate',
+        ]);
+        $bounced = GrowthProspect::factory()->create([
+            'name' => 'Bounced Club',
+            'website' => 'https://bounced-club.example',
+            'normalized_domain' => 'bounced-club.example',
+            'email' => 'info@bounced-club.example',
+            'normalized_email' => 'info@bounced-club.example',
+            'status' => 'bounced',
+            'skip_reason' => 'bounced',
+        ]);
+        $sent = GrowthProspect::factory()->create([
+            'name' => 'Sent Club',
+            'website' => 'https://sent-club.example',
+            'normalized_domain' => 'sent-club.example',
+            'email' => 'info@sent-club.example',
+            'normalized_email' => 'info@sent-club.example',
+            'status' => GrowthProspect::LIFECYCLE_CONTACTED,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_CONTACTED,
+            'campaign_id' => $campaign->id,
+        ]);
+        GrowthOutreachEvent::query()->create([
+            'growth_prospect_id' => $sent->id,
+            'campaign_id' => $campaign->id,
+            'campaign_slug' => 'club2026',
+            'event_type' => GrowthOutreachEvent::TYPE_SENT,
+            'occurred_at' => now(),
+        ]);
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Archived Club', 'https://archived-club.example', 'info@archived-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+            $this->row('Duplicate Club', 'https://duplicate-club.example', 'info@duplicate-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+            $this->row('Bounced Club', 'https://bounced-club.example', 'info@bounced-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+            $this->row('Sent Club', 'https://sent-club.example', 'info@sent-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+        ]);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $this->assertSame('archived', $archived->fresh()->status);
+        $this->assertSame('duplicate', $duplicate->fresh()->skip_reason);
+        $this->assertSame('bounced', $bounced->fresh()->status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_CONTACTED, $sent->fresh()->lifecycle_status);
+    }
+
+    public function test_second_import_after_resync_reports_zero_updates(): void
+    {
+        $this->seedCampaigns();
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Motorclub Noord', 'https://motorclub-noord.example', 'info@motorclub-noord.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+        ]);
+
+        $this->runWriteImport($csv, $markdown);
+
+        $this->artisan('garagebook:growth:import-motorclubs', [
+            '--file' => $csv,
+            '--markdown' => $markdown,
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('existing: 1')
+            ->expectsOutput('updates: 0')
+            ->assertSuccessful();
+    }
+
+    public function test_dry_run_reports_current_email_distribution_without_writing(): void
+    {
+        $this->seedCampaigns();
+        GrowthProspect::factory()->create([
+            'name' => 'Bestaande Verrijkte Club',
+            'website' => 'https://bestaande-club.example',
+            'normalized_domain' => 'bestaande-club.example',
+            'email' => 'info@bestaande-club.example',
+            'normalized_email' => 'info@bestaande-club.example',
+            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+            'status' => GrowthProspect::LIFECYCLE_NEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+            'skip_reason' => 'missing_email',
+            'source_type' => 'docs_motorclubs',
+        ]);
+
+        [$csv, $markdown] = $this->writeMotorclubSources([
+            $this->row('Publieke Club', 'https://publieke-club.example', 'info@publieke-club.example', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+            $this->row('Zonder Mail', 'https://zonder-mail.example', '', 'Merkclub', 'BMW', 'Club2026'),
+            $this->row('Persoonlijke Club', 'https://persoonlijke-club.example', 'clubbeheer@gmail.com', 'Merkclub', 'Yamaha', 'Club2026'),
+            $this->row('Bestaande Verrijkte Club', 'https://bestaande-club.example', '', 'Algemene motorclub', 'Motorclub', 'Club2026'),
+        ]);
+
+        $this->artisan('garagebook:growth:import-motorclubs', [
+            '--file' => $csv,
+            '--markdown' => $markdown,
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('public email: 2')
+            ->expectsOutput('missing email: 1')
+            ->expectsOutput('email present: 3')
+            ->expectsOutput('personal email: 1')
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('growth_prospects', 1);
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_MISSING, GrowthProspect::query()->where('name', 'Bestaande Verrijkte Club')->firstOrFail()->email_status);
     }
 
     private function seedCampaigns(): void
