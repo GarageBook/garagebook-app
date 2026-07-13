@@ -28,7 +28,7 @@ class OutreachCampaignResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMegaphone;
 
-    protected static ?string $navigationLabel = 'Outreach campagnes';
+    protected static ?string $navigationLabel = 'Legacy outreachcampagnes';
 
     protected static ?string $modelLabel = 'Outreach campagne';
 
@@ -114,7 +114,7 @@ class OutreachCampaignResource extends Resource
                 Action::make('sendTestMail')
                     ->label('Verstuur testmail')
                     ->requiresConfirmation()
-                    ->modalDescription('Testmail wordt verzonden naar: willemvanveelen@icloud.com. Afzender: ' . config('mail.from.address') . '. Antwoorden gaan naar: social@garagebook.nl')
+                    ->modalDescription('Testmail wordt verzonden naar: willemvanveelen@icloud.com. Afzender: '.config('mail.from.address').'. Antwoorden gaan naar: social@garagebook.nl')
                     ->action(function (OutreachCampaign $record, OutreachEmailService $service): void {
                         $prospect = $record->prospects()->orderBy('id')->first();
 

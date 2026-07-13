@@ -104,7 +104,7 @@ class GrowthCampaignResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->latest('id'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->withCount('prospects')->latest('id'))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Naam')
@@ -112,6 +112,7 @@ class GrowthCampaignResource extends Resource
                 Tables\Columns\TextColumn::make('slug')
                     ->label('Slug')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('prospects_count')->label('Prospects')->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()

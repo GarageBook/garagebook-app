@@ -6,6 +6,9 @@ use App\Filament\Resources\GrowthCampaigns\Pages\CreateGrowthCampaign;
 use App\Filament\Resources\GrowthCampaigns\Pages\EditGrowthCampaign;
 use App\Filament\Resources\GrowthCampaigns\Pages\ListGrowthCampaigns;
 use App\Models\GrowthCampaign;
+use App\Models\GrowthProspect;
+use App\Models\OutreachCampaign;
+use App\Models\OutreachProspect;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -137,5 +140,36 @@ class GrowthCampaignResourceTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ListGrowthCampaigns::class)
             ->assertSuccessful();
+    }
+
+    public function test_growth_campaign_counts_are_separate_from_legacy_outreach_campaign_counts(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
+        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
+        $legacy = OutreachCampaign::factory()->create(['name' => 'Growth club2026', 'slug' => 'growth-club2026']);
+
+        GrowthProspect::factory()->count(21)->create(['campaign_id' => $club->id]);
+        GrowthProspect::factory()->count(9)->create(['campaign_id' => $classic->id]);
+        OutreachProspect::factory()->count(4)->create(['outreach_campaign_id' => $legacy->id]);
+
+        $growthCounts = GrowthCampaign::query()
+            ->withCount('prospects')
+            ->whereIn('slug', ['club2026', 'classic2026'])
+            ->pluck('prospects_count', 'slug');
+
+        $this->assertSame(21, $growthCounts->get('club2026'));
+        $this->assertSame(9, $growthCounts->get('classic2026'));
+        $this->assertSame(4, $legacy->prospects()->count());
+        $this->assertSame(0, GrowthCampaign::query()->where('slug', 'growth-club2026')->count());
+        $this->assertSame(0, OutreachCampaign::query()->whereIn('slug', ['club2026', 'classic2026'])->count());
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthCampaigns::class)
+            ->assertSeeText('Club2026')
+            ->assertSeeText('Classic2026')
+            ->assertSeeText('21')
+            ->assertSeeText('9')
+            ->assertDontSeeText('growth-club2026');
     }
 }

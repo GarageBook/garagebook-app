@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\GrowthCampaignFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class GrowthCampaign extends Model
 {
@@ -47,5 +48,10 @@ class GrowthCampaign extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
         ];
+    }
+
+    public function prospects(): HasMany
+    {
+        return $this->hasMany(GrowthProspect::class, 'campaign_id');
     }
 }
