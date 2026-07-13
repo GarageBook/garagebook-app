@@ -19,14 +19,15 @@ class GrowthCampaignSeeder extends Seeder
             ['name' => 'Workshop2026', 'slug' => 'workshop2026'],
             ['name' => 'Media2026', 'slug' => 'media2026'],
         ])->each(function (array $campaign): void {
-            GrowthCampaign::query()->updateOrCreate(
-                ['slug' => $campaign['slug']],
-                [
-                    'name' => $campaign['name'],
-                    'status' => GrowthCampaign::STATUS_DRAFT,
-                    'description' => $campaign['description'] ?? null,
-                ],
-            );
+            $record = GrowthCampaign::query()->firstOrNew(['slug' => $campaign['slug']]);
+
+            if (! $record->exists) {
+                $record->status = GrowthCampaign::STATUS_DRAFT;
+            }
+
+            $record->name = $campaign['name'];
+            $record->description ??= $campaign['description'] ?? null;
+            $record->save();
         });
     }
 }

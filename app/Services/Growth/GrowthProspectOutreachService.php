@@ -25,7 +25,17 @@ class GrowthProspectOutreachService
      */
     public function sendClub2026Bulk(EloquentCollection $prospects): array
     {
-        return $this->sendCampaignBulk($prospects, 'club2026');
+        $result = ['sent' => 0, 'skipped' => 0];
+
+        foreach ($prospects as $prospect) {
+            if ($this->sendClub2026($prospect)) {
+                $result['sent']++;
+            } else {
+                $result['skipped']++;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -49,6 +59,17 @@ class GrowthProspectOutreachService
 
     public function sendClub2026(GrowthProspect $prospect): bool
     {
+        $prospect->loadMissing('campaign');
+
+        if (($prospect->campaign?->slug !== null || $prospect->last_campaign_slug !== null)
+            && $prospect->campaign?->slug !== 'club2026'
+            && $prospect->last_campaign_slug !== 'club2026') {
+            $campaign = GrowthCampaign::query()->where('slug', 'club2026')->first();
+            $this->markSkipped($prospect, $campaign, 'club2026', 'wrong_campaign');
+
+            return false;
+        }
+
         return $this->sendCampaign($prospect, 'club2026');
     }
 

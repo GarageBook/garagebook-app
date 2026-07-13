@@ -356,6 +356,14 @@ class GrowthProspectResource extends Resource
                 SelectFilter::make('prospect_subtype')
                     ->label('Subtype')
                     ->options(array_combine(GrowthProspect::PROSPECT_SUBTYPES, GrowthProspect::PROSPECT_SUBTYPES)),
+                SelectFilter::make('source_type')
+                    ->label('Bron/importbatch')
+                    ->options(fn (): array => GrowthProspect::query()
+                        ->whereNotNull('source_type')
+                        ->distinct()
+                        ->orderBy('source_type')
+                        ->pluck('source_type', 'source_type')
+                        ->all()),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -609,7 +617,17 @@ class GrowthProspectResource extends Resource
     {
         return ! blank($record->email)
             && $record->status !== 'archived'
+            && self::belongsToClub2026($record)
             && app(GrowthProspectTrackingUrlGenerator::class)->generate($record) !== null;
+    }
+
+    private static function belongsToClub2026(GrowthProspect $record): bool
+    {
+        $record->loadMissing('campaign');
+
+        return ($record->campaign?->slug === null && $record->last_campaign_slug === null)
+            || $record->campaign?->slug === 'club2026'
+            || $record->last_campaign_slug === 'club2026';
     }
 
     private static function sendBulkUpdatedNotification(int $count, string $title): void
