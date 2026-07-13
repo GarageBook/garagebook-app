@@ -10,6 +10,8 @@ use App\Filament\Resources\GrowthProspects\Pages\ListGrowthProspects;
 use App\Mail\GrowthProspectOutreachMail;
 use App\Models\GrowthCampaign;
 use App\Models\GrowthProspect;
+use App\Models\OutreachCampaign;
+use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Services\Growth\GrowthProspectCsvImportService;
 use App\Services\Growth\GrowthProspectTrackingUrlGenerator;
@@ -17,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -815,5 +818,90 @@ class GrowthProspectResourceTest extends TestCase
         } finally {
             @unlink($path);
         }
+    }
+
+    public function test_motorclub_campaign_tabs_use_growth_campaign_relation_counts(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
+        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
+        $community = GrowthCampaign::factory()->create(['name' => 'Community2026', 'slug' => 'community2026']);
+
+        $clubProspects = GrowthProspect::factory()->count(21)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
+        $classicProspects = GrowthProspect::factory()->count(9)->create(['campaign_id' => $classic->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
+        $communityProspect = GrowthProspect::factory()->create(['campaign_id' => $community->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_READY, 'status' => GrowthProspect::LIFECYCLE_READY]);
+        $legacyCampaign = OutreachCampaign::factory()->create(['slug' => 'growth-club2026']);
+        OutreachProspect::factory()->count(4)->create(['outreach_campaign_id' => $legacyCampaign->id]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'ready_club2026')
+            ->assertCanSeeTableRecords($clubProspects)
+            ->assertCanNotSeeTableRecords($classicProspects->merge([$communityProspect]));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'ready_classic2026')
+            ->assertCanSeeTableRecords($classicProspects)
+            ->assertCanNotSeeTableRecords($clubProspects->merge([$communityProspect]));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'ready_community2026')
+            ->assertCanSeeTableRecords([$communityProspect])
+            ->assertCanNotSeeTableRecords($clubProspects->merge($classicProspects));
+    }
+
+    public function test_all_prospects_is_default_and_manual_review_tab_is_campaign_independent(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
+        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
+
+        $enriched = GrowthProspect::factory()->count(13)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_ENRICHED, 'status' => GrowthProspect::LIFECYCLE_ENRICHED]);
+        $manualClub = GrowthProspect::factory()->count(8)->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'verification_required' => true]);
+        $manualClassic = GrowthProspect::factory()->count(9)->create(['campaign_id' => $classic->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'status' => GrowthProspect::LIFECYCLE_MANUAL_REVIEW, 'verification_required' => true]);
+        $archived = GrowthProspect::factory()->create(['campaign_id' => $club->id, 'lifecycle_status' => GrowthProspect::LIFECYCLE_ARCHIVED, 'status' => 'archived']);
+
+        $allActive = $enriched->merge($manualClub)->merge($manualClassic);
+        $manual = $manualClub->merge($manualClassic);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->assertSet('activeTab', 'all')
+            ->assertCanSeeTableRecords($allActive)
+            ->assertCanNotSeeTableRecords([$archived]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->set('tableRecordsPerPage', 50)
+            ->set('activeTab', 'manual_review')
+            ->assertCanSeeTableRecords($manual)
+            ->assertCanNotSeeTableRecords($enriched->merge([$archived]));
+    }
+
+    public function test_campaign_filter_uses_campaign_id_relation_and_excludes_legacy_outreach_prospects(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $club = GrowthCampaign::factory()->create(['name' => 'Club2026', 'slug' => 'club2026']);
+        $classic = GrowthCampaign::factory()->create(['name' => 'Classic2026', 'slug' => 'classic2026']);
+        $legacyCampaign = OutreachCampaign::factory()->create(['slug' => 'growth-club2026']);
+
+        $clubProspect = GrowthProspect::factory()->create(['campaign_id' => $club->id, 'last_campaign_slug' => 'wrong-last-slug']);
+        $classicProspect = GrowthProspect::factory()->create(['campaign_id' => $classic->id, 'last_campaign_slug' => 'club2026']);
+        OutreachProspect::factory()->create(['outreach_campaign_id' => $legacyCampaign->id, 'company_name' => 'Legacy Growth Club']);
+
+        $this->assertFalse(Schema::hasColumn('growth_prospects', 'campaign_slug'));
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->filterTable('campaign_id', $club->id)
+            ->assertCanSeeTableRecords([$clubProspect])
+            ->assertCanNotSeeTableRecords([$classicProspect])
+            ->assertDontSeeText('Legacy Growth Club');
     }
 }
