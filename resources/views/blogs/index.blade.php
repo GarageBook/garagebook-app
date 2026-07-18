@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @php($isAppBlogHost = request()->getHost() === 'app.garagebook.nl')
-@php($blogIndexCanonicalUrl = $isAppBlogHost ? 'https://garagebook.nl/blogs' : url('/blogs'))
+@php($blogIndexCanonicalUrl = \App\Support\PublicSeoUrl::blogIndex())
 
 @section('title', 'Blogs over motoronderhoud en onderhoudshistorie | GarageBook')
 @section('meta_description', 'Lees praktische blogs over motoronderhoud, onderhoudshistorie, digitaal onderhoud bijhouden en de invloed daarvan op vertrouwen en verkoopwaarde.')
@@ -46,7 +46,7 @@
     <div class="gb-card-grid">
         @foreach($blogs as $blog)
             <article class="gb-card-surface">
-                <a href="https://garagebook.nl/blog/{{ $blog->slug }}/" class="gb-card-link">
+                <a href="{{ \App\Support\PublicSeoUrl::blog($blog->slug) }}" class="gb-card-link">
                     @if($blog->hero_image)
                         <img
                             src="/blog-image/{{ $blog->hero_image }}"

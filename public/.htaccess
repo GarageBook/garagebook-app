@@ -15,6 +15,8 @@
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/blog/[^/]+/$
+    RewriteCond %{REQUEST_URI} !^/youngtimer-onderhoud-bijhouden/$
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 

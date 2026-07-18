@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
 use App\Services\Seo\SeoHealthService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -98,7 +99,7 @@ class SeoHealthServiceTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame('1974-honda-c50-super-cub', $row['slug']);
         $this->assertSame(
-            route('public-garage.show', ['publicSlug' => '1974-honda-c50-super-cub']),
+            PublicSeoUrl::garage('1974-honda-c50-super-cub'),
             $row['public_url']
         );
         $this->assertFalse(str_ends_with($row['public_url'], '/garage/honda-c50'));

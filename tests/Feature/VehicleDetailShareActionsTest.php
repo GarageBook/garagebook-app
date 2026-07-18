@@ -6,6 +6,7 @@ use App\Filament\Resources\Vehicles\Pages\ViewVehicle;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use ReflectionMethod;
@@ -38,7 +39,7 @@ class VehicleDetailShareActionsTest extends TestCase
         $actions = collect($method->invoke($component->instance()))->keyBy(fn ($action) => $action->getName());
 
         $this->assertSame(
-            url('/garage/bmw-r-1200-gs'),
+            PublicSeoUrl::garage('bmw-r-1200-gs'),
             $actions->get('openSharePage')->getUrl(),
         );
         $this->assertSame(

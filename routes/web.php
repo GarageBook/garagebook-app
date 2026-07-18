@@ -20,6 +20,7 @@ use App\Models\MaintenanceLog;
 use App\Models\Page;
 use App\Models\Vehicle;
 use App\Support\InternalContentLinks;
+use App\Support\PublicSeoUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Support\Facades\Route;
@@ -133,14 +134,18 @@ Route::get('/blogs', function () {
         ->get();
 
     return view('blogs.index', compact('blogs'));
-});
+})->name('blogs.index');
 
-Route::get('/blogs/{slug}', function ($slug) {
+Route::get('/blog/{slug}/', function ($slug) {
     $blog = Blog::where('slug', $slug)
         ->whereNotNull('published_at')
         ->firstOrFail();
 
     return view('blogs.show', compact('blog'));
+})->name('blogs.show');
+
+Route::get('/blogs/{slug}', function ($slug) {
+    return redirect()->to(PublicSeoUrl::blog($slug), 301);
 });
 
 /*
@@ -159,8 +164,13 @@ Route::get('/sitemap.xml', function () {
         ->orderBy('slug')
         ->get();
 
+    $blogs = Blog::query()
+        ->whereNotNull('published_at')
+        ->orderBy('slug')
+        ->get();
+
     return response()
-        ->view('sitemap', compact('pages'))
+        ->view('sitemap', compact('blogs', 'pages'))
         ->header('Content-Type', 'application/xml');
 });
 
@@ -188,6 +198,22 @@ Route::get('/robots.txt', function () {
         ->view('robots')
         ->header('Content-Type', 'text/plain; charset=UTF-8');
 });
+
+Route::get('/{slug}/index.html', function ($slug) {
+    abort_if(in_array($slug, ['admin', 'api', 'blog-image', 'build', 'css', 'filament', 'images', 'js', 'livewire', 'storage', 'vendor'], true), 404);
+
+    return redirect()->to(PublicSeoUrl::path('/'.trim($slug, '/').'/'), 301);
+})->where('slug', '[A-Za-z0-9][A-Za-z0-9\-]*');
+
+Route::get('/{slug}/', function ($slug) {
+    $page = Page::where('slug', $slug)->first();
+
+    if ($page) {
+        return view('pages.show', compact('page'));
+    }
+
+    abort(404);
+})->where('slug', '[A-Za-z0-9][A-Za-z0-9\-]*');
 
 Route::get('/{slug}', function ($slug) {
     $page = Page::where('slug', $slug)->first();

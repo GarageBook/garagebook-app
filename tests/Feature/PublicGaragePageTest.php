@@ -6,6 +6,7 @@ use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -38,7 +39,7 @@ class PublicGaragePageTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Aantoonbare voertuiggeschiedenis van deze 2008 Toyota Highlander Hybrid Limited');
-        $response->assertSee('<link rel="canonical" href="'.url('/garage/'.$vehicle->public_slug).'">', false);
+        $response->assertSee('<link rel="canonical" href="'.PublicSeoUrl::garage($vehicle->public_slug).'">', false);
         $response->assertSee('<meta name="robots" content="index,follow">', false);
         $response->assertSee('<meta name="description" content="Bekijk de gedeelde onderhoudsgeschiedenis van deze Toyota Highlander Hybrid Limited in GarageBook. 1 onderhoudsmoment(en) en 1 moment(en) met kilometerstand laten zien wat de eigenaar aantoonbaar heeft vastgelegd.">', false);
         $response->assertSee('"@type": "Vehicle"', false);
@@ -51,7 +52,7 @@ class PublicGaragePageTest extends TestCase
         $response->assertSee('01-05-2026');
         $response->assertSee('Deze publieke GarageBook-pagina laat zien welke onderhoudsmomenten de eigenaar van deze 2008 Toyota Highlander Hybrid Limited heeft opgebouwd. Onderhoud, kilometerstanden, foto\'s en bewijsstukken worden hier deelbaar samengebracht, terwijl de eigenaar controle houdt over wat openbaar is.');
         $response->assertSee('Deze GarageBook-pagina bevat de onderhoudsgeschiedenis van een 2008 Toyota Highlander Hybrid Limited. Hier vind je uitgevoerde onderhoudsbeurten, vervangen onderdelen, reparaties, kilometerstanden en overige werkzaamheden.');
-        $response->assertDontSee('"item": "'.url('/garage').'"', false);
+        $response->assertDontSee('"item": "'.'https://garagebook.nl/garage'.'"', false);
     }
 
     public function test_public_garage_structured_data_uses_webpage_main_entity_vehicle_without_product_markup(): void
@@ -349,7 +350,7 @@ class PublicGaragePageTest extends TestCase
         ]);
 
         $this->get('/share/willem-van-veelen/toyota-highlander-hybrid-limited')
-            ->assertRedirect(url('/garage/'.$vehicle->public_slug))
+            ->assertRedirect(PublicSeoUrl::garage($vehicle->public_slug))
             ->assertStatus(301);
     }
 
@@ -520,8 +521,8 @@ class PublicGaragePageTest extends TestCase
         $this->get('/sitemap-garages.xml')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/xml')
-            ->assertSee(url('/garage/'.$indexableVehicle->public_slug), false)
-            ->assertDontSee(url('/garage/'.$privateVehicle->public_slug), false)
+            ->assertSee(PublicSeoUrl::garage($indexableVehicle->public_slug), false)
+            ->assertDontSee(PublicSeoUrl::garage($privateVehicle->public_slug), false)
             ->assertSee('/garage/1999-aprilia-rsv-mille', false);
     }
 
@@ -546,7 +547,7 @@ class PublicGaragePageTest extends TestCase
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
-            ->assertSee(url('/garage/'.$vehicle->public_slug), false);
+            ->assertSee(PublicSeoUrl::garage($vehicle->public_slug), false);
     }
 
     public function test_public_page_shows_empty_states_when_no_public_history_or_photos_are_available(): void

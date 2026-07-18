@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
+use App\Support\PublicSeoUrl;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -54,7 +55,7 @@ class PublicGarageService
     {
         $publicSlug = $vehicle->public_slug ?: $this->ensurePublicSlug($vehicle);
 
-        return rtrim((string) config('app.url'), '/').'/garage/'.$publicSlug;
+        return PublicSeoUrl::garage($publicSlug);
     }
 
     public function ensurePublicSlug(Vehicle $vehicle): string

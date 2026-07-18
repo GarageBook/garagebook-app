@@ -8,7 +8,10 @@ use App\Filament\Resources\Pages\PageResource;
 use App\Models\Blog;
 use App\Models\Page;
 use App\Models\User;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class BlogResourceAuthorizationTest extends TestCase
@@ -29,7 +32,7 @@ class BlogResourceAuthorizationTest extends TestCase
             ->assertOk()
             ->assertSee('Publieke blog');
 
-        $this->get('/blogs/' . $blog->slug)
+        $this->kernelGet('https://garagebook.nl/blog/'.$blog->slug.'/')
             ->assertOk()
             ->assertSee('Publieke blog')
             ->assertSee('Publieke content');
@@ -48,7 +51,7 @@ class BlogResourceAuthorizationTest extends TestCase
             ->assertOk()
             ->assertDontSee('Verborgen blog');
 
-        $this->get('/blogs/' . $blog->slug)
+        $this->kernelGet('https://garagebook.nl/blog/'.$blog->slug.'/')
             ->assertNotFound();
     }
 
@@ -61,7 +64,7 @@ class BlogResourceAuthorizationTest extends TestCase
             'content' => 'Publieke pagina-inhoud',
         ]);
 
-        $this->get('/' . $page->slug)
+        $this->get('/'.$page->slug)
             ->assertOk()
             ->assertSee('Over ons')
             ->assertSee('storage/page-images/hero.jpg')
@@ -142,5 +145,12 @@ class BlogResourceAuthorizationTest extends TestCase
         $this->assertTrue(PageResource::canCreate());
         $this->assertTrue(PageResource::canEdit($page));
         $this->assertTrue(PageResource::canDelete($page));
+    }
+
+    private function kernelGet(string $url): TestResponse
+    {
+        return TestResponse::fromBaseResponse(
+            app(Kernel::class)->handle(Request::create($url, 'GET'))
+        );
     }
 }

@@ -18,16 +18,16 @@ class PageSeoRenderingTest extends TestCase
             'content' => '<p>Body</p>',
             'meta_title' => 'Over GarageBook',
             'meta_description' => 'Lees meer over GarageBook en hoe het motoronderhoud overzichtelijk maakt.',
-            'canonical_url' => 'https://app.garagebook.nl/over-garagebook',
+            'canonical_url' => 'https://garagebook.nl/over-garagebook',
             'indexable' => true,
         ]);
 
-        $response = $this->get('/' . $page->slug);
+        $response = $this->get('/'.$page->slug);
 
         $response->assertOk();
         $response->assertSee('<meta name="description" content="Lees meer over GarageBook en hoe het motoronderhoud overzichtelijk maakt.">', false);
         $response->assertSee('<meta name="robots" content="index,follow">', false);
-        $response->assertSee('<link rel="canonical" href="https://app.garagebook.nl/over-garagebook">', false);
+        $response->assertSee('<link rel="canonical" href="https://garagebook.nl/over-garagebook">', false);
     }
 
     public function test_non_indexable_page_renders_noindex_meta_tag(): void
@@ -39,7 +39,7 @@ class PageSeoRenderingTest extends TestCase
             'indexable' => false,
         ]);
 
-        $response = $this->get('/' . $page->slug);
+        $response = $this->get('/'.$page->slug);
 
         $response->assertOk();
         $response->assertSee('<meta name="robots" content="noindex,nofollow">', false);

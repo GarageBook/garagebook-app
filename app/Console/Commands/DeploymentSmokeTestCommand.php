@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Services\PublicGarageService;
 use App\Services\Seo\SeoHealthService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,12 +40,12 @@ class DeploymentSmokeTestCommand extends Command
 
         Auth::forgetGuards();
 
-        $this->assertRouteIsOk('public home', '/');
+        $this->assertRouteIsOk('public home', '/', publicHost: true);
         if ($garageSlug !== null) {
-            $this->assertRouteIsOk('public garage page', '/garage/'.$garageSlug);
+            $this->assertRouteIsOk('public garage page', '/garage/'.$garageSlug, publicHost: true);
         }
 
-        $this->assertRouteIsOk('sitemap garages', '/sitemap-garages.xml');
+        $this->assertRouteIsOk('sitemap garages', '/sitemap-garages.xml', publicHost: true);
 
         $failed = $this->failures !== [];
 
@@ -92,9 +93,9 @@ class DeploymentSmokeTestCommand extends Command
         return null;
     }
 
-    private function assertRouteIsOk(string $label, string $path, ?User $user = null): void
+    private function assertRouteIsOk(string $label, string $path, ?User $user = null, bool $publicHost = false): void
     {
-        $response = $this->dispatchPath($path, $user);
+        $response = $this->dispatchPath($path, $user, $publicHost);
 
         if ($response->getStatusCode() !== 200) {
             $this->recordFailure($label, $path, $response->getStatusCode(), sprintf('%s returned %d', $path, $response->getStatusCode()));
@@ -138,11 +139,11 @@ class DeploymentSmokeTestCommand extends Command
         $this->line('✓ seo health dashboard: /admin/seo-health-dashboard');
     }
 
-    private function dispatchPath(string $path, ?User $user = null): Response
+    private function dispatchPath(string $path, ?User $user = null, bool $publicHost = false): Response
     {
         $appUrl = (string) config('app.url');
-        $host = parse_url($appUrl, PHP_URL_HOST) ?: 'localhost';
-        $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?: 'https';
+        $host = $publicHost ? PublicSeoUrl::HOST : (parse_url($appUrl, PHP_URL_HOST) ?: 'localhost');
+        $scheme = $publicHost ? 'https' : (parse_url($appUrl, PHP_URL_SCHEME) ?: 'https');
         $guardName = (string) config('auth.defaults.guard', 'web');
 
         $request = Request::create($path, 'GET', [], [], [], [

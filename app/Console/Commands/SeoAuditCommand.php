@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -320,7 +321,7 @@ class SeoAuditCommand extends Command
     private function dispatchPath(string $path, ?string $sourceUrl = null): Response
     {
         $appUrl = (string) config('app.url');
-        $url = $sourceUrl ?: rtrim($appUrl, '/').$path;
+        $url = $sourceUrl ?: PublicSeoUrl::path($path);
         $host = parse_url($url, PHP_URL_HOST) ?: parse_url($appUrl, PHP_URL_HOST) ?: 'localhost';
         $scheme = parse_url($url, PHP_URL_SCHEME) ?: parse_url($appUrl, PHP_URL_SCHEME) ?: 'https';
         $requestPath = parse_url($url, PHP_URL_PATH) ?: $path;
@@ -341,7 +342,7 @@ class SeoAuditCommand extends Command
         }
 
         $scheme = parse_url($baseUrl, PHP_URL_SCHEME) ?: 'https';
-        $host = parse_url($baseUrl, PHP_URL_HOST) ?: parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost';
+        $host = parse_url($baseUrl, PHP_URL_HOST) ?: PublicSeoUrl::HOST;
 
         return $scheme.'://'.$host.'/'.ltrim($location, '/');
     }

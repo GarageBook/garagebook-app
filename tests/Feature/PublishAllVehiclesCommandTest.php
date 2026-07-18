@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -72,8 +73,8 @@ class PublishAllVehiclesCommandTest extends TestCase
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
-            ->assertSee(url('/garage/'.$publicVehicle->public_slug), false)
-            ->assertDontSee(url('/garage/'.$hiddenVehicle->public_slug), false)
-            ->assertDontSee(url('/garage/'.$demoVehicle->public_slug), false);
+            ->assertSee(PublicSeoUrl::garage($publicVehicle->public_slug), false)
+            ->assertDontSee(PublicSeoUrl::garage($hiddenVehicle->public_slug), false)
+            ->assertDontSee(PublicSeoUrl::garage($demoVehicle->public_slug), false);
     }
 }

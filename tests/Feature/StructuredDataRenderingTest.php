@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Blog;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class StructuredDataRenderingTest extends TestCase
@@ -29,17 +32,17 @@ class StructuredDataRenderingTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $response = $this->get('/blogs/' . $blog->slug);
-        $canonicalUrl = 'https://garagebook.nl/blog/' . $blog->slug . '/';
+        $response = TestResponse::fromBaseResponse(app(Kernel::class)->handle(Request::create('/blog/'.$blog->slug.'/', 'GET')));
+        $canonicalUrl = 'https://garagebook.nl/blog/'.$blog->slug.'/';
 
         $response->assertOk();
         $response->assertSee('"@context": "https://schema.org"', false);
-        $response->assertSee('<link rel="canonical" href="' . $canonicalUrl . '">', false);
-        $response->assertSee('<meta property="og:url" content="' . $canonicalUrl . '">', false);
-        $response->assertSee('<meta name="twitter:url" content="' . $canonicalUrl . '">', false);
+        $response->assertSee('<link rel="canonical" href="'.$canonicalUrl.'">', false);
+        $response->assertSee('<meta property="og:url" content="'.$canonicalUrl.'">', false);
+        $response->assertSee('<meta name="twitter:url" content="'.$canonicalUrl.'">', false);
         $response->assertDontSee('<meta name="robots" content="noindex"', false);
-        $response->assertSee('"url": "' . $canonicalUrl . '"', false);
-        $response->assertSee('"mainEntityOfPage": "' . $canonicalUrl . '"', false);
+        $response->assertSee('"url": "'.$canonicalUrl.'"', false);
+        $response->assertSee('"mainEntityOfPage": "'.$canonicalUrl.'"', false);
         $response->assertDontSee('__contextArgs', false);
     }
 }

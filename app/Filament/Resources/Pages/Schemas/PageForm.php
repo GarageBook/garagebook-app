@@ -16,8 +16,7 @@ class PageForm
                     Forms\Components\TextInput::make('title')
                         ->required()
                         ->live(onBlur: true)
-                        ->afterStateUpdated(fn ($state, $set) =>
-                            $set('slug', \Str::slug($state))
+                        ->afterStateUpdated(fn ($state, $set) => $set('slug', \Str::slug($state))
                         ),
 
                     Forms\Components\TextInput::make('slug')
@@ -55,7 +54,7 @@ class PageForm
                     Forms\Components\TextInput::make('canonical_url')
                         ->url()
                         ->helperText('Laat leeg om automatisch de huidige page-URL als canonical te gebruiken.')
-                        ->placeholder('https://app.garagebook.nl/over-ons'),
+                        ->placeholder('https://garagebook.nl/over-ons'),
 
                     Forms\Components\Toggle::make('indexable')
                         ->default(true)

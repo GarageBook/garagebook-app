@@ -4,6 +4,7 @@ namespace App\Services\Seo;
 
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
+use App\Support\PublicSeoUrl;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -415,7 +416,7 @@ class SeoHealthService
         }
 
         return parse_url($canonical, PHP_URL_SCHEME) !== 'https'
-            || parse_url($canonical, PHP_URL_HOST) !== 'app.garagebook.nl'
+            || parse_url($canonical, PHP_URL_HOST) !== PublicSeoUrl::HOST
             || Str::contains($canonical, 'www.');
     }
 }

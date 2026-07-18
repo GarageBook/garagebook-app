@@ -58,13 +58,13 @@ class SitemapTest extends TestCase
         $this->get('/sitemap.xml')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/xml')
-            ->assertSee(url('/'), false)
-            ->assertSee(url('/blogs'), false)
-            ->assertSee(url('/contact'), false)
-            ->assertSee(url('/ons-verhaal'), false)
-            ->assertDontSee(url('/blogs/publieke-blog'), false)
-            ->assertDontSee(url('/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026'), false)
-            ->assertDontSee(url('/verborgen-pagina'), false)
-            ->assertDontSee(url('/blogs/verborgen-blog'), false);
+            ->assertSee('https://garagebook.nl/', false)
+            ->assertSee('https://garagebook.nl/blogs', false)
+            ->assertSee('https://garagebook.nl/contact', false)
+            ->assertSee('https://garagebook.nl/ons-verhaal', false)
+            ->assertSee('https://garagebook.nl/blog/publieke-blog/', false)
+            ->assertDontSee('https://garagebook.nl/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026', false)
+            ->assertDontSee('https://garagebook.nl/verborgen-pagina', false)
+            ->assertDontSee('https://garagebook.nl/blog/verborgen-blog/', false);
     }
 }

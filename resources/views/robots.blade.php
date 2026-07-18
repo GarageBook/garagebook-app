@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: {{ url('/sitemap.xml') }}
-Sitemap: {{ url('/sitemap-garages.xml') }}
-Sitemap: {{ url('/sitemap-vehicle-authority.xml') }}
+Sitemap: {{ \App\Support\PublicSeoUrl::path('/sitemap.xml') }}
+Sitemap: {{ \App\Support\PublicSeoUrl::path('/sitemap-garages.xml') }}
+Sitemap: {{ \App\Support\PublicSeoUrl::path('/sitemap-vehicle-authority.xml') }}

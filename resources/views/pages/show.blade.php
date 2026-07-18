@@ -3,12 +3,12 @@
 @section('title', $page->meta_title ?: $page->title . ' - GarageBook')
 @section('meta_description', $page->meta_description ?: \Illuminate\Support\Str::limit(strip_tags($page->content), 155))
 @section('meta_robots', $page->indexable === false ? 'noindex,nofollow' : 'index,follow')
-@section('canonical_url', $page->canonical_url ?: url('/' . $page->slug))
+@section('canonical_url', \App\Support\PublicSeoUrl::normalizeConfiguredCanonical($page->canonical_url, '/' . $page->slug))
 
 @php
     $faqItems = $page->structured_data ?? [];
     $hasFaq = is_array($faqItems) && count($faqItems) > 0;
-    $pageUrl = $page->canonical_url ?: url('/' . $page->slug);
+    $pageUrl = \App\Support\PublicSeoUrl::normalizeConfiguredCanonical($page->canonical_url, '/' . $page->slug);
     $graph = [
         [
             '@type' => 'Organization',
@@ -87,7 +87,7 @@
 
             <div class="gb-related-content__items">
                 @foreach($relatedBlogs as $relatedBlog)
-                    <a href="https://garagebook.nl/blog/{{ $relatedBlog->slug }}/" class="gb-related-content__item">
+                    <a href="{{ \App\Support\PublicSeoUrl::blog($relatedBlog->slug) }}" class="gb-related-content__item">
                         <span class="gb-related-content__label">Blog</span>
                         <strong>{{ $relatedBlog->title }}</strong>
                     </a>

@@ -6,6 +6,7 @@ use App\Services\PublicGarageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class PublicGarageController extends Controller
@@ -51,11 +52,20 @@ class PublicGarageController extends Controller
         ]);
     }
 
-    public function legacyRedirect(string $username, string $vehicleSlug): RedirectResponse
+    public function legacyRedirect(Request $request, string $username, string $vehicleSlug): RedirectResponse|Response
     {
         $vehicle = $this->publicGarageService->findLegacyPublicVehicle($username, $vehicleSlug);
 
-        abort_if(! $vehicle, 404);
+        if (! $vehicle) {
+            Log::warning('unknown_legacy_public_garage_share_url', [
+                'path' => $request->path(),
+                'host' => $request->getHost(),
+                'username' => $username,
+                'vehicle_slug' => $vehicleSlug,
+            ]);
+
+            return response('Gone', 410);
+        }
 
         return redirect()->to($this->publicGarageService->publicUrl($vehicle), 301);
     }

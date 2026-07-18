@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Blog;
 use App\Models\Page;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class BlogInternalLinksTest extends TestCase
@@ -51,12 +54,12 @@ class BlogInternalLinksTest extends TestCase
             'published_at' => now()->addMinute(),
         ]);
 
-        $response = $this->get('/blogs/' . $primaryBlog->slug);
+        $response = $this->kernelGet('https://garagebook.nl/blog/'.$primaryBlog->slug.'/');
 
         $response->assertOk();
-        $response->assertSee('https://garagebook.nl/blog/' . $relatedBlog->slug . '/', false);
-        $response->assertSee('https://garagebook.nl/blog/' . $secondaryRelatedBlog->slug . '/', false);
-        $response->assertSee('/' . $featuredPage->slug, false);
+        $response->assertSee('https://garagebook.nl/blog/'.$relatedBlog->slug.'/', false);
+        $response->assertSee('https://garagebook.nl/blog/'.$secondaryRelatedBlog->slug.'/', false);
+        $response->assertSee('/'.$featuredPage->slug, false);
         $response->assertDontSee('https://garagebook.nl/blog/niet-relevant-maar-nieuwer/', false);
     }
 
@@ -84,10 +87,17 @@ class BlogInternalLinksTest extends TestCase
             'published_at' => now()->addMinute(),
         ]);
 
-        $response = $this->get('/' . $page->slug);
+        $response = $this->get('/'.$page->slug);
 
         $response->assertOk();
-        $response->assertSee('https://garagebook.nl/blog/' . $blog->slug . '/', false);
+        $response->assertSee('https://garagebook.nl/blog/'.$blog->slug.'/', false);
         $response->assertDontSee('https://garagebook.nl/blog/niet-geselecteerde-blog/', false);
+    }
+
+    private function kernelGet(string $url): TestResponse
+    {
+        return TestResponse::fromBaseResponse(
+            app(Kernel::class)->handle(Request::create($url, 'GET'))
+        );
     }
 }

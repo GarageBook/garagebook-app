@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Page;
+use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +45,7 @@ class PublicSeoPagesAvailabilityTest extends TestCase
         $response->assertOk();
 
         foreach (self::EXPECTED_SLUGS as $slug) {
-            $response->assertSee(url('/'.$slug), false);
+            $response->assertSee(PublicSeoUrl::page($slug), false);
         }
     }
 }
