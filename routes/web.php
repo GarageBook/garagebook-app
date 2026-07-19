@@ -201,6 +201,7 @@ Route::get('/robots.txt', function () {
 
 Route::get('/{slug}/index.html', function ($slug) {
     abort_if(in_array($slug, ['admin', 'api', 'blog-image', 'build', 'css', 'filament', 'images', 'js', 'livewire', 'storage', 'vendor'], true), 404);
+    abort_if(request()->getHost() === 'app.garagebook.nl' && ! Page::query()->where('slug', $slug)->exists(), 404);
 
     return redirect()->to(PublicSeoUrl::path('/'.trim($slug, '/').'/'), 301);
 })->where('slug', '[A-Za-z0-9][A-Za-z0-9\-]*');

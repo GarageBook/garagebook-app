@@ -20,9 +20,9 @@ class RegistrationRedirectTest extends TestCase
 
     public function test_start_redirects_temporarily_to_admin_register(): void
     {
-        $this->get('/start')
+        $this->get('https://app.garagebook.nl/start')
             ->assertStatus(302)
-            ->assertRedirect('/admin/register');
+            ->assertRedirect('https://app.garagebook.nl/admin/register');
     }
 
     public function test_admin_register_page_is_publicly_available(): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Page;
 use App\Support\PublicSeoUrl;
 use Closure;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class CanonicalizePublicUrl
             return $blogRedirect;
         }
 
-        if ($request->getHost() === 'app.garagebook.nl' && ! $this->shouldSkipAppHostRedirect($request)) {
+        if ($request->getHost() === 'app.garagebook.nl' && $this->isPublicCanonicalizableAppPath($request)) {
             return redirect()->to($this->targetUrl(PublicSeoUrl::HOST, $request->getPathInfo(), $request), 301);
         }
 
@@ -57,29 +58,33 @@ class CanonicalizePublicUrl
         return $request->is('admin') || $request->is('admin/*');
     }
 
-    private function shouldSkipAppHostRedirect(Request $request): bool
+    private function isPublicCanonicalizableAppPath(Request $request): bool
     {
-        return $request->is([
-            'admin',
-            'admin/*',
-            'api',
-            'api/*',
-            'demo/garage/*',
-            'documents/*',
-            'email/*',
-            'filament/*',
-            'lifecycle-emails/*',
-            'livewire/*',
-            'livewire-*',
-            'login',
-            'logout',
-            'maintenance/pdf',
-            'password/*',
-            'register',
-            'share/*',
-            'storage/*',
-            'trips/*',
-        ]);
+        if ($request->is([
+            '/',
+            'blog',
+            'blog/*',
+            'blogs',
+            'blogs/*',
+            'garage/*',
+            'onderhoud/*',
+            'robots.txt',
+            'sitemap.xml',
+            'sitemap-garages.xml',
+            'sitemap-onderhoud.xml',
+            'sitemap-vehicle-authority.xml',
+            'website',
+        ])) {
+            return true;
+        }
+
+        $path = trim($request->getPathInfo(), '/');
+
+        if ($path === '' || str_contains($path, '/')) {
+            return false;
+        }
+
+        return Page::query()->where('slug', $path)->exists();
     }
 
     private function indexHtmlRedirect(Request $request): ?Response
@@ -90,13 +95,27 @@ class CanonicalizePublicUrl
             return null;
         }
 
-        if ($this->isProtectedIndexHtmlPath($request)) {
+        $targetPath = substr($path, 0, -strlen('index.html'));
+
+        if ($this->isProtectedIndexHtmlPath($request) || ! $this->shouldRedirectIndexHtml($request, $targetPath)) {
             return null;
         }
 
-        $targetPath = substr($path, 0, -strlen('index.html'));
-
         return redirect()->to($this->targetUrl(PublicSeoUrl::HOST, $targetPath, $request), 301);
+    }
+
+    private function shouldRedirectIndexHtml(Request $request, string $targetPath): bool
+    {
+        if ($request->getHost() !== 'app.garagebook.nl') {
+            return true;
+        }
+
+        $targetRequest = Request::create(
+            $request->getSchemeAndHttpHost().($targetPath === '' ? '/' : $targetPath),
+            $request->method()
+        );
+
+        return $this->isPublicCanonicalizableAppPath($targetRequest);
     }
 
     private function isProtectedIndexHtmlPath(Request $request): bool

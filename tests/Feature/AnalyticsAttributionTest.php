@@ -15,7 +15,7 @@ class AnalyticsAttributionTest extends TestCase
     {
         $this->withHeader('referer', 'https://garagebook.nl/blogs/onderhoud')
             ->get('/start?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id&_gl=test123')
-            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id&_gl=test123');
+            ->assertRedirect('https://app.garagebook.nl/admin/register?utm_source=google&utm_medium=cpc&utm_campaign=spring&utm_content=hero&utm_term=motor%20app&gclid=google-click-id&_gl=test123');
 
         $this->assertSame([
             'utm_source' => 'google',
@@ -32,7 +32,7 @@ class AnalyticsAttributionTest extends TestCase
     public function test_gclid_without_utm_parameters_is_captured_in_session(): void
     {
         $this->get('/start?gclid=test456')
-            ->assertRedirect('/admin/register?gclid=test456');
+            ->assertRedirect('https://app.garagebook.nl/admin/register?gclid=test456');
 
         $this->assertSame([
             'gclid' => 'test456',
@@ -71,7 +71,7 @@ class AnalyticsAttributionTest extends TestCase
         ]);
 
         $this->get('/start?utm_source=linkedin&utm_medium=social')
-            ->assertRedirect('/admin/register?utm_source=linkedin&utm_medium=social');
+            ->assertRedirect('https://app.garagebook.nl/admin/register?utm_source=linkedin&utm_medium=social');
 
         $this->assertSame([
             'utm_source' => 'google',

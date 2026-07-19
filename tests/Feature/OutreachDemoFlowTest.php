@@ -293,7 +293,7 @@ class OutreachDemoFlowTest extends TestCase
     public function test_regular_start_and_geratel_registration_remain_available(): void
     {
         $this->get('/start?utm_source=google&utm_medium=cpc')
-            ->assertRedirect('/admin/register?utm_source=google&utm_medium=cpc');
+            ->assertRedirect('https://app.garagebook.nl/admin/register?utm_source=google&utm_medium=cpc');
 
         $this->get('/admin/register/geratel?utm_source=geratel&utm_medium=partner')
             ->assertOk()

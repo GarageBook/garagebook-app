@@ -38,13 +38,13 @@ class HomepageRedirectTest extends TestCase
 
         $this->get('/start?'.$queryString)
             ->assertStatus(302)
-            ->assertRedirect('/admin/register?'.$queryString);
+            ->assertRedirect('https://app.garagebook.nl/admin/register?'.$queryString);
     }
 
-    public function test_start_redirect_drops_non_whitelisted_query_parameters(): void
+    public function test_start_redirect_preserves_unknown_query_parameters(): void
     {
         $this->get('/start?utm_source=test&utm_medium=referral&foo=bar')
             ->assertStatus(302)
-            ->assertRedirect('/admin/register?utm_source=test&utm_medium=referral');
+            ->assertRedirect('https://app.garagebook.nl/admin/register?utm_source=test&utm_medium=referral&foo=bar');
     }
 }

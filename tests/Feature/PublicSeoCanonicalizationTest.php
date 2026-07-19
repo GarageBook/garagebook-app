@@ -20,24 +20,123 @@ class PublicSeoCanonicalizationTest extends TestCase
 
     public function test_app_host_public_url_redirects_to_apex_and_preserves_querystring(): void
     {
+        Page::query()->create([
+            'title' => 'Privacy statement',
+            'slug' => 'privacy-statement',
+            'content' => '<p>Body</p>',
+        ]);
+
         $this->get('https://app.garagebook.nl/privacy-statement?utm_source=gsc&x=1')
             ->assertStatus(301)
             ->assertRedirect('https://garagebook.nl/privacy-statement?utm_source=gsc&x=1');
     }
 
-    public function test_app_host_excluded_app_routes_are_not_host_redirected(): void
+    public function test_app_host_app_routes_are_not_host_redirected(): void
     {
         $this->get('https://app.garagebook.nl/admin/login')
+            ->assertStatus(200);
+
+        $this->get('https://app.garagebook.nl/admin/register')
             ->assertStatus(200);
 
         $this->get('https://app.garagebook.nl/register')
             ->assertStatus(200);
 
+        $this->get('https://app.garagebook.nl/login')
+            ->assertStatus(404)
+            ->assertHeaderMissing('Location');
+
+        $this->get('https://app.garagebook.nl/admin/password-reset/request')
+            ->assertStatus(200);
+
+        $this->get('https://app.garagebook.nl/admin/password-reset/reset')
+            ->assertStatus(403)
+            ->assertHeaderMissing('Location');
+
+        $this->post('https://app.garagebook.nl/admin/logout')
+            ->assertRedirect('https://app.garagebook.nl/admin/login');
+
         $this->get('https://app.garagebook.nl/api/ping')
             ->assertStatus(404);
 
+        $this->post('https://app.garagebook.nl/livewire-33d43eea/update')
+            ->assertStatus(404)
+            ->assertHeaderMissing('Location');
+
         $this->get('https://app.garagebook.nl/livewire-33d43eea/livewire.js')
             ->assertStatus(200);
+    }
+
+    public function test_unknown_app_host_path_is_not_redirected_to_public_host(): void
+    {
+        $this->get('https://app.garagebook.nl/future-app-entrypoint')
+            ->assertStatus(404)
+            ->assertHeaderMissing('Location');
+    }
+
+    public function test_start_redirects_to_app_register_for_get_and_head(): void
+    {
+        $this->get('https://app.garagebook.nl/start')
+            ->assertStatus(302)
+            ->assertRedirect('https://app.garagebook.nl/admin/register');
+
+        $this->head('https://app.garagebook.nl/start')
+            ->assertStatus(302)
+            ->assertRedirect('https://app.garagebook.nl/admin/register');
+    }
+
+    public function test_start_redirect_preserves_raw_tracking_querystring_exactly(): void
+    {
+        $queryString = implode('&', [
+            'utm_source=garagebook.nl',
+            'utm_medium=website',
+            'utm_campaign=organic_cta',
+            'utm_content=hero',
+            'utm_term=motor%20onderhoud',
+            'utm_id=launch-2026',
+            'gclid=test-gclid',
+            'dclid=test-dclid',
+            'gbraid=test-gbraid',
+            'wbraid=test-wbraid',
+            'gad_source=1',
+            '_ga=test-ga',
+            '_gid=test-gid',
+            '_gac=test-gac',
+            '_gl=1%2Atest-value%2Atest-extra',
+            'fbclid=test-fbclid',
+            'msclkid=test-msclkid',
+            'ttclid=test-ttclid',
+            'custom_future_parameter=behouden',
+            'empty=',
+            'duplicate=first',
+            'duplicate=second',
+            'encoded=a%2Bb%3Dc%2520d',
+        ]);
+
+        $this->get('https://app.garagebook.nl/start?'.$queryString)
+            ->assertStatus(302)
+            ->assertRedirect('https://app.garagebook.nl/admin/register?'.$queryString)
+            ->assertHeader('Location', 'https://app.garagebook.nl/admin/register?'.$queryString);
+    }
+
+    public function test_start_redirect_follow_ends_on_app_register_page_with_form(): void
+    {
+        $queryString = '_gl=1%2Atest-value%2Atest-extra&gclid=test-gclid&custom_future_parameter=behouden';
+        $firstResponse = $this->get('https://app.garagebook.nl/start?'.$queryString);
+
+        $firstResponse
+            ->assertStatus(302)
+            ->assertRedirect('https://app.garagebook.nl/admin/register?'.$queryString);
+
+        $location = $firstResponse->headers->get('Location');
+        $this->assertSame('app.garagebook.nl', parse_url($location, PHP_URL_HOST));
+
+        $this->get($location)
+            ->assertOk()
+            ->assertSee('GarageBook')
+            ->assertSee('Naam')
+            ->assertSee('E-mailadres')
+            ->assertSee('Wachtwoord');
     }
 
     public function test_blog_detail_legacy_urls_redirect_to_single_canonical_url(): void
@@ -138,6 +237,9 @@ class PublicSeoCanonicalizationTest extends TestCase
         $this->get('/youngtimer-onderhoud-bijhouden/index.html')
             ->assertStatus(301)
             ->assertRedirect('https://garagebook.nl/youngtimer-onderhoud-bijhouden/');
+
+        $this->get('https://app.garagebook.nl/unknown-app-entrypoint/index.html')
+            ->assertStatus(404);
 
         $this->get('/build/index.html')
             ->assertStatus(404);
