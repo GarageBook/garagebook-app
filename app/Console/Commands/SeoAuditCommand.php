@@ -63,7 +63,9 @@ class SeoAuditCommand extends Command
         $this->lineSection('=== SITEMAP ===');
 
         foreach (['/sitemap.xml', '/sitemap-garages.xml'] as $sitemapPath) {
-            $response = $this->dispatchPath($sitemapPath);
+            $response = $sitemapPath === '/sitemap-garages.xml'
+                ? $this->dispatchUrl(PublicSeoUrl::appBase().$sitemapPath)
+                : $this->dispatchPath($sitemapPath);
 
             if (! $response->isOk()) {
                 $this->recordFailure('sitemap', "sitemap bestaat: {$sitemapPath} returned {$response->getStatusCode()}");

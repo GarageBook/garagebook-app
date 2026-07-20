@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
@@ -55,7 +56,7 @@ class SeoQualityGateTest extends TestCase
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
-            ->assertSee('https://garagebook.nl/garage/'.$vehicle->public_slug, false)
+            ->assertSee('https://app.garagebook.nl/garage/'.$vehicle->public_slug, false)
             ->assertDontSee('garage-demo', false);
     }
 
@@ -78,7 +79,7 @@ class SeoQualityGateTest extends TestCase
         $response = $this->get('/garage/'.$vehicle->public_slug);
 
         $response->assertOk();
-        $response->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
+        $response->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
         $response->assertSee('<meta name="robots" content="index,follow">', false);
         $response->assertSee('"@type": "WebPage"', false);
         $response->assertSee('"@type": "Vehicle"', false);
@@ -114,12 +115,12 @@ class SeoQualityGateTest extends TestCase
 
         $this->get('/garage/'.$vehicle->public_slug.'?utm_source=test')
             ->assertStatus(301)
-            ->assertRedirect('https://garagebook.nl/garage/'.$vehicle->public_slug);
+            ->assertRedirect('https://app.garagebook.nl/garage/'.$vehicle->public_slug);
     }
 
     public function test_seo_report_writes_markdown_report(): void
     {
-        if (! array_key_exists('garagebook:seo-report', app(\Illuminate\Contracts\Console\Kernel::class)->all())) {
+        if (! array_key_exists('garagebook:seo-report', app(Kernel::class)->all())) {
             $this->markTestSkipped('garagebook:seo-report command is not registered in this checkout.');
         }
         Storage::fake('local');

@@ -416,7 +416,7 @@ class SeoHealthService
         }
 
         return parse_url($canonical, PHP_URL_SCHEME) !== 'https'
-            || parse_url($canonical, PHP_URL_HOST) !== PublicSeoUrl::HOST
+            || parse_url($canonical, PHP_URL_HOST) !== parse_url(PublicSeoUrl::garage('host-check'), PHP_URL_HOST)
             || Str::contains($canonical, 'www.');
     }
 }

@@ -9,12 +9,20 @@ use App\Services\PublicGarageService;
 use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PublicGaragePageTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Config::set('app.url', 'https://app.garagebook.nl');
+    }
 
     public function test_public_garage_route_works_without_username_and_renders_seo_markup(): void
     {
@@ -52,7 +60,46 @@ class PublicGaragePageTest extends TestCase
         $response->assertSee('01-05-2026');
         $response->assertSee('Deze publieke GarageBook-pagina laat zien welke onderhoudsmomenten de eigenaar van deze 2008 Toyota Highlander Hybrid Limited heeft opgebouwd. Onderhoud, kilometerstanden, foto\'s en bewijsstukken worden hier deelbaar samengebracht, terwijl de eigenaar controle houdt over wat openbaar is.');
         $response->assertSee('Deze GarageBook-pagina bevat de onderhoudsgeschiedenis van een 2008 Toyota Highlander Hybrid Limited. Hier vind je uitgevoerde onderhoudsbeurten, vervangen onderdelen, reparaties, kilometerstanden en overige werkzaamheden.');
-        $response->assertDontSee('"item": "'.'https://garagebook.nl/garage'.'"', false);
+        $response->assertDontSee('"item": "'.'https://app.garagebook.nl/garage'.'"', false);
+    }
+
+    public function test_public_garage_route_resolves_exact_stored_public_slug(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'RSV Mille',
+            'year' => 1999,
+            'public_slug' => '1999-aprilia-rsv-mille',
+            'is_public' => true,
+        ]);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Kleppen gecontroleerd',
+            'km_reading' => 42750,
+            'maintenance_date' => '2026-05-04',
+        ]);
+
+        $response = $this->get('/garage/1999-aprilia-rsv-mille');
+
+        $response->assertOk();
+        $response->assertSee('1999 Aprilia RSV Mille');
+        $response->assertSee('Kleppen gecontroleerd');
+        $response->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+        $response->assertSee('<meta property="og:url" content="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+        $response->assertSee('"url": "https://app.garagebook.nl/garage/1999-aprilia-rsv-mille"', false);
+
+        $this->get('/garage/'.$vehicle->id)
+            ->assertNotFound();
+    }
+
+    public function test_unknown_public_garage_slug_returns_not_found(): void
+    {
+        $this->get('/garage/onbekende-publieke-slug')
+            ->assertNotFound();
     }
 
     public function test_public_garage_structured_data_uses_webpage_main_entity_vehicle_without_product_markup(): void

@@ -8,9 +8,22 @@ class PublicSeoUrl
 {
     public const HOST = 'garagebook.nl';
 
+    public const APP_HOST = 'app.garagebook.nl';
+
     public static function base(): string
     {
         return 'https://'.self::HOST;
+    }
+
+    public static function appBase(): string
+    {
+        $host = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        if ($host !== self::APP_HOST) {
+            $host = self::APP_HOST;
+        }
+
+        return 'https://'.$host;
     }
 
     public static function path(string $path): string
@@ -35,7 +48,7 @@ class PublicSeoUrl
 
     public static function garage(string $publicSlug): string
     {
-        return self::path('/garage/'.trim($publicSlug, '/'));
+        return self::appBase().route('public-garage.show', ['publicSlug' => trim($publicSlug, '/')], false);
     }
 
     public static function page(string $slug): string

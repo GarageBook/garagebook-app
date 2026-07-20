@@ -42,10 +42,10 @@ class DeploymentSmokeTestCommand extends Command
 
         $this->assertRouteIsOk('public home', '/', publicHost: true);
         if ($garageSlug !== null) {
-            $this->assertRouteIsOk('public garage page', '/garage/'.$garageSlug, publicHost: true);
+            $this->assertRouteIsOk('public garage page', '/garage/'.$garageSlug);
         }
 
-        $this->assertRouteIsOk('sitemap garages', '/sitemap-garages.xml', publicHost: true);
+        $this->assertRouteIsOk('sitemap garages', '/sitemap-garages.xml');
 
         $failed = $this->failures !== [];
 

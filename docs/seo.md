@@ -10,7 +10,7 @@ php artisan garagebook:seo-audit
 
 ## URL Conventies
 
-- Publieke garagepagina's staan op `https://garagebook.nl/garage/{public_slug}`.
+- Publieke garagepagina's staan functioneel op `https://app.garagebook.nl/garage/{public_slug}` zolang de apex-host deze Laravel-route niet aantoonbaar bedient.
 - Gebruik geen querystrings in canonicals of sitemaps.
 - Gebruik geen trailing slash op app-routes, behalve wanneer een externe marketingroute dit expliciet vereist.
 - Gebruik geen `www` host voor app-routes.

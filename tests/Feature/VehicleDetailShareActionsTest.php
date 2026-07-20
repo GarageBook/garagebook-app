@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\PublicSeoUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Livewire\Livewire;
 use ReflectionMethod;
 use Tests\TestCase;
@@ -15,6 +16,23 @@ use Tests\TestCase;
 class VehicleDetailShareActionsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Config::set('app.url', 'https://app.garagebook.nl');
+    }
+
+    public function test_public_garage_url_uses_app_host_even_when_app_url_is_apex(): void
+    {
+        Config::set('app.url', 'https://garagebook.nl');
+
+        $this->assertSame(
+            'https://app.garagebook.nl/garage/eigen-opgeslagen-slug',
+            PublicSeoUrl::garage('eigen-opgeslagen-slug'),
+        );
+    }
 
     public function test_vehicle_detail_header_actions_include_public_page_and_pdf_export(): void
     {
@@ -74,6 +92,33 @@ class VehicleDetailShareActionsTest extends TestCase
             ->assertSee('data-analytics-event="public_vehicle_page_view_clicked"', false)
             ->assertSee('data-analytics-event="public_vehicle_page_link_copied"', false)
             ->assertSee('data-analytics-param-location="vehicle_detail"', false);
+    }
+
+    public function test_vehicle_detail_public_page_action_uses_stored_public_slug(): void
+    {
+        $user = User::factory()->create();
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'RSV Mille',
+            'year' => 1999,
+            'public_slug' => 'eigen-opgeslagen-aprilia-slug',
+            'is_public' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(ViewVehicle::class, ['record' => $vehicle->getRouteKey()]);
+
+        $method = new ReflectionMethod($component->instance(), 'getHeaderActions');
+        $method->setAccessible(true);
+        $actions = collect($method->invoke($component->instance()))->keyBy(fn ($action) => $action->getName());
+
+        $expectedUrl = PublicSeoUrl::garage('eigen-opgeslagen-aprilia-slug');
+
+        $this->assertSame($expectedUrl, $actions->get('openSharePage')->getUrl());
+        $this->assertStringNotContainsString('1999-aprilia-rsv-mille', $actions->get('openSharePage')->getUrl());
     }
 
     public function test_private_vehicle_detail_shows_activation_cta_without_dead_public_link(): void
