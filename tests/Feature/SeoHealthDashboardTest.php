@@ -40,6 +40,38 @@ class SeoHealthDashboardTest extends TestCase
         $response->assertDontSee('/garage/honda-c50');
     }
 
+    public function test_guest_get_to_seo_health_dashboard_redirects_to_admin_login_without_server_error(): void
+    {
+        $this->get('/admin/seo-health-dashboard')
+            ->assertRedirect('/admin/login');
+    }
+
+    public function test_guest_head_to_seo_health_dashboard_redirects_to_admin_login_without_server_error(): void
+    {
+        $this->head('/admin/seo-health-dashboard')
+            ->assertRedirect('/admin/login');
+    }
+
+    public function test_admin_head_to_seo_health_dashboard_does_not_throw(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->head('/admin/seo-health-dashboard')
+            ->assertOk();
+    }
+
+    public function test_regular_user_head_to_seo_health_dashboard_is_forbidden_without_server_error(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->head('/admin/seo-health-dashboard')
+            ->assertForbidden();
+    }
+
     public function test_seo_health_dashboard_can_be_loaded_repeatedly(): void
     {
         $admin = User::factory()->admin()->create();

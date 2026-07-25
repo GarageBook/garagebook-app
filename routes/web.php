@@ -22,6 +22,7 @@ use App\Models\Vehicle;
 use App\Support\InternalContentLinks;
 use App\Support\PublicSeoUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Http\Middleware\Authenticate as FilamentAuthenticate;
 use Filament\Http\Middleware\SetUpPanel;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -54,8 +55,8 @@ Route::get('/website', function () {
 })->name('website');
 
 Route::middleware([
-    'auth',
     SetUpPanel::class.':admin',
+    FilamentAuthenticate::class,
 ])->get('/admin/seo-health-dashboard', SeoHealthDashboardController::class)
     ->name('admin.seo-health-dashboard');
 
