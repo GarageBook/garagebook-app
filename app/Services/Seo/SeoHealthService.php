@@ -2,6 +2,7 @@
 
 namespace App\Services\Seo;
 
+use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Models\Vehicle;
 use App\Services\PublicGarageService;
 use App\Support\PublicSeoUrl;
@@ -16,11 +17,13 @@ class SeoHealthService
 {
     public function __construct(
         private readonly PublicGarageService $publicGarageService,
+        private readonly GarageQualityScore $qualityScore,
     ) {}
 
     public function report(): array
     {
         $vehicles = $this->publicVehicles();
+        $allVehicles = $this->allVehicles();
         $sitemapVehicles = $this->publicGarageService->indexableVehicles();
         $eligibleUrls = $this->eligibleUrls($sitemapVehicles);
         $sitemapUrls = $this->sitemapGarageUrls($sitemapVehicles);
@@ -32,52 +35,93 @@ class SeoHealthService
         $sitemapNotEligible = $sitemapUrls->diff($eligibleUrls)->values();
         $eligibleMissingFromSitemap = $eligibleUrls->diff($sitemapUrls)->values();
         $sitemapInspections = $this->inspectSitemapUrls($sitemapUrls, $vehicles);
-        $weakPages = $this->weakPages($vehicles, $eligibleUrls);
+
         $publicWithSlugButNoindex = $vehicles
             ->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug) && ! $this->publicGarageService->shouldIndex($vehicle))
             ->values();
-        $indexablePublicGaragePages = $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->shouldIndex($vehicle))->count();
-        $totalVehicles = Vehicle::query()->count();
+        $indexableVehicles = $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->shouldIndex($vehicle))->values();
+        $qualityByVehicle = $this->qualityScores($indexableVehicles);
+        $actionItems = $this->actionItems(
+            $vehicles,
+            $eligibleUrls,
+            $sitemapUrls,
+            $garageInspections,
+            $qualityByVehicle,
+        );
+
+        $structuredDataErrorUrls = collect([
+            ...$garageInspections['webpage_schema_missing_urls'],
+            ...$garageInspections['vehicle_schema_missing_urls'],
+            ...$garageInspections['product_schema_urls'],
+        ])->unique()->values();
 
         $critical = [
-            'product_schema' => count($garageInspections['product_schema_urls']),
             'noindex_urls_in_sitemap' => count($sitemapInspections['noindex_urls']),
             'demo_outreach_urls_in_sitemap' => count($sitemapInspections['demo_outreach_urls']),
-            'canonical_mismatches' => count($garageInspections['canonical_mismatch_urls']),
-            'duplicate_canonicals' => $duplicateCanonicals->count(),
             'sitemap_not_eligible' => $sitemapNotEligible->count(),
             'sitemap_redirects' => count($sitemapInspections['redirect_urls']),
             'sitemap_404s' => count($sitemapInspections['not_found_urls']),
             'redirect_chains' => count($garageInspections['redirect_chain_urls']),
+            'public_pages_without_slug' => $vehicles->filter(fn (Vehicle $vehicle): bool => blank($vehicle->public_slug))->count(),
         ];
 
         $warnings = [
-            'public_slug_but_noindex' => $publicWithSlugButNoindex->count(),
-            'weak_content' => count($weakPages),
-            'no_photo' => collect($weakPages)->filter(fn (array $row): bool => in_array('geen foto', $row['reasons'], true))->count(),
-            'no_public_logs' => collect($weakPages)->filter(fn (array $row): bool => in_array('geen publieke onderhoudslogs', $row['reasons'], true))->count(),
             'eligible_missing_from_sitemap' => $eligibleMissingFromSitemap->count(),
+            'canonical_mismatches' => count($garageInspections['canonical_mismatch_urls']),
+            'host_mismatches' => count($garageInspections['canonical_host_mismatch_urls']),
+            'querystring_issues' => count($garageInspections['querystring_issue_urls']),
+            'structured_data_errors' => $structuredDataErrorUrls->count(),
+            'unexpected_noindex' => $publicWithSlugButNoindex
+                ->reject(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle))
+                ->count(),
         ];
+
+        $opportunities = $this->opportunityCounts($actionItems);
+        $informational = [
+            'total_vehicles' => $allVehicles->count(),
+            'vehicles_with_owner' => $allVehicles->filter(fn (Vehicle $vehicle): bool => filled($vehicle->user_id))->count(),
+            'public_vehicles' => $vehicles->count(),
+            'hidden_vehicles' => $allVehicles->filter(fn (Vehicle $vehicle): bool => ! (bool) $vehicle->is_public)->count(),
+            'demo_outreach_vehicles' => $allVehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle))->count(),
+            'vehicles_without_photo' => $allVehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->publicVehiclePhotos($vehicle) === [])->count(),
+            'vehicles_without_maintenance' => $allVehicles->filter(fn (Vehicle $vehicle): bool => $vehicle->maintenanceLogs->isEmpty())->count(),
+        ];
+
+        $productMetrics = [
+            ...$informational,
+            'vehicles_with_public_slug' => $vehicles->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug))->count(),
+        ];
+
+        $indexabilityMetrics = [
+            'indexable_public_garages' => $indexableVehicles->count(),
+            'public_noindex_pages' => $publicWithSlugButNoindex->count(),
+            'sitemap_eligible' => $eligibleUrls->count(),
+            'included_in_sitemap' => $sitemapUrls->count(),
+            'eligible_missing_from_sitemap' => $eligibleMissingFromSitemap->count(),
+            'noindex_in_sitemap' => count($sitemapInspections['noindex_urls']),
+            'demo_outreach_indexable' => $vehicles
+                ->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle) && $this->publicGarageService->shouldIndex($vehicle))
+                ->count(),
+            'canonical_mismatches' => count($garageInspections['canonical_mismatch_urls']),
+            'host_mismatches' => count($garageInspections['canonical_host_mismatch_urls']),
+            'structured_data_errors' => $structuredDataErrorUrls->count(),
+        ];
+
+        $contentQualityMetrics = $this->contentQualityMetrics($indexableVehicles, $qualityByVehicle, $actionItems);
 
         return [
             'status' => array_sum($critical) > 0 ? 'fail' : (array_sum($warnings) > 0 ? 'warning' : 'pass'),
             'critical_errors' => array_sum($critical),
             'warnings' => array_sum($warnings),
+            'opportunity_count' => array_sum($opportunities),
             'critical' => $critical,
             'warning_counts' => $warnings,
-            'overview' => [
-                'total_vehicles' => $totalVehicles,
-                'public_vehicles' => $vehicles->count(),
-                'hidden_vehicles' => Vehicle::query()->where('is_public', false)->count(),
-                'indexable_public_garage_pages' => $indexablePublicGaragePages,
-                'noindex_public_garage_pages' => $vehicles->filter(fn (Vehicle $vehicle): bool => ! $this->publicGarageService->shouldIndex($vehicle))->count(),
-                'vehicles_without_public_slug' => Vehicle::query()->where(fn ($query) => $query->whereNull('public_slug')->orWhere('public_slug', ''))->count(),
-                'vehicles_without_photo' => Vehicle::query()->whereNull('photo')->where(fn ($query) => $query->whereNull('photos')->orWhere('photos', '[]'))->count(),
-                'vehicles_without_maintenance' => Vehicle::query()->doesntHave('maintenanceLogs')->count(),
-                'demo_outreach_vehicles' => $vehicles->filter(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle))->count(),
-                'vehicles_with_public_slug' => $vehicles->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug))->count(),
-                'indexable_percentage' => $totalVehicles > 0 ? round(($indexablePublicGaragePages / $totalVehicles) * 100, 1) : 0.0,
-            ],
+            'opportunity_counts' => $opportunities,
+            'informational_counts' => $informational,
+            'product_metrics' => $productMetrics,
+            'indexability_metrics' => $indexabilityMetrics,
+            'content_quality_metrics' => $contentQualityMetrics,
+            'overview' => $productMetrics,
             'sitemap' => [
                 'exists' => view()->exists('sitemap-garages'),
                 'url_count' => $sitemapUrls->count(),
@@ -97,6 +141,7 @@ class SeoHealthService
                 'vehicle_schema_pages' => count($garageInspections['vehicle_schema_urls']),
                 'product_schema_pages' => count($garageInspections['product_schema_urls']),
                 'product_schema_urls' => $garageInspections['product_schema_urls'],
+                'error_urls' => $structuredDataErrorUrls->all(),
             ],
             'canonical' => [
                 'mismatches' => count($garageInspections['canonical_mismatch_urls']),
@@ -124,7 +169,7 @@ class SeoHealthService
                 'should_index_not_in_sitemap' => $eligibleMissingFromSitemap->all(),
                 'sitemap_but_not_should_index' => $sitemapNotEligible->all(),
             ],
-            'weak_pages' => $weakPages,
+            'action_items' => $actionItems,
             'validation_shortlist' => $this->validationShortlist(
                 $garageInspections,
                 $sitemapInspections,
@@ -140,11 +185,23 @@ class SeoHealthService
             'has_vehicle_schema' => $this->containsSchemaType($html, 'Vehicle'),
             'has_product_schema' => $this->containsSchemaType($html, 'Product'),
             'canonical' => $this->extractCanonical($html),
+            'og_url' => $this->extractOgUrl($html),
             'has_noindex' => Str::contains($html, 'name="robots" content="noindex'),
             'has_title' => (bool) preg_match('/<title>\s*[^<]+\s*<\/title>/i', $html),
             'has_meta_description' => (bool) preg_match('/<meta\s+name="description"\s+content="[^"]+"/i', $html),
             'has_h1' => (bool) preg_match('/<h1\b[^>]*>\s*.+?\s*<\/h1>/is', $html),
         ];
+    }
+
+    private function allVehicles(): EloquentCollection
+    {
+        return Vehicle::query()
+            ->with([
+                'user',
+                'maintenanceLogs' => fn ($query) => $query->latest('maintenance_date')->latest('id'),
+            ])
+            ->orderBy('id')
+            ->get();
     }
 
     private function publicVehicles(): EloquentCollection
@@ -236,7 +293,7 @@ class SeoHealthService
                     $result['product_schema_urls'][] = $url;
                 }
 
-                if ($inspection['canonical'] !== $canonicalUrl) {
+                if ($inspection['canonical'] !== $canonicalUrl || $inspection['og_url'] !== $canonicalUrl) {
                     $result['canonical_mismatch_urls'][] = $url;
                 }
 
@@ -304,56 +361,150 @@ class SeoHealthService
         return $result;
     }
 
-    private function weakPages(EloquentCollection $vehicles, Collection $eligibleUrls): array
+    private function qualityScores(Collection|EloquentCollection $vehicles): Collection
     {
+        return collect($vehicles)
+            ->mapWithKeys(fn (Vehicle $vehicle): array => [$vehicle->getKey() => $this->qualityScore->score($vehicle)]);
+    }
+
+    private function actionItems(EloquentCollection $vehicles, Collection $eligibleUrls, Collection $sitemapUrls, array $garageInspections, Collection $qualityByVehicle): array
+    {
+        $sets = [
+            'missing_from_sitemap' => $eligibleUrls->diff($sitemapUrls)->flip(),
+            'canonical_mismatch' => collect($garageInspections['canonical_mismatch_urls'])->flip(),
+            'host_mismatch' => collect($garageInspections['canonical_host_mismatch_urls'])->flip(),
+            'structured_data_error' => collect([
+                ...$garageInspections['webpage_schema_missing_urls'],
+                ...$garageInspections['vehicle_schema_missing_urls'],
+                ...$garageInspections['product_schema_urls'],
+            ])->unique()->flip(),
+        ];
+
         return $vehicles
             ->filter(fn (Vehicle $vehicle): bool => filled($vehicle->public_slug))
-            ->map(function (Vehicle $vehicle) use ($eligibleUrls): ?array {
-                $timelineItems = $this->publicGarageService->publicTimelineItems($vehicle);
-                $photos = $this->publicGarageService->publicVehiclePhotos($vehicle);
-                $shouldIndex = $this->publicGarageService->shouldIndex($vehicle);
-                $isDemo = $this->publicGarageService->isOutreachDemoVehicle($vehicle);
+            ->reject(fn (Vehicle $vehicle): bool => $this->publicGarageService->isOutreachDemoVehicle($vehicle))
+            ->filter(fn (Vehicle $vehicle): bool => (bool) $vehicle->is_public && $this->publicGarageService->shouldIndex($vehicle))
+            ->map(function (Vehicle $vehicle) use ($sets, $qualityByVehicle): ?array {
                 $publicUrl = $this->publicGarageService->canonicalUrl($vehicle);
-                $reasons = [];
+                $quality = $qualityByVehicle->get($vehicle->getKey()) ?? $this->qualityScore->score($vehicle);
+                $reasonCodes = [];
 
-                if ($timelineItems === []) {
-                    $reasons[] = 'geen publieke onderhoudslogs';
+                foreach ($sets as $code => $set) {
+                    if ($set->has($publicUrl)) {
+                        $reasonCodes[] = $code;
+                    }
                 }
 
-                if ($photos === []) {
-                    $reasons[] = 'geen foto';
+                foreach (['missing_photo', 'no_maintenance_logs', 'short_log_descriptions', 'missing_vehicle_identity'] as $code) {
+                    if (in_array($code, $quality['reason_codes'], true)) {
+                        $reasonCodes[] = $code;
+                    }
                 }
 
-                if ($timelineItems !== [] && ! collect($timelineItems)->contains(fn (array $item): bool => mb_strlen(trim((string) ($item['description'] ?? ''))) >= 20)) {
-                    $reasons[] = 'korte/lege logomschrijving';
+                if (($quality['score'] ?? 0) < 60) {
+                    $reasonCodes[] = 'low_quality_score';
                 }
 
-                if (! $shouldIndex) {
-                    $reasons[] = 'wel public_slug maar shouldIndex false';
-                }
+                $reasonCodes = array_values(array_unique($reasonCodes));
 
-                if ($vehicle->is_public && ! $eligibleUrls->contains($publicUrl)) {
-                    $reasons[] = 'wel public maar niet sitemap eligible';
-                }
-
-                if ($reasons === []) {
+                if ($reasonCodes === []) {
                     return null;
                 }
 
                 return [
-                    'vehicle' => trim($this->publicGarageService->publicVehicleName($vehicle)) ?: 'Voertuig '.$vehicle->id,
-                    'slug' => (string) $vehicle->public_slug,
-                    'owner' => $vehicle->user?->email ?? 'Onbekend',
-                    'reasons' => $reasons,
-                    'reason' => implode(', ', $reasons),
+                    'vehicle_id' => $vehicle->getKey(),
                     'public_url' => $publicUrl,
-                    'status' => $isDemo ? 'demo' : ($shouldIndex ? 'weak' : 'noindex'),
+                    'admin_url' => VehicleResource::getUrl('edit', ['record' => $vehicle]),
+                    'brand' => (string) $vehicle->brand,
+                    'model' => (string) $vehicle->model,
+                    'year' => $vehicle->year,
+                    'vehicle_label' => trim($this->publicGarageService->publicVehicleName($vehicle)) ?: 'Voertuig '.$vehicle->getKey(),
+                    'indexability_status' => 'indexable',
+                    'sitemap_status' => $sets['missing_from_sitemap']->has($publicUrl) ? 'missing' : 'included',
+                    'quality_score' => (int) ($quality['score'] ?? 0),
+                    'severity' => $this->severityForReasons($reasonCodes),
+                    'reason_codes' => $reasonCodes,
+                    'details' => $this->readableReasons($reasonCodes),
                 ];
             })
             ->filter()
-            ->take(25)
+            ->sortBy([
+                fn (array $a, array $b): int => $this->severityWeight($b['severity']) <=> $this->severityWeight($a['severity']),
+                fn (array $a, array $b): int => $a['quality_score'] <=> $b['quality_score'],
+            ])
             ->values()
             ->all();
+    }
+
+    private function opportunityCounts(array $actionItems): array
+    {
+        $items = collect($actionItems);
+
+        return [
+            'missing_photo' => $items->filter(fn (array $item): bool => in_array('missing_photo', $item['reason_codes'], true))->count(),
+            'no_maintenance_logs' => $items->filter(fn (array $item): bool => in_array('no_maintenance_logs', $item['reason_codes'], true))->count(),
+            'short_log_descriptions' => $items->filter(fn (array $item): bool => in_array('short_log_descriptions', $item['reason_codes'], true))->count(),
+            'missing_vehicle_identity' => $items->filter(fn (array $item): bool => in_array('missing_vehicle_identity', $item['reason_codes'], true))->count(),
+            'low_quality_score' => $items->filter(fn (array $item): bool => in_array('low_quality_score', $item['reason_codes'], true))->count(),
+        ];
+    }
+
+    private function contentQualityMetrics(Collection $indexableVehicles, Collection $qualityByVehicle, array $actionItems): array
+    {
+        $items = collect($actionItems);
+        $scores = $qualityByVehicle->pluck('score');
+
+        return [
+            'indexable_garages_without_photo' => $items->filter(fn (array $item): bool => in_array('missing_photo', $item['reason_codes'], true))->count(),
+            'indexable_garages_without_maintenance_logs' => $items->filter(fn (array $item): bool => in_array('no_maintenance_logs', $item['reason_codes'], true))->count(),
+            'indexable_garages_with_short_or_empty_log_descriptions' => $items->filter(fn (array $item): bool => in_array('short_log_descriptions', $item['reason_codes'], true))->count(),
+            'indexable_garages_with_incomplete_vehicle_identity' => $items->filter(fn (array $item): bool => in_array('missing_vehicle_identity', $item['reason_codes'], true))->count(),
+            'indexable_garages_meeting_quality_criteria' => $indexableVehicles->filter(fn (Vehicle $vehicle): bool => ($qualityByVehicle->get($vehicle->getKey())['score'] ?? 0) >= 80)->count(),
+            'average_quality_score' => $scores->isNotEmpty() ? round((float) $scores->avg(), 1) : 0.0,
+            'score_bands' => [
+                '0_39' => $scores->filter(fn (int $score): bool => $score <= 39)->count(),
+                '40_59' => $scores->filter(fn (int $score): bool => $score >= 40 && $score <= 59)->count(),
+                '60_79' => $scores->filter(fn (int $score): bool => $score >= 60 && $score <= 79)->count(),
+                '80_100' => $scores->filter(fn (int $score): bool => $score >= 80)->count(),
+            ],
+        ];
+    }
+
+    private function severityForReasons(array $reasonCodes): string
+    {
+        if (array_intersect($reasonCodes, ['missing_from_sitemap', 'unexpected_noindex', 'canonical_mismatch', 'host_mismatch', 'structured_data_error']) !== []) {
+            return 'warning';
+        }
+
+        return 'opportunity';
+    }
+
+    private function readableReasons(array $reasonCodes): array
+    {
+        $labels = [
+            'missing_photo' => 'geen voertuigfoto',
+            'no_maintenance_logs' => 'geen publieke onderhoudslogs',
+            'short_log_descriptions' => 'korte publieke logomschrijving',
+            'missing_vehicle_identity' => 'ontbrekend merk of model',
+            'missing_from_sitemap' => 'pagina ontbreekt in sitemap',
+            'unexpected_noindex' => 'pagina hoort indexeerbaar te zijn',
+            'canonical_mismatch' => 'canonical of og:url wijkt af',
+            'host_mismatch' => 'canonical gebruikt verkeerde host',
+            'structured_data_error' => 'ontbrekende of ongeldige structured data',
+            'low_quality_score' => 'lage paginavolledigheid',
+        ];
+
+        return collect($reasonCodes)->map(fn (string $code): string => $labels[$code] ?? $code)->values()->all();
+    }
+
+    private function severityWeight(string $severity): int
+    {
+        return match ($severity) {
+            'critical' => 3,
+            'warning' => 2,
+            'opportunity' => 1,
+            default => 0,
+        };
     }
 
     private function validationShortlist(array $garageInspections, array $sitemapInspections, Collection $sitemapNotEligible): array
@@ -403,6 +554,15 @@ class SeoHealthService
     private function extractCanonical(string $html): ?string
     {
         if (! preg_match('/<link\s+rel="canonical"\s+href="([^"]+)"/i', $html, $matches)) {
+            return null;
+        }
+
+        return $matches[1];
+    }
+
+    private function extractOgUrl(string $html): ?string
+    {
+        if (! preg_match('/<meta\s+property="og:url"\s+content="([^"]+)"/i', $html, $matches)) {
             return null;
         }
 

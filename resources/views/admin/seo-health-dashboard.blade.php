@@ -4,15 +4,10 @@
             <div class="fi-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="fi-header-heading text-2xl font-bold tracking-tight text-gray-950 dark:text-white">SEO Health</h1>
-                    <p class="fi-header-subheading mt-2 text-sm text-gray-500 dark:text-gray-400">Read-only controle van publieke garagepagina's, sitemap, canonical en structured data.</p>
+                    <p class="fi-header-subheading mt-2 text-sm text-gray-500 dark:text-gray-400">Read-only controle van publieke garagepagina's, sitemap, canonical, structured data en contentkwaliteit.</p>
                 </div>
 
-                <x-filament::button
-                    tag="a"
-                    href="{{ route('admin.seo-health-dashboard.export') }}"
-                    color="gray"
-                    icon="heroicon-o-arrow-down-tray"
-                >
+                <x-filament::button tag="a" href="{{ route('admin.seo-health-dashboard.export') }}" color="gray" icon="heroicon-o-arrow-down-tray">
                     Export CSV
                 </x-filament::button>
             </div>
@@ -27,6 +22,20 @@
             'fail' => 'border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100',
         ];
         $card = 'rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900';
+        $metricLabel = fn (string $metric): string => str($metric)->replace('_', ' ')->headline()->toString();
+        $metricValue = fn (mixed $value): string => is_array($value)
+            ? collect($value)->map(fn ($count, $band) => str_replace('_', '-', $band).': '.$count)->implode(' | ')
+            : (string) $value;
+        $tabs = [
+            'critical' => 'Critical',
+            'warning' => 'Warnings',
+            'opportunity' => 'Opportunities',
+            'missing_photo' => 'Zonder foto',
+            'no_maintenance_logs' => 'Zonder onderhoud',
+            'short_log_descriptions' => 'Korte omschrijvingen',
+            'low_quality_score' => 'Lage score',
+            'missing_from_sitemap' => 'Ontbreekt in sitemap',
+        ];
     @endphp
 
     <div class="space-y-6">
@@ -35,99 +44,120 @@
                 <div>
                     <p class="text-sm font-medium uppercase tracking-wide">SEO Health status</p>
                     <h2 class="text-2xl font-semibold">{{ strtoupper($status) }}</h2>
+                    <p class="mt-1 text-sm">Alleen critical en warning bepalen deze status. Opportunities zijn contentkansen.</p>
                 </div>
                 <div class="text-right text-sm">
-                    <div>{{ $report['critical_errors'] ?? 0 }} kritieke fouten</div>
-                    <div>{{ $report['warnings'] ?? 0 }} waarschuwingen</div>
+                    <div>{{ $report['critical_errors'] ?? 0 }} critical</div>
+                    <div>{{ $report['warnings'] ?? 0 }} warnings</div>
+                    <div>{{ $report['opportunity_count'] ?? 0 }} opportunities</div>
                 </div>
             </div>
         </section>
 
-        <section>
-            <h3 class="mb-3 text-lg font-semibold">Indexability overview</h3>
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                @foreach([
-                    'Totaal voertuigen' => $report['overview']['total_vehicles'] ?? 0,
-                    'Publieke voertuigen' => $report['overview']['public_vehicles'] ?? 0,
-                    'Verborgen voertuigen' => $report['overview']['hidden_vehicles'] ?? 0,
-                    'Indexeerbare voertuigen' => $report['overview']['indexable_public_garage_pages'] ?? 0,
-                    'Voertuigen zonder slug' => $report['overview']['vehicles_without_public_slug'] ?? 0,
-                    'Voertuigen zonder foto' => $report['overview']['vehicles_without_photo'] ?? 0,
-                    'Voertuigen zonder onderhoud' => $report['overview']['vehicles_without_maintenance'] ?? 0,
-                    'Outreach-demo uitgesloten' => $report['overview']['demo_outreach_vehicles'] ?? 0,
-                    'Percentage indexeerbaar' => ($report['overview']['indexable_percentage'] ?? 0) . '%',
-                ] as $label => $value)
-                    <div class="{{ $card }}">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ $label }}</div>
-                        <div class="mt-1 text-2xl font-semibold">{{ $value }}</div>
-                    </div>
-                @endforeach
+        <section class="grid gap-4 xl:grid-cols-2">
+            <div class="{{ $card }}">
+                <h3 class="mb-1 text-lg font-semibold">Technische fouten</h3>
+                <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Critical blokkeert of vervuilt indexatie. Warning wijst op technische inconsistentie die herstel verdient.</p>
+                <dl class="space-y-2 text-sm">
+                    @foreach(($report['critical'] ?? []) as $metric => $value)
+                        <div class="flex justify-between gap-4"><dt>{{ $metricLabel($metric) }}</dt><dd>{{ $metricValue($value) }}</dd></div>
+                    @endforeach
+                    @foreach(($report['warning_counts'] ?? []) as $metric => $value)
+                        <div class="flex justify-between gap-4"><dt>{{ $metricLabel($metric) }}</dt><dd>{{ $metricValue($value) }}</dd></div>
+                    @endforeach
+                </dl>
+            </div>
+
+            <div class="{{ $card }}">
+                <h3 class="mb-1 text-lg font-semibold">Product coverage</h3>
+                <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Informatieve productdekking. Deze cijfers zetten de SEO-status niet op warning.</p>
+                <dl class="space-y-2 text-sm">
+                    @foreach(($report['product_metrics'] ?? []) as $metric => $value)
+                        <div class="flex justify-between gap-4"><dt>{{ $metricLabel($metric) }}</dt><dd>{{ $metricValue($value) }}</dd></div>
+                    @endforeach
+                </dl>
             </div>
         </section>
 
         <section class="grid gap-4 xl:grid-cols-3">
             <div class="{{ $card }}">
-                <h3 class="mb-3 text-lg font-semibold">Sitemap health</h3>
+                <h3 class="mb-1 text-lg font-semibold">Indexability</h3>
+                <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Controleert of publieke, indexeerbare garagepagina's consistent indexeerbaar zijn.</p>
+                <dl class="space-y-2 text-sm">
+                    @foreach(($report['indexability_metrics'] ?? []) as $metric => $value)
+                        <div class="flex justify-between gap-4"><dt>{{ $metricLabel($metric) }}</dt><dd>{{ $metricValue($value) }}</dd></div>
+                    @endforeach
+                </dl>
+            </div>
+
+            <div class="{{ $card }}">
+                <h3 class="mb-1 text-lg font-semibold">Sitemap</h3>
+                <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">De sitemap hoort alleen canonical, indexeerbare garage-URL's te bevatten.</p>
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between gap-4"><dt>URLs in sitemap-garages.xml</dt><dd>{{ $report['sitemap']['url_count'] ?? 0 }}</dd></div>
                     <div class="flex justify-between gap-4"><dt>Sitemap eligible</dt><dd>{{ $report['sitemap']['eligible_count'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Duplicate canonical URLs</dt><dd>{{ count($report['sitemap']['duplicate_canonical_urls'] ?? []) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Noindex URLs in sitemap</dt><dd>{{ count($report['sitemap']['noindex_urls'] ?? []) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Demo/outreach URLs in sitemap</dt><dd>{{ count($report['sitemap']['demo_outreach_urls'] ?? []) }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Niet eligible in sitemap</dt><dd>{{ count($report['sitemap']['not_eligible_urls'] ?? []) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt>Noindex in sitemap</dt><dd>{{ count($report['sitemap']['noindex_urls'] ?? []) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt>Demo/outreach in sitemap</dt><dd>{{ count($report['sitemap']['demo_outreach_urls'] ?? []) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt>Eligible ontbreekt</dt><dd>{{ count($report['sitemap']['eligible_missing_urls'] ?? []) }}</dd></div>
                 </dl>
             </div>
 
             <div class="{{ $card }}">
-                <h3 class="mb-3 text-lg font-semibold">Structured data health</h3>
+                <h3 class="mb-1 text-lg font-semibold">Content opportunities</h3>
+                <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Kansen om publieke garagepagina's vollediger en bruikbaarder te maken.</p>
                 <dl class="space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt>WebPage schema</dt><dd>{{ $report['structured_data']['webpage_schema_pages'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Vehicle schema</dt><dd>{{ $report['structured_data']['vehicle_schema_pages'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Product schema</dt><dd>{{ $report['structured_data']['product_schema_pages'] ?? 0 }}</dd></div>
-                </dl>
-            </div>
-
-            <div class="{{ $card }}">
-                <h3 class="mb-3 text-lg font-semibold">Canonical health</h3>
-                <dl class="space-y-2 text-sm">
-                    <div class="flex justify-between gap-4"><dt>Canonical mismatches</dt><dd>{{ $report['canonical']['mismatches'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Duplicate canonicals</dt><dd>{{ $report['canonical']['duplicate_canonicals'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Querystring issues</dt><dd>{{ $report['canonical']['querystring_issues'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Host mismatches</dt><dd>{{ $report['canonical']['host_mismatches'] ?? 0 }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt>Redirect candidates</dt><dd>{{ $report['canonical']['redirect_candidates'] ?? 0 }}</dd></div>
+                    @foreach(($report['content_quality_metrics'] ?? []) as $metric => $value)
+                        <div class="flex justify-between gap-4"><dt>{{ $metricLabel($metric) }}</dt><dd>{{ $metricValue($value) }}</dd></div>
+                    @endforeach
                 </dl>
             </div>
         </section>
 
         <section class="{{ $card }}">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h3 class="text-lg font-semibold">Thin content / weak SEO pages</h3>
-                <span class="text-sm text-gray-500 dark:text-gray-400">Top {{ count($report['weak_pages'] ?? []) }}</span>
+                <div>
+                    <h3 class="text-lg font-semibold">Action items</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Filterbare technische issues en contentkansen per officiële publieke garage-URL.</p>
+                </div>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ count($report['action_items'] ?? []) }} items</span>
             </div>
+
+            <div class="mb-4 flex flex-wrap gap-2 text-sm">
+                @foreach($tabs as $code => $label)
+                    <a class="rounded-md border border-gray-200 px-3 py-1 text-gray-700 dark:border-gray-700 dark:text-gray-200" href="#{{ $code }}">{{ $label }}</a>
+                @endforeach
+            </div>
+
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[900px] text-left text-sm">
+                <table class="w-full min-w-[1100px] text-left text-sm">
                     <thead class="border-b border-gray-200 text-xs uppercase text-gray-500 dark:border-gray-800 dark:text-gray-400">
                         <tr>
+                            <th class="py-2 pr-4">ID</th>
                             <th class="py-2 pr-4">Voertuig</th>
-                            <th class="py-2 pr-4">Slug</th>
-                            <th class="py-2 pr-4">Eigenaar</th>
-                            <th class="py-2 pr-4">Reden</th>
-                            <th class="py-2 pr-4">Public URL</th>
-                            <th class="py-2 pr-4">Status</th>
+                            <th class="py-2 pr-4">Severity</th>
+                            <th class="py-2 pr-4">Score</th>
+                            <th class="py-2 pr-4">Indexability</th>
+                            <th class="py-2 pr-4">Sitemap</th>
+                            <th class="py-2 pr-4">Reasons</th>
+                            <th class="py-2 pr-4">Publiek</th>
+                            <th class="py-2 pr-4">Admin</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @forelse($report['weak_pages'] ?? [] as $row)
-                            <tr>
-                                <td class="py-3 pr-4 font-medium">{{ $row['vehicle'] }}</td>
-                                <td class="py-3 pr-4">{{ $row['slug'] }}</td>
-                                <td class="py-3 pr-4">{{ $row['owner'] }}</td>
-                                <td class="py-3 pr-4">{{ $row['reason'] }}</td>
-                                <td class="py-3 pr-4"><a class="text-primary-600" href="{{ $row['public_url'] }}" target="_blank" rel="noopener">{{ $row['public_url'] }}</a></td>
-                                <td class="py-3 pr-4">{{ $row['status'] }}</td>
+                        @forelse($report['action_items'] ?? [] as $row)
+                            <tr id="{{ $row['severity'] }}">
+                                <td class="py-3 pr-4">{{ $row['vehicle_id'] }}</td>
+                                <td class="py-3 pr-4 font-medium">{{ $row['vehicle_label'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['severity'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['quality_score'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['indexability_status'] }}</td>
+                                <td class="py-3 pr-4">{{ $row['sitemap_status'] }}</td>
+                                <td class="py-3 pr-4">{{ implode(', ', $row['reason_codes']) }}</td>
+                                <td class="py-3 pr-4"><a class="text-primary-600" href="{{ $row['public_url'] }}" target="_blank" rel="noopener">Publieke pagina</a></td>
+                                <td class="py-3 pr-4"><a class="text-primary-600" href="{{ $row['admin_url'] }}">Beheer voertuig</a></td>
                             </tr>
                         @empty
-                            <tr><td class="py-3 text-gray-500" colspan="6">Geen weak pages gevonden.</td></tr>
+                            <tr><td class="py-3 text-gray-500" colspan="9">Geen action items gevonden.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

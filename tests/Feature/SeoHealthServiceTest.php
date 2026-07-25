@@ -65,22 +65,23 @@ class SeoHealthServiceTest extends TestCase
         ], $report['sitemap']['urls']);
     }
 
-    public function test_weak_public_pages_are_reported(): void
+    public function test_action_items_are_privacy_safe_and_atomized(): void
     {
-
-        $user = User::factory()->create(['email' => 'owner@example.com']);
+        $user = User::factory()->create(['name' => 'Private Owner', 'email' => 'owner@example.com']);
         $vehicle = $this->createPublicVehicle($user, '2026-honda-nc750x');
         $this->createMaintenanceLog($vehicle, '');
 
         $report = app(SeoHealthService::class)->report();
 
-        $this->assertNotEmpty($report['weak_pages']);
-        $row = collect($report['weak_pages'])->firstWhere('slug', '2026-honda-nc750x');
+        $this->assertNotEmpty($report['action_items']);
+        $row = collect($report['action_items'])->firstWhere('vehicle_id', $vehicle->id);
 
         $this->assertNotNull($row);
-        $this->assertSame('owner@example.com', $row['owner']);
-        $this->assertContains('geen foto', $row['reasons']);
-        $this->assertContains('korte/lege logomschrijving', $row['reasons']);
+        $this->assertArrayNotHasKey('owner', $row);
+        $this->assertContains('missing_photo', $row['reason_codes']);
+        $this->assertContains('short_log_descriptions', $row['reason_codes']);
+        $this->assertStringNotContainsString('owner@example.com', json_encode($row));
+        $this->assertStringNotContainsString('Private Owner', json_encode($row));
     }
 
     public function test_dashboard_public_links_use_the_vehicle_public_slug(): void
@@ -94,10 +95,9 @@ class SeoHealthServiceTest extends TestCase
         ])->save();
 
         $report = app(SeoHealthService::class)->report();
-        $row = collect($report['weak_pages'])->firstWhere('vehicle', '1974 Honda C50');
+        $row = collect($report['action_items'])->firstWhere('vehicle_label', '1974 Honda C50');
 
         $this->assertNotNull($row);
-        $this->assertSame('1974-honda-c50-super-cub', $row['slug']);
         $this->assertSame(
             PublicSeoUrl::garage('1974-honda-c50-super-cub'),
             $row['public_url']

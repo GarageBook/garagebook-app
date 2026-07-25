@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'public_site_url' => env('PUBLIC_SITE_URL', 'https://garagebook.nl'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
@@ -67,7 +69,7 @@ return [
 
     'timezone' => 'UTC',
 
-/*
+    /*
 |--------------------------------------------------------------------------
 | Application Locale Configuration
 |--------------------------------------------------------------------------
@@ -77,15 +79,9 @@ return [
 |
 */
 
+    'locale' => 'nl',
 
-
-
-'locale' => 'nl',
-
-'fallback_locale' => 'en',
-
-
-
+    'fallback_locale' => 'en',
 
     /*
     |--------------------------------------------------------------------------
