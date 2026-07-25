@@ -24,12 +24,12 @@ class VehicleDetailShareActionsTest extends TestCase
         Config::set('app.url', 'https://app.garagebook.nl');
     }
 
-    public function test_public_garage_url_uses_public_site_url_even_when_app_url_is_apex(): void
+    public function test_public_garage_url_uses_app_host_even_when_app_url_is_apex(): void
     {
         Config::set('app.url', 'https://garagebook.nl');
 
         $this->assertSame(
-            'https://garagebook.nl/garage/eigen-opgeslagen-slug',
+            'https://app.garagebook.nl/garage/eigen-opgeslagen-slug',
             PublicSeoUrl::garage('eigen-opgeslagen-slug'),
         );
     }

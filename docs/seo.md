@@ -10,7 +10,7 @@ php artisan garagebook:seo-audit
 
 ## URL Conventies
 
-- De officiële publieke garage-URL voor canonical, sitemap, structured data, dashboard en sharelinks is `https://garagebook.nl/garage/{public_slug}` via `PUBLIC_SITE_URL`.
+- Publieke garagepagina's staan functioneel op `https://app.garagebook.nl/garage/{public_slug}` zolang de apex-host deze Laravel-route niet aantoonbaar bedient.
 - Gebruik geen querystrings in canonicals of sitemaps.
 - Gebruik geen trailing slash op app-routes, behalve wanneer een externe marketingroute dit expliciet vereist.
 - Gebruik geen `www` host voor app-routes.
@@ -76,7 +76,3 @@ php artisan garagebook:seo-report
 `garagebook:seo-audit` is de CI/deploy gate. Exitcode `0` is PASS, exitcode `1` is FAIL.
 
 `garagebook:seo-report` schrijft een markdownrapport naar `storage/app/reports/` voor maandelijkse monitoring.
-
-## Host architecture note
-
-Publieke garagepagina's kunnen technisch nog via de app-host bereikbaar zijn zolang route- en hostredirectgedrag niet apart is aangepast. De officiële URL-generatie gebruikt wel de apex-host. Wijzig hostredirects alleen in een aparte sprint.

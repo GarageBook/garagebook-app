@@ -12,13 +12,7 @@ class PublicSeoUrl
 
     public static function base(): string
     {
-        $configured = trim((string) config('app.public_site_url', 'https://garagebook.nl'));
-        $configured = $configured !== '' ? $configured : 'https://garagebook.nl';
-        $scheme = parse_url($configured, PHP_URL_SCHEME) ?: 'https';
-        $host = parse_url($configured, PHP_URL_HOST) ?: self::HOST;
-        $path = trim((string) parse_url($configured, PHP_URL_PATH), '/');
-
-        return rtrim($scheme.'://'.$host.($path !== '' ? '/'.$path : ''), '/');
+        return 'https://'.self::HOST;
     }
 
     public static function appBase(): string
@@ -54,9 +48,7 @@ class PublicSeoUrl
 
     public static function garage(string $publicSlug): string
     {
-        $publicSlug = trim((string) preg_split('/[?#]/', trim($publicSlug, '/'))[0], '/');
-
-        return self::path('/garage/'.implode('/', array_map('rawurlencode', explode('/', $publicSlug))));
+        return self::appBase().route('public-garage.show', ['publicSlug' => trim($publicSlug, '/')], false);
     }
 
     public static function page(string $slug): string

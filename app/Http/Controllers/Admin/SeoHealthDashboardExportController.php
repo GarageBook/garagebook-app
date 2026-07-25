@@ -16,47 +16,51 @@ class SeoHealthDashboardExportController extends Controller
         abort_unless(auth()->user()?->isAdmin() ?? false, 403);
 
         return response()->streamDownload(function () use ($seoHealthService): void {
-            echo chr(0xEF).chr(0xBB).chr(0xBF);
+            echo "\xEF\xBB\xBF";
 
             $handle = fopen('php://output', 'w');
             $report = $seoHealthService->report();
 
-            fputcsv($handle, ['section', 'metric', 'value', 'details', 'public_url', 'admin_url', 'vehicle_id', 'quality_score', 'severity', 'reason_codes']);
+            fputcsv($handle, ['section', 'metric', 'value', 'details', 'url', 'status']);
 
-            fputcsv($handle, ['status', 'SEO Health status', strtoupper((string) ($report['status'] ?? 'fail')), '', '', '', '', '', '', '']);
-            fputcsv($handle, ['status', 'Critical errors', $report['critical_errors'] ?? 0, '', '', '', '', '', 'critical', '']);
-            fputcsv($handle, ['status', 'Warnings', $report['warnings'] ?? 0, '', '', '', '', '', 'warning', '']);
-            fputcsv($handle, ['status', 'Opportunities', $report['opportunity_count'] ?? 0, '', '', '', '', '', 'opportunity', '']);
+            fputcsv($handle, ['status', 'SEO Health status', strtoupper((string) ($report['status'] ?? 'fail')), '', '', '']);
+            fputcsv($handle, ['status', 'Critical errors', $report['critical_errors'] ?? 0, '', '', '']);
+            fputcsv($handle, ['status', 'Warnings', $report['warnings'] ?? 0, '', '', '']);
 
-            foreach (($report['product_metrics'] ?? []) as $metric => $value) {
-                fputcsv($handle, ['product_metrics', $this->label($metric), $this->formatValue($value), '', '', '', '', '', 'informational', '']);
+            foreach (($report['overview'] ?? []) as $metric => $value) {
+                fputcsv($handle, ['indexability_overview', $this->label($metric), $value, '', '', '']);
             }
 
-            foreach (($report['indexability_metrics'] ?? []) as $metric => $value) {
-                fputcsv($handle, ['indexability_metrics', $this->label($metric), $this->formatValue($value), '', '', '', '', '', $this->metricSeverity($metric), '']);
-            }
+            fputcsv($handle, ['sitemap_health', 'URLs in sitemap-garages.xml', $report['sitemap']['url_count'] ?? 0, '', '', '']);
+            fputcsv($handle, ['sitemap_health', 'Sitemap eligible', $report['sitemap']['eligible_count'] ?? 0, '', '', '']);
+            fputcsv($handle, ['sitemap_health', 'Duplicate canonical URLs', count($report['sitemap']['duplicate_canonical_urls'] ?? []), '', '', '']);
+            fputcsv($handle, ['sitemap_health', 'Noindex URLs in sitemap', count($report['sitemap']['noindex_urls'] ?? []), '', '', '']);
+            fputcsv($handle, ['sitemap_health', 'Demo/outreach URLs in sitemap', count($report['sitemap']['demo_outreach_urls'] ?? []), '', '', '']);
+            fputcsv($handle, ['sitemap_health', 'Niet eligible in sitemap', count($report['sitemap']['not_eligible_urls'] ?? []), '', '', '']);
 
-            foreach (($report['content_quality_metrics'] ?? []) as $metric => $value) {
-                fputcsv($handle, ['content_quality_metrics', $this->label($metric), $this->formatValue($value), '', '', '', '', '', 'opportunity', '']);
-            }
+            fputcsv($handle, ['structured_data_health', 'WebPage schema', $report['structured_data']['webpage_schema_pages'] ?? 0, '', '', '']);
+            fputcsv($handle, ['structured_data_health', 'Vehicle schema', $report['structured_data']['vehicle_schema_pages'] ?? 0, '', '', '']);
+            fputcsv($handle, ['structured_data_health', 'Product schema', $report['structured_data']['product_schema_pages'] ?? 0, '', '', '']);
 
-            foreach (($report['action_items'] ?? []) as $row) {
+            fputcsv($handle, ['canonical_health', 'Canonical mismatches', $report['canonical']['mismatches'] ?? 0, '', '', '']);
+            fputcsv($handle, ['canonical_health', 'Duplicate canonicals', $report['canonical']['duplicate_canonicals'] ?? 0, '', '', '']);
+            fputcsv($handle, ['canonical_health', 'Querystring issues', $report['canonical']['querystring_issues'] ?? 0, '', '', '']);
+            fputcsv($handle, ['canonical_health', 'Host mismatches', $report['canonical']['host_mismatches'] ?? 0, '', '', '']);
+            fputcsv($handle, ['canonical_health', 'Redirect candidates', $report['canonical']['redirect_candidates'] ?? 0, '', '', '']);
+
+            foreach (($report['weak_pages'] ?? []) as $row) {
                 fputcsv($handle, [
-                    'action_items',
-                    $row['vehicle_label'] ?? '',
-                    '',
-                    implode(' | ', $row['details'] ?? []),
+                    'weak_pages',
+                    $row['vehicle'] ?? '',
+                    $row['slug'] ?? '',
+                    ($row['owner'] ?? '').' | '.($row['reason'] ?? ''),
                     $row['public_url'] ?? '',
-                    $row['admin_url'] ?? '',
-                    $row['vehicle_id'] ?? '',
-                    $row['quality_score'] ?? '',
-                    $row['severity'] ?? '',
-                    implode('|', $row['reason_codes'] ?? []),
+                    $row['status'] ?? '',
                 ]);
             }
 
             foreach (($report['validation_shortlist'] ?? []) as $url) {
-                fputcsv($handle, ['gsc_validation_shortlist', 'URL', '', '', $url, '', '', '', 'warning', '']);
+                fputcsv($handle, ['gsc_validation_shortlist', 'URL', '', '', $url, '']);
             }
 
             fclose($handle);
@@ -71,21 +75,5 @@ class SeoHealthDashboardExportController extends Controller
             ->replace('_', ' ')
             ->headline()
             ->toString();
-    }
-
-    private function formatValue(mixed $value): string|int|float
-    {
-        if (! is_array($value)) {
-            return $value;
-        }
-
-        return collect($value)
-            ->map(fn (mixed $count, string $band): string => $band.': '.$count)
-            ->implode(' | ');
-    }
-
-    private function metricSeverity(string $metric): string
-    {
-        return in_array($metric, ['noindex_in_sitemap', 'demo_outreach_indexable'], true) ? 'critical' : 'warning';
     }
 }

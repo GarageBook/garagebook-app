@@ -179,18 +179,18 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertDontSee('/blogs/'.$blog->slug, false);
     }
 
-    public function test_public_garage_canonical_and_sitemap_use_apex_host(): void
+    public function test_public_garage_canonical_and_sitemap_use_app_host(): void
     {
         $vehicle = $this->publicVehicle();
 
         $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
-            ->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
+            ->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
-            ->assertSee('https://garagebook.nl/garage/'.$vehicle->public_slug, false)
-            ->assertDontSee('https://app.garagebook.nl/garage/'.$vehicle->public_slug, false);
+            ->assertSee('https://app.garagebook.nl/garage/'.$vehicle->public_slug, false)
+            ->assertDontSee('https://garagebook.nl/garage/'.$vehicle->public_slug, false);
     }
 
     public function test_app_host_public_garage_request_is_not_redirected_to_apex(): void
@@ -206,11 +206,11 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertOk()
             ->assertHeaderMissing('Location')
             ->assertSee('1999 Aprilia RSV Mille')
-            ->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+            ->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
 
         $this->kernelGet('https://garagebook.nl/garage/'.$vehicle->public_slug)
             ->assertOk()
-            ->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+            ->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
     }
 
     public function test_garage_sitemap_urls_resolve_to_public_garage_pages(): void
@@ -221,7 +221,7 @@ class PublicSeoCanonicalizationTest extends TestCase
 
         $garageSitemap = $this->get('/sitemap-garages.xml')->assertOk()->getContent();
 
-        $expectedUrl = 'https://garagebook.nl'.route('public-garage.show', ['publicSlug' => $vehicle->public_slug], false);
+        $expectedUrl = 'https://app.garagebook.nl'.route('public-garage.show', ['publicSlug' => $vehicle->public_slug], false);
 
         $this->assertStringContainsString($expectedUrl, $garageSitemap);
         $this->kernelGet($expectedUrl)->assertOk();
@@ -243,7 +243,7 @@ class PublicSeoCanonicalizationTest extends TestCase
         $this->get('/garage/'.$vehicle->public_slug)
             ->assertOk()
             ->assertSee('<meta name="robots" content="noindex,follow">', false)
-            ->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
+            ->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/'.$vehicle->public_slug.'">', false);
 
         $this->get('/sitemap-garages.xml')
             ->assertOk()
@@ -262,7 +262,7 @@ class PublicSeoCanonicalizationTest extends TestCase
 
         $this->get('/share/willem-van-veelen/honda-cbr600rr')
             ->assertStatus(301)
-            ->assertRedirect('https://garagebook.nl/garage/'.$vehicle->public_slug);
+            ->assertRedirect('https://app.garagebook.nl/garage/'.$vehicle->public_slug);
 
         $this->get('/share/bauke-huitema/project-13')
             ->assertStatus(410);
@@ -312,9 +312,9 @@ class PublicSeoCanonicalizationTest extends TestCase
 
         $this->assertStringContainsString('https://garagebook.nl/youngtimer-onderhoud-bijhouden', $sitemap);
         $this->assertStringContainsString('https://garagebook.nl/blog/'.$blog->slug.'/', $sitemap);
-        $this->assertStringContainsString('https://garagebook.nl/garage/'.$vehicle->public_slug, $garageSitemap);
+        $this->assertStringContainsString('https://app.garagebook.nl/garage/'.$vehicle->public_slug, $garageSitemap);
         $this->assertStringNotContainsString('app.garagebook.nl', $sitemap);
-        $this->assertStringNotContainsString('https://app.garagebook.nl/garage/', $garageSitemap);
+        $this->assertStringNotContainsString('https://garagebook.nl/garage/', $garageSitemap);
         $this->assertStringNotContainsString('/index.html', $sitemap.$garageSitemap);
         $this->assertStringNotContainsString('/share/', $sitemap.$garageSitemap);
         $this->assertStringNotContainsString('privacy-statement', $sitemap);

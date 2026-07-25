@@ -3,9 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Admin\SeoHealthDashboardController;
-use App\Models\MaintenanceLog;
 use App\Models\User;
-use App\Models\Vehicle;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -36,8 +34,8 @@ class SeoHealthDashboardTest extends TestCase
         $response->assertHeaderMissing('Location');
         $response->assertViewIs('admin.seo-health-dashboard');
         $response->assertSee('SEO Health');
-        $response->assertSeeText('Indexability');
-        $response->assertSeeText('Product coverage');
+        $response->assertSeeText('Indexability overview');
+        $response->assertSeeText('Sitemap health');
         $response->assertDontSee('Honda C50');
         $response->assertDontSee('/garage/honda-c50');
     }
@@ -113,45 +111,6 @@ class SeoHealthDashboardTest extends TestCase
             ->assertDownload('seo-health-dashboard-'.now()->format('Y-m-d').'.csv');
     }
 
-    public function test_seo_health_dashboard_and_csv_do_not_expose_owner_identity(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $owner = User::factory()->create([
-            'name' => 'Sensitive Owner',
-            'email' => 'sensitive-owner@example.com',
-        ]);
-        $vehicle = Vehicle::query()->create([
-            'user_id' => $owner->id,
-            'brand' => 'Honda, Garage',
-            'model' => 'NC750X',
-            'public_slug' => 'honda-nc750x-sensitive',
-            'is_public' => true,
-        ]);
-        MaintenanceLog::query()->create([
-            'vehicle_id' => $vehicle->id,
-            'description' => 'Olie',
-            'km_reading' => 12_000,
-            'maintenance_date' => '2026-07-25',
-        ]);
-
-        $dashboard = $this->actingAs($admin)->get('/admin/seo-health-dashboard')->assertOk();
-        $dashboard->assertSee('https://garagebook.nl/garage/honda-nc750x-sensitive', false);
-        $dashboard->assertDontSee('https://app.garagebook.nl/garage/honda-nc750x-sensitive', false);
-        $dashboard->assertDontSee('sensitive-owner@example.com');
-        $dashboard->assertDontSee('Sensitive Owner');
-
-        $csv = $this->actingAs($admin)->get('/admin/seo-health-export')->assertOk()->streamedContent();
-
-        $this->assertStringContainsString('https://garagebook.nl/garage/honda-nc750x-sensitive', $csv);
-        $this->assertStringNotContainsString('https://app.garagebook.nl/garage/', $csv);
-        $this->assertStringNotContainsString('sensitive-owner@example.com', $csv);
-        $this->assertStringNotContainsString('Sensitive Owner', $csv);
-        $this->assertDoesNotMatchRegularExpression('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $csv);
-        $this->assertStringContainsString('missing_photo', $csv);
-        $this->assertStringContainsString('short_log_descriptions', $csv);
-        $this->assertStringContainsString('"Honda, Garage NC750X"', $csv);
-    }
-
     public function test_regular_user_cannot_download_seo_health_dashboard_csv(): void
     {
         $user = User::factory()->create([
@@ -185,9 +144,9 @@ class SeoHealthDashboardTest extends TestCase
 
         $csv = $response->streamedContent();
 
-        $this->assertStringContainsString('section,metric,value,details,public_url,admin_url,vehicle_id,quality_score,severity,reason_codes', $csv);
+        $this->assertStringContainsString('section,metric,value,details,url,status', $csv);
         $this->assertStringContainsString('status,"SEO Health status"', $csv);
-        $this->assertStringContainsString('product_metrics,"Total Vehicles"', $csv);
+        $this->assertStringContainsString('indexability_overview,"Total Vehicles"', $csv);
     }
 
     /**

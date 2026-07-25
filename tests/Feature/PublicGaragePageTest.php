@@ -88,9 +88,9 @@ class PublicGaragePageTest extends TestCase
         $response->assertOk();
         $response->assertSee('1999 Aprilia RSV Mille');
         $response->assertSee('Kleppen gecontroleerd');
-        $response->assertSee('<link rel="canonical" href="https://garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
-        $response->assertSee('<meta property="og:url" content="https://garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
-        $response->assertSee('"url": "https://garagebook.nl/garage/1999-aprilia-rsv-mille"', false);
+        $response->assertSee('<link rel="canonical" href="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+        $response->assertSee('<meta property="og:url" content="https://app.garagebook.nl/garage/1999-aprilia-rsv-mille">', false);
+        $response->assertSee('"url": "https://app.garagebook.nl/garage/1999-aprilia-rsv-mille"', false);
 
         $this->get('/garage/'.$vehicle->id)
             ->assertNotFound();
