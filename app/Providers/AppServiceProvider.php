@@ -9,7 +9,6 @@ use App\Events\Lifecycle\MaintenanceCreated;
 use App\Events\Lifecycle\VehicleCreated;
 use App\Filament\Auth\Http\Responses\RegistrationResponse as CustomRegistrationResponse;
 use App\Listeners\Lifecycle\UpdateLifecycleProgress;
-use App\Listeners\QueueMailerLiteSubscription;
 use App\Listeners\TrackSuccessfulLogin;
 use App\Models\FuelLog;
 use App\Models\MaintenanceLog;
@@ -29,7 +28,6 @@ use App\Services\Growth\Campaigns\Community2026Definition;
 use App\Services\Growth\Campaigns\Partner2026Definition;
 use App\Services\LocaleService;
 use Carbon\Carbon;
-use Filament\Auth\Events\Registered;
 use Filament\Auth\Http\Responses\Contracts\RegistrationResponse as RegistrationResponseContract;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -79,7 +77,6 @@ class AppServiceProvider extends ServiceProvider
         FuelLog::observe(FuelLogObserver::class);
 
         Event::listen(Login::class, TrackSuccessfulLogin::class);
-        Event::listen(Registered::class, QueueMailerLiteSubscription::class);
         Event::listen(VehicleCreated::class, UpdateLifecycleProgress::class);
         Event::listen(MaintenanceCreated::class, UpdateLifecycleProgress::class);
         Event::listen(DocumentUploaded::class, UpdateLifecycleProgress::class);

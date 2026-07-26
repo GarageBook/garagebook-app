@@ -4,13 +4,14 @@ namespace Tests\Feature;
 
 use App\Mail\ContactFormMail;
 use App\Mail\WelcomeToGarageBookMail;
+use App\Models\User;
 use Tests\TestCase;
 
 class EmailLocalizationTest extends TestCase
 {
     public function test_mail_subjects_use_default_locale_translations(): void
     {
-        $this->assertSame('Welkom bij GarageBook', (new WelcomeToGarageBookMail())->envelope()->subject);
+        $this->assertSame('Welkom bij GarageBook', (new WelcomeToGarageBookMail(User::factory()->make()))->envelope()->subject);
         $this->assertSame(
             'Nieuw contactbericht via GarageBook',
             (new ContactFormMail('Willem', 'willem@example.com', 'Testbericht'))->envelope()->subject
