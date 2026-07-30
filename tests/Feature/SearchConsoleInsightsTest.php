@@ -104,6 +104,23 @@ class SearchConsoleInsightsTest extends TestCase
         $this->assertSame(12, substr_count($html, 'data-gsc-dimension-row="dates-full"'));
     }
 
+    public function test_regular_user_cannot_export_search_console_insights_csv(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/search-console-insights/export')
+            ->assertForbidden();
+    }
+
+    public function test_guest_is_redirected_to_admin_login_for_search_console_insights_csv(): void
+    {
+        $this->get('/admin/search-console-insights/export')
+            ->assertRedirect('/admin/login');
+    }
+
     private function seedCountriesAndDates(): void
     {
         for ($i = 1; $i <= 12; $i++) {

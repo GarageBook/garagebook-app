@@ -42,7 +42,7 @@ class DeploymentSmokeTestCommandTest extends TestCase
 
         User::factory()->create([
             'email' => 'WillemVanVeelen@ICloud.Com',
-            'is_admin' => false,
+            'is_admin' => true,
         ]);
 
         Vehicle::query()->create([

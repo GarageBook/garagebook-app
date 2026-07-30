@@ -61,7 +61,7 @@ class MergeUsersCommandTest extends TestCase
         $vehicle = $vehicle->fresh();
 
         $this->assertSame('recGnzeD8Bk4CH5ak', $target->airtable_record_id);
-        $this->assertSame(User::ADMIN_EMAIL, $target->email);
+        $this->assertSame('willemvanveelen@icloud.com', $target->email);
         $this->assertTrue($target->isAdmin());
         $this->assertSame($target->id, $vehicle->user_id);
         $this->assertDatabaseMissing('users', [

@@ -105,6 +105,23 @@ class SeoOpportunityTest extends TestCase
         $this->assertStringContainsString('Modelpagina uitbreiden', $csv);
     }
 
+    public function test_regular_user_cannot_export_seo_opportunities_csv(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/search-console-insights/opportunities/export')
+            ->assertForbidden();
+    }
+
+    public function test_guest_is_redirected_to_admin_login_for_seo_opportunities_csv(): void
+    {
+        $this->get('/admin/search-console-insights/opportunities/export')
+            ->assertRedirect('/admin/login');
+    }
+
     public function test_weekly_report_includes_top_ten_seo_opportunities(): void
     {
         $this->seedGscSnapshots();

@@ -36,7 +36,7 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email' => User::ADMIN_EMAIL,
+            'email' => 'willemvanveelen@icloud.com',
             'is_admin' => true,
         ]);
     }

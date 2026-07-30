@@ -57,7 +57,7 @@ class DeploymentSmokeTestCommand extends Command
 
     private function resolveAdminUser(): ?User
     {
-        $email = trim((string) ($this->option('admin-email') ?: config('services.deployment_smoke_test.admin_email', User::ADMIN_EMAIL)));
+        $email = trim((string) ($this->option('admin-email') ?: config('services.deployment_smoke_test.admin_email', 'willemvanveelen@icloud.com')));
         $admin = User::query()->where('email', $email)->first();
 
         if (! $admin instanceof User) {

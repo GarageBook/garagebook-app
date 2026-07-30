@@ -61,7 +61,8 @@ class OutreachDemoIntroTest extends TestCase
         ]);
 
         $admin = User::factory()->create([
-            'email' => User::ADMIN_EMAIL,
+            'email' => 'willemvanveelen@icloud.com',
+            'is_admin' => true,
             'is_outreach_demo' => true,
         ]);
 

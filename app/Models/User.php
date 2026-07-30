@@ -17,19 +17,19 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
-    public const ADMIN_EMAIL = 'willemvanveelen@icloud.com';
-
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     public function canAccessPanel(Panel $panel): bool
     {
+        // GarageBook uses /admin for both the user app and admin-only management features,
+        // so panel access must not be globally blocked by admin status.
         return true;
     }
 
     public function isAdmin(): bool
     {
-        return str($this->email)->lower()->value() === self::ADMIN_EMAIL;
+        return (bool) $this->is_admin;
     }
 
     public function isGeratelUser(): bool
