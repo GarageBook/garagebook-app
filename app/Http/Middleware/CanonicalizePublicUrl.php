@@ -60,6 +60,10 @@ class CanonicalizePublicUrl
 
     private function isPublicCanonicalizableAppPath(Request $request): bool
     {
+        if ($request->getPathInfo() === '/' && auth()->check()) {
+            return false;
+        }
+
         if ($request->is([
             '/',
             'blog',

@@ -14,16 +14,59 @@ class HomepageRedirectTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
+            ->assertSee('GarageBook')
+            ->assertHeaderMissing('Location');
+    }
+
+    public function test_guest_on_app_host_keeps_current_public_canonical_flow(): void
+    {
+        $this->get('https://app.garagebook.nl/')
+            ->assertStatus(301)
+            ->assertRedirect('https://garagebook.nl/');
+
+        $this->followingRedirects()
+            ->get('https://app.garagebook.nl/')
+            ->assertOk()
             ->assertSee('GarageBook');
     }
 
     public function test_authenticated_user_is_redirected_to_dashboard_from_homepage(): void
     {
         $user = User::factory()->create();
+        $dashboardPath = route('filament.admin.pages.dashboard', absolute: false);
 
         $this->actingAs($user)
-            ->get('/')
-            ->assertRedirect('/admin');
+            ->get('https://app.garagebook.nl/')
+            ->assertRedirect($dashboardPath);
+    }
+
+    public function test_authenticated_user_can_follow_homepage_redirect_to_dashboard_without_loop(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get('https://app.garagebook.nl/');
+
+        $response->assertRedirect(route('filament.admin.pages.dashboard', absolute: false));
+
+        $this->actingAs($user)
+            ->get($response->headers->get('Location'))
+            ->assertOk()
+            ->assertHeaderMissing('Location');
+    }
+
+    public function test_after_logout_homepage_is_visible_again(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('https://app.garagebook.nl/admin/logout')
+            ->assertRedirect('https://app.garagebook.nl/admin/login');
+
+        $this->followingRedirects()
+            ->get('https://app.garagebook.nl/')
+            ->assertOk()
+            ->assertSee('GarageBook');
     }
 
     public function test_public_website_path_redirects_to_homepage(): void

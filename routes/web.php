@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect('/admin');
+        return redirect()->to(route('filament.admin.pages.dashboard', absolute: false));
     }
 
     return view('welcome');
