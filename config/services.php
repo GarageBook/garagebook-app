@@ -1,5 +1,8 @@
 <?php
 
+$growthReportRecipient = env('GROWTH_REPORT_RECIPIENT', 'willemvanveelen@icloud.com');
+$growthReportRecipients = env('GROWTH_REPORT_RECIPIENTS', $growthReportRecipient.',leroy@lenduria.nl');
+
 return [
 
     /*
@@ -62,7 +65,8 @@ return [
     ],
 
     'growth_report' => [
-        'recipient' => env('GROWTH_REPORT_RECIPIENT', 'willemvanveelen@icloud.com'),
+        'recipient' => $growthReportRecipient,
+        'recipients' => array_values(array_filter(array_map('trim', explode(',', $growthReportRecipients)))),
     ],
 
     'deployment_smoke_test' => [

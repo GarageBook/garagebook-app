@@ -24,9 +24,28 @@ class SendGrowthReportCommandTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_command_sends_growth_report_to_configured_recipient(): void
+    public function test_command_sends_growth_report_to_configured_recipients(): void
     {
-        config(['services.growth_report.recipient' => 'willemvanveelen@icloud.com']);
+        config(['services.growth_report.recipients' => ['willemvanveelen@icloud.com', 'leroy@lenduria.nl']]);
+
+        Mail::fake();
+
+        $this->artisan('garagebook:send-growth-report')
+            ->expectsOutput('Growth report verzonden naar: willemvanveelen@icloud.com, leroy@lenduria.nl')
+            ->assertSuccessful();
+
+        Mail::assertSent(WeeklyGrowthReportMail::class, function (WeeklyGrowthReportMail $mail): bool {
+            return $mail->hasTo('willemvanveelen@icloud.com')
+                && $mail->hasTo('leroy@lenduria.nl');
+        });
+    }
+
+    public function test_command_supports_legacy_single_growth_report_recipient_config(): void
+    {
+        config([
+            'services.growth_report.recipients' => null,
+            'services.growth_report.recipient' => 'willemvanveelen@icloud.com',
+        ]);
 
         Mail::fake();
 
@@ -35,7 +54,8 @@ class SendGrowthReportCommandTest extends TestCase
             ->assertSuccessful();
 
         Mail::assertSent(WeeklyGrowthReportMail::class, function (WeeklyGrowthReportMail $mail): bool {
-            return $mail->hasTo('willemvanveelen@icloud.com');
+            return $mail->hasTo('willemvanveelen@icloud.com')
+                && ! $mail->hasTo('leroy@lenduria.nl');
         });
     }
 

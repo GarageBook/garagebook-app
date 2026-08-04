@@ -15,18 +15,36 @@ class SendGrowthReportCommand extends Command
 
     public function handle(GrowthDashboardData $growthDashboardData): int
     {
-        $recipient = config('services.growth_report.recipient');
+        $recipients = $this->growthReportRecipients();
 
-        if (! is_string($recipient) || $recipient === '') {
+        if ($recipients === []) {
             $this->warn('Geen growth report ontvanger geconfigureerd.');
 
             return self::SUCCESS;
         }
 
-        Mail::to($recipient)->send(new WeeklyGrowthReportMail($growthDashboardData->weeklyGrowthReport()));
+        Mail::to($recipients)->send(new WeeklyGrowthReportMail($growthDashboardData->weeklyGrowthReport()));
 
-        $this->info('Growth report verzonden naar: '.$recipient);
+        $this->info('Growth report verzonden naar: '.implode(', ', $recipients));
 
         return self::SUCCESS;
+    }
+
+    private function growthReportRecipients(): array
+    {
+        $configuredRecipients = config('services.growth_report.recipients');
+
+        if (is_string($configuredRecipients)) {
+            $configuredRecipients = explode(',', $configuredRecipients);
+        }
+
+        if (! is_array($configuredRecipients) || $configuredRecipients === []) {
+            $configuredRecipients = [config('services.growth_report.recipient')];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($recipient): string => trim((string) $recipient),
+            $configuredRecipients,
+        ))));
     }
 }
