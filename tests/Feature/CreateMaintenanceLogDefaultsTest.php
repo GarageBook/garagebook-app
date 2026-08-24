@@ -8,6 +8,8 @@ use App\Jobs\OptimizeMaintenanceLogMedia;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
@@ -66,6 +68,7 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
             'user_id' => $user->id,
             'brand' => 'BMW',
             'model' => 'R 1250 GS',
+            'is_public' => false,
         ]);
 
         MaintenanceLog::query()->create([
@@ -158,6 +161,85 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
         ]);
 
         Bus::assertDispatched(OptimizeMaintenanceLogMedia::class);
+    }
+
+    public function test_create_notification_invites_user_to_set_reminder_for_new_log(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Ducati',
+            'model' => 'Monster',
+            'is_public' => false,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Olie vervangen',
+                'km_reading' => 15100,
+                'maintenance_date' => '2026-06-15',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $log = MaintenanceLog::query()->where('vehicle_id', $vehicle->id)->firstOrFail();
+        Notification::assertNotified(
+            Notification::make()
+                ->success()
+                ->title('Onderhoud toegevoegd.')
+                ->body('Je onderhoudshistorie is bijgewerkt.')
+                ->actions([
+                    Action::make('setReminder')
+                        ->label('Reminder instellen')
+                        ->url(MaintenanceLogResource::getUrl('edit', ['record' => $log]).'?with_reminder=1')
+                        ->button(),
+                    Action::make('dismissReminder')
+                        ->label('Niet nu')
+                        ->color('gray')
+                        ->close(),
+                ]),
+        );
+    }
+
+    public function test_create_notification_does_not_show_reminder_cta_when_reminder_is_already_enabled(): void
+    {
+        Bus::fake();
+
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'BMW',
+            'model' => 'R 1250 GS',
+            'is_public' => false,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(CreateMaintenanceLog::class)
+            ->fillForm([
+                'vehicle_id' => $vehicle->id,
+                'distance_unit' => 'km',
+                'description' => 'Klepcontrole',
+                'km_reading' => 32000,
+                'maintenance_date' => '2026-06-15',
+                'reminder_enabled' => true,
+                'interval_months' => 12,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        Notification::assertNotified(
+            Notification::make()
+                ->success()
+                ->title('Onderhoud toegevoegd.')
+                ->body('Je onderhoudshistorie is bijgewerkt.'),
+        );
     }
 
     public function test_create_public_vehicle_maintenance_log_notifies_that_public_page_was_updated(): void

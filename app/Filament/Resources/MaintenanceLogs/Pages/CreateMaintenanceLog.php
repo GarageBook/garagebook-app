@@ -72,13 +72,29 @@ class CreateMaintenanceLog extends CreateRecord
                 ? 'Nieuwe onderhoudsregels worden meegenomen op je publieke voertuigpagina.'
                 : 'Je onderhoudshistorie is bijgewerkt.');
 
+        $actions = [];
+
+        if (! $this->record->reminder_enabled) {
+            $actions[] = Action::make('setReminder')
+                ->label('Reminder instellen')
+                ->url(MaintenanceLogResource::getUrl('edit', ['record' => $this->record]).'?with_reminder=1')
+                ->button();
+
+            $actions[] = Action::make('dismissReminder')
+                ->label('Niet nu')
+                ->color('gray')
+                ->close();
+        }
+
         if ($vehicle?->is_public) {
-            $notification->actions([
-                Action::make('viewPublicVehiclePage')
-                    ->label('Bekijk publieke pagina')
-                    ->url(app(PublicGarageService::class)->publicUrl($vehicle))
-                    ->openUrlInNewTab(),
-            ]);
+            $actions[] = Action::make('viewPublicVehiclePage')
+                ->label('Bekijk publieke pagina')
+                ->url(app(PublicGarageService::class)->publicUrl($vehicle))
+                ->openUrlInNewTab();
+        }
+
+        if ($actions !== []) {
+            $notification->actions($actions);
         }
 
         return $notification;

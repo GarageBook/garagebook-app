@@ -146,6 +146,7 @@ class SendGrowthReportCommandTest extends TestCase
         $this->assertStringContainsString('Users met voertuig', $text);
         $this->assertStringContainsString('Users met actieve reminder', $text);
         $this->assertStringContainsString('Registratie → voertuig', $text);
+        $this->assertStringContainsString('Eerste onderhoudslog → tweede onderhoudslog: 50,0% (1 van 2)', $text);
         $this->assertStringContainsString('Extra product/SEO KPI’s', $text);
         $this->assertStringContainsString('Gem. onderhoudslogs per voertuig: 1,5', $text);
         $this->assertStringContainsString('Users met ≥2 onderhoudslogs: 1 (50,0%)', $text);

@@ -16,6 +16,7 @@ class LifecycleMailAdapter
     private const TEMPLATE_MAP = [
         'no_vehicle' => LifecycleEmailTemplate::NO_VEHICLE_DAY2,
         'first_maintenance' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+        'second_maintenance_log_reminder' => LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
         'upload_document' => LifecycleEmailTemplate::UPLOAD_DOCUMENT,
         'vehicle_photo_reminder' => LifecycleEmailTemplate::VEHICLE_PHOTO_REMINDER,
         'inactive_maintenance' => LifecycleEmailTemplate::INACTIVE_USER_RETURN,

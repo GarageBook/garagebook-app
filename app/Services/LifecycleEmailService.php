@@ -13,6 +13,7 @@ use App\Mail\NoMaintenanceLogDay14Mail;
 use App\Mail\NoMaintenanceLogDay30Mail;
 use App\Mail\NoMaintenanceLogDay3Mail;
 use App\Mail\NoVehicleAddedMail;
+use App\Mail\SecondMaintenanceLogReminderMail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\MaintenanceLog;
@@ -41,6 +42,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
             LifecycleEmailTemplate::INACTIVE_USER_RETURN,
         ];
     }
@@ -57,6 +59,10 @@ class LifecycleEmailService
 
         if (! $this->userHasMaintenanceLogs($user)) {
             return $this->resolveNoMaintenanceKey($user);
+        }
+
+        if ($emailKey = $this->resolveSecondMaintenanceLogReminderKey($user)) {
+            return $emailKey;
         }
 
         if ($emailKey = $this->resolveAfterFirstMaintenanceKey($user)) {
@@ -164,6 +170,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => new NoMaintenanceLogDay14Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => new NoMaintenanceLogDay30Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => new AfterFirstMaintenanceLogMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER => new SecondMaintenanceLogReminderMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::INACTIVE_USER_RETURN => new InactiveUserReturnMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             default => throw new \InvalidArgumentException('Unknown lifecycle email key ['.$template->email_key.'].'),
         };
@@ -318,6 +325,9 @@ class LifecycleEmailService
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => $vehicle
                 ? MaintenanceLogResource::getUrl('index', ['vehicle_id' => $vehicle->getKey()])
                 : '/admin',
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER => ($firstMaintenanceVehicle = $this->firstMaintenanceLogVehicle($user))
+                ? MaintenanceLogResource::getUrl('create', ['vehicle_id' => $firstMaintenanceVehicle->getKey()])
+                : ($vehicle ? MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->getKey()]) : MaintenanceLogResource::getUrl('create')),
             LifecycleEmailTemplate::INACTIVE_USER_RETURN => '/admin',
             default => '/admin',
         };
@@ -574,6 +584,46 @@ class LifecycleEmailService
         return null;
     }
 
+    private function resolveSecondMaintenanceLogReminderKey(User $user): ?string
+    {
+        $emailKey = LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER;
+
+        if (! $this->userQualifiesForSecondMaintenanceLogReminder($user)) {
+            return null;
+        }
+
+        if ($this->hasLifecycleEmailLog($user, $emailKey)) {
+            return null;
+        }
+
+        return $emailKey;
+    }
+
+    public function userQualifiesForSecondMaintenanceLogReminder(User $user): bool
+    {
+        if (! $this->getActiveTemplate(LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER)) {
+            return false;
+        }
+
+        if (! $user->vehicles()->exists()) {
+            return false;
+        }
+
+        $logs = MaintenanceLog::query()
+            ->whereHas('vehicle', fn ($query) => $query->where('user_id', $user->getKey()))
+            ->oldest('created_at')
+            ->get(['id', 'vehicle_id', 'created_at']);
+
+        if ($logs->count() !== 1) {
+            return false;
+        }
+
+        $firstLog = $logs->first();
+
+        return $firstLog?->created_at !== null
+            && $firstLog->created_at->lte(now()->subDays(3));
+    }
+
     private function resolveAfterFirstMaintenanceKey(User $user): ?string
     {
         $emailKey = LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG;
@@ -620,6 +670,17 @@ class LifecycleEmailService
         }
 
         return LifecycleEmailTemplate::INACTIVE_USER_RETURN;
+    }
+
+    private function firstMaintenanceLogVehicle(User $user): ?Vehicle
+    {
+        $log = MaintenanceLog::query()
+            ->whereHas('vehicle', fn ($query) => $query->where('user_id', $user->getKey()))
+            ->with('vehicle')
+            ->oldest('created_at')
+            ->first();
+
+        return $log?->vehicle;
     }
 
     private function userHasMaintenanceLogs(User $user): bool
@@ -779,6 +840,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => ! $this->userHasMaintenanceLogs($user),
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => $this->userQualifiesForAfterFirstMaintenanceEmail($user),
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER => $this->userQualifiesForSecondMaintenanceLogReminder($user),
             LifecycleEmailTemplate::INACTIVE_USER_RETURN => $this->userHasMaintenanceLogs($user) && $this->userIsInactive($user),
             default => false,
         };
@@ -804,6 +866,10 @@ class LifecycleEmailService
 
         if (in_array($emailKey, [LifecycleEmailTemplate::NO_VEHICLE_DAY2, LifecycleEmailTemplate::NO_VEHICLE_ADDED], true)) {
             return 'vehicle_added';
+        }
+
+        if ($emailKey === LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER) {
+            return 'second_maintenance_log_state_changed';
         }
 
         if ($this->userHasMaintenanceLogs($user)) {

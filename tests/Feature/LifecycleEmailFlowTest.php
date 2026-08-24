@@ -7,6 +7,7 @@ use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Jobs\SendLifecycleEmailJob;
 use App\Mail\NoMaintenanceLogDay14Mail;
+use App\Mail\SecondMaintenanceLogReminderMail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\MaintenanceLog;
@@ -92,7 +93,7 @@ class LifecycleEmailFlowTest extends TestCase
         );
     }
 
-    public function test_user_with_vehicle_and_maintenance_does_not_get_a_no_maintenance_mail(): void
+    public function test_user_with_vehicle_and_single_old_maintenance_gets_second_log_reminder_before_after_first_mail(): void
     {
         $user = User::factory()->create([
             'created_at' => now()->subDays(20),
@@ -118,9 +119,114 @@ class LifecycleEmailFlowTest extends TestCase
         ])->saveQuietly();
 
         $this->assertSame(
-            LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
             app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
         );
+    }
+
+    public function test_user_with_exactly_one_old_maintenance_log_gets_second_log_reminder_key(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tracer 9',
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Eerste onderhoud',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDays(4)->toDateString(),
+        ]);
+        $log->forceFill([
+            'created_at' => now()->subDays(4),
+            'updated_at' => now()->subDays(4),
+        ])->saveQuietly();
+
+        $service = app(LifecycleEmailService::class);
+
+        $this->assertSame(LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER, $service->resolveEligibleEmailKey($user));
+        $this->assertSame(
+            MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
+            $service->resolveCtaDestination($user, LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER),
+        );
+    }
+
+    public function test_second_log_reminder_is_not_selected_twice_after_existing_log(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Yamaha',
+            'model' => 'Tracer 9',
+        ]);
+
+        $log = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Eerste onderhoud',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDays(4)->toDateString(),
+        ]);
+        $log->forceFill([
+            'created_at' => now()->subDays(4),
+            'updated_at' => now()->subDays(4),
+        ])->saveQuietly();
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
+            'subject' => 'Verzonden',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subDay(),
+        ]);
+
+        $this->assertNull(app(LifecycleEmailService::class)->resolveEligibleEmailKey($user));
+    }
+
+    public function test_second_log_reminder_job_skips_when_user_added_second_log_before_send(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'name' => 'Late Check',
+        ]);
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+        ]);
+
+        $firstLog = MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Eerste onderhoud',
+            'km_reading' => 12000,
+            'maintenance_date' => now()->subDays(4)->toDateString(),
+        ]);
+        $firstLog->forceFill([
+            'created_at' => now()->subDays(4),
+            'updated_at' => now()->subDays(4),
+        ])->saveQuietly();
+
+        $service = app(LifecycleEmailService::class);
+        $log = $service->reserveLogFor($user, LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER);
+
+        $this->assertNotNull($log);
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Tweede onderhoud',
+            'km_reading' => 13000,
+            'maintenance_date' => now()->toDateString(),
+        ]);
+
+        (new SendLifecycleEmailJob($user->id, LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER, $log->id))
+            ->handle($service, app(AnalyticsEventTracker::class));
+
+        Mail::assertNotSent(SecondMaintenanceLogReminderMail::class);
+        $log->refresh();
+        $this->assertSame(LifecycleEmailLog::STATUS_SKIPPED, $log->status);
+        $this->assertSame('second_maintenance_log_state_changed', $log->reason_skipped);
     }
 
     public function test_lifecycle_body_uses_first_name_when_available(): void
@@ -259,6 +365,13 @@ class LifecycleEmailFlowTest extends TestCase
             'created_at' => now()->subDays(10),
             'updated_at' => now()->subDays(10),
         ])->saveQuietly();
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Tweede beurt',
+            'km_reading' => 9000,
+            'maintenance_date' => now()->subDays(2)->toDateString(),
+        ]);
 
         $service = app(LifecycleEmailService::class);
 
@@ -547,6 +660,13 @@ class LifecycleEmailFlowTest extends TestCase
             'created_at' => now()->subDays(10),
             'updated_at' => now()->subDays(10),
         ])->saveQuietly();
+
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Tweede onderhoud',
+            'km_reading' => 9000,
+            'maintenance_date' => now()->subDay()->toDateString(),
+        ]);
 
         $queuedLog = LifecycleEmailLog::query()->create([
             'user_id' => $user->id,

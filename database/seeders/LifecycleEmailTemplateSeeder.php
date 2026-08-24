@@ -83,6 +83,18 @@ BODY,
                 'is_active' => true,
             ],
             [
+                'email_key' => LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
+                'name' => 'Tweede onderhoudslog toevoegen',
+                'subject' => 'Je onderhoudshistorie begint vorm te krijgen',
+                'body' => <<<'BODY'
+Hoi {{ first_name }},
+
+Je eerste onderhoudsbeurt staat in GarageBook. Voeg nu nog een eerdere of andere beurt toe, zodat je onderhoudshistorie sneller compleet wordt.
+BODY,
+                'cta_text' => 'Nog een onderhoudsbeurt toevoegen',
+                'is_active' => true,
+            ],
+            [
                 'email_key' => LifecycleEmailTemplate::UPLOAD_DOCUMENT,
                 'name' => 'Document toevoegen',
                 'subject' => 'Voeg bewijs toe aan je onderhoud',

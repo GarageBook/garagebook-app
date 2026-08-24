@@ -11,6 +11,7 @@ use App\Services\Lifecycle\Rules\LifecycleRule;
 use App\Services\Lifecycle\Rules\LifecycleRuleEngine;
 use App\Services\Lifecycle\Rules\LifecycleRuleRegistry;
 use App\Services\Lifecycle\Rules\LifecycleRuleResult;
+use App\Services\Lifecycle\Rules\Rules\SecondMaintenanceLogReminderRule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
@@ -38,6 +39,67 @@ class LifecycleRuleEngineTest extends TestCase
         $winner = app(LifecycleRuleEngine::class)->evaluate($user)['winner'];
 
         $this->assertSame('first_maintenance', $winner?->ruleName);
+    }
+
+    public function test_second_maintenance_log_reminder_rule_matches_exactly_one_old_log(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createVehicle($user);
+        $this->createMaintenanceLog($vehicle, createdAt: now()->subDays(3)->subMinute());
+
+        $result = app(SecondMaintenanceLogReminderRule::class)->evaluate($user);
+
+        $this->assertTrue($result->matched);
+        $this->assertSame('second_maintenance_log_reminder', $result->ruleName);
+        $this->assertSame(14, $result->cooldownDays);
+    }
+
+    public function test_second_maintenance_log_reminder_rule_misses_when_user_has_two_logs(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createVehicle($user);
+        $this->createMaintenanceLog($vehicle, createdAt: now()->subDays(4));
+        $this->createMaintenanceLog($vehicle, createdAt: now()->subDay());
+
+        $result = app(SecondMaintenanceLogReminderRule::class)->evaluate($user);
+
+        $this->assertFalse($result->matched);
+        $this->assertSame(2, $result->metadata['maintenance_logs_count'] ?? null);
+    }
+
+    public function test_second_maintenance_log_reminder_rule_misses_when_first_log_is_too_recent(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createVehicle($user);
+        $this->createMaintenanceLog($vehicle, createdAt: now()->subDays(2));
+
+        $result = app(SecondMaintenanceLogReminderRule::class)->evaluate($user);
+
+        $this->assertFalse($result->matched);
+        $this->assertStringContainsString('recenter dan 3 dagen', $result->reason);
+    }
+
+    public function test_second_maintenance_log_reminder_rule_cooldown_blocks_repeat_winner(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = $this->createVehicle($user);
+        $this->createMaintenanceLog($vehicle, createdAt: now()->subDays(4));
+
+        $engine = new LifecycleRuleEngine(new class extends LifecycleRuleRegistry
+        {
+            public function rules(): Collection
+            {
+                return collect([
+                    app(SecondMaintenanceLogReminderRule::class),
+                ]);
+            }
+        });
+
+        $first = $engine->evaluate($user, evaluatedAt: now(), persist: true)['winner'];
+        $second = $engine->evaluate($user, evaluatedAt: now()->addDay(), persist: true)['winner'];
+
+        $this->assertSame('second_maintenance_log_reminder', $first?->ruleName);
+        $this->assertNull($second);
     }
 
     public function test_highest_priority_wins(): void
@@ -128,7 +190,7 @@ class LifecycleRuleEngineTest extends TestCase
         $this->artisan('garagebook:lifecycle:evaluate-rules')->assertSuccessful();
         $this->artisan('garagebook:lifecycle:evaluate-rules')->assertSuccessful();
 
-        $this->assertSame(5, LifecycleRuleEvaluation::query()->where('user_id', $user->id)->count());
+        $this->assertSame(6, LifecycleRuleEvaluation::query()->where('user_id', $user->id)->count());
     }
 
     private function createVehicle(User $user): Vehicle
@@ -140,14 +202,23 @@ class LifecycleRuleEngineTest extends TestCase
         ]);
     }
 
-    private function createMaintenanceLog(Vehicle $vehicle): MaintenanceLog
+    private function createMaintenanceLog(Vehicle $vehicle, ?\DateTimeInterface $createdAt = null): MaintenanceLog
     {
-        return MaintenanceLog::query()->create([
+        $log = MaintenanceLog::query()->create([
             'vehicle_id' => $vehicle->id,
             'description' => 'Onderhoud',
             'km_reading' => 42_000,
             'maintenance_date' => now()->toDateString(),
         ]);
+
+        if ($createdAt !== null) {
+            $log->forceFill([
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ])->saveQuietly();
+        }
+
+        return $log;
     }
 }
 

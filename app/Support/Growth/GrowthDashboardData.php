@@ -544,11 +544,7 @@ class GrowthDashboardData
                 ? $largestDropOff['label']
                 : 'Nog onvoldoende data',
             'attention_point' => $attentionPoint,
-            'summary' => $stats['users_with_maintenance'] === 0
-                ? 'De activatie stopt nog voor de eerste onderhoudslog. Focus op het sneller vastleggen van het eerste onderhoud.'
-                : (($stats['users_with_active_reminder'] ?? 0) === 0
-                    ? 'Er zijn wel onderhoudslogs, maar reminders worden nog nauwelijks geactiveerd als secundaire retentiefeature.'
-                    : 'De basisactivatie loopt. Kijk vooral of remindergebruik en onderhoudsboekje-downloads blijven meegroeien.'),
+            'summary' => $this->activationRetentionSummary($stats),
             'product_seo' => $this->weeklyProductSeoInterpretation($extraKpis),
         ];
 
@@ -559,6 +555,7 @@ class GrowthDashboardData
                 'registrations_last_30_days' => $stats['registrations_last_30_days'],
                 'users_with_vehicle' => $stats['users_with_vehicle'],
                 'users_with_maintenance' => $stats['users_with_maintenance'],
+                'users_with_two_maintenance' => $stats['users_with_two_maintenance'],
                 'users_with_active_reminder' => $stats['users_with_active_reminder'],
                 'users_with_booklet_download' => $stats['users_with_booklet_download'],
                 'public_vehicles' => $stats['public_vehicles'],
@@ -570,6 +567,23 @@ class GrowthDashboardData
             'seo_opportunities' => $this->weeklySeoOpportunities(),
             'interpretation' => $interpretation,
         ];
+    }
+
+    private function activationRetentionSummary(array $stats): string
+    {
+        if ($stats['users_with_maintenance'] === 0) {
+            return 'Activation stopt nog voor de eerste onderhoudslog. Focus op registratie → voertuig → eerste log.';
+        }
+
+        if (($stats['users_with_two_maintenance'] ?? 0) === 0) {
+            return 'Activation loopt tot de eerste log; retention blijft hangen op eerste → tweede onderhoudslog.';
+        }
+
+        if (($stats['users_with_active_reminder'] ?? 0) === 0) {
+            return 'Activation en eerste retention zijn zichtbaar; reminders blijven achter als feature-adoption.';
+        }
+
+        return 'Activation = registratie → voertuig → eerste log; retention = eerste → tweede log; feature adoption = reminder en PDF.';
     }
 
     private function weeklySeoOpportunities(): array
@@ -725,7 +739,7 @@ class GrowthDashboardData
             'registrations_last_30_days' => User::query()->where('created_at', '>=', $thirtyDayStart)->count(),
             'users_with_vehicle' => $hasVehicles ? User::query()->whereHas('vehicles')->count() : null,
             'users_with_maintenance' => $hasVehicles && $hasMaintenanceLogs ? User::query()->whereHas('vehicles.maintenanceLogs')->count() : null,
-            'users_with_three_maintenance' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithMinimumMaintenanceLogs(3) : null,
+            'users_with_two_maintenance' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithMinimumMaintenanceLogs(2) : null,
             'users_with_documents' => $hasVehicles && $hasVehicleDocuments ? User::query()->whereHas('vehicles.documents')->count() : null,
             'users_with_fuel_entries' => $hasVehicles && $hasFuelLogs ? User::query()->whereHas('vehicles.fuelLogs')->count() : null,
             'users_with_active_reminder' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithActiveReminder() : null,
@@ -775,6 +789,7 @@ class GrowthDashboardData
             'conversions' => [
                 $this->buildConversion('Registratie → voertuig', $stats['total_users'], $stats['users_with_vehicle']),
                 $this->buildConversion('Voertuig → eerste onderhoudslog', $stats['users_with_vehicle'], $stats['users_with_maintenance']),
+                $this->buildConversion('Eerste onderhoudslog → tweede onderhoudslog', $stats['users_with_maintenance'], $stats['users_with_two_maintenance']),
                 $this->buildConversion('Eerste onderhoudslog → reminder actief', $stats['users_with_maintenance'], $stats['users_with_active_reminder']),
                 $this->buildConversion('Eerste onderhoudslog → onderhoudsboekje download', $stats['users_with_maintenance'], $this->usersWithMaintenanceAndBookletDownload($hasBookletDownloads, $hasVehicles, $hasMaintenanceLogs)),
             ],

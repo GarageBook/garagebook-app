@@ -4,7 +4,7 @@
         ['label' => 'Registraties 30 dagen', 'value' => $stats['registrations_last_30_days']],
         ['label' => '≥1 voertuig', 'legacy_label' => 'Users met minimaal 1 voertuig', 'value' => $stats['users_with_vehicle']],
         ['label' => '≥1 onderhoudslog', 'legacy_label' => 'Users met minimaal 1 maintenance log', 'value' => $stats['users_with_maintenance']],
-        ['label' => '≥3 logs', 'legacy_label' => 'Users met minimaal 3 maintenance logs', 'value' => $stats['users_with_three_maintenance']],
+        ['label' => '≥2 logs', 'legacy_label' => 'Users met minimaal 2 maintenance logs', 'value' => $stats['users_with_two_maintenance']],
         ['label' => 'Reminder actief', 'value' => $stats['users_with_active_reminder']],
         ['label' => 'Boekje gedownload', 'value' => $stats['users_with_booklet_download']],
         ['label' => 'Publieke voertuigen', 'value' => $stats['public_vehicles']],

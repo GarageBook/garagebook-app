@@ -23,6 +23,9 @@ class LifecycleEmailTemplateSeederTest extends TestCase
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
+            LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER,
+            LifecycleEmailTemplate::UPLOAD_DOCUMENT,
+            LifecycleEmailTemplate::VEHICLE_PHOTO_REMINDER,
             LifecycleEmailTemplate::INACTIVE_USER_RETURN,
         ];
 

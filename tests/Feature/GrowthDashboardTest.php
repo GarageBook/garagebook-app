@@ -251,6 +251,7 @@ class GrowthDashboardTest extends TestCase
                 ->assertSeeText('Kernconversies')
                 ->assertSeeText('Registratie → voertuig')
                 ->assertSeeText('Voertuig → eerste onderhoudslog')
+                ->assertSeeText('Eerste onderhoudslog → tweede onderhoudslog')
                 ->assertSeeText('Eerste onderhoudslog → reminder actief')
                 ->assertSeeText('Eerste onderhoudslog → onderhoudsboekje download')
                 ->assertSeeText('50,0%');
@@ -301,8 +302,54 @@ class GrowthDashboardTest extends TestCase
         $this->actingAs($admin);
 
         Livewire::test(GrowthProductActivationFunnelWidget::class)
-            ->assertSeeText('Users met minimaal 3 maintenance logs')
+            ->assertSeeText('Users met minimaal 2 maintenance logs')
             ->assertSeeText('1');
+    }
+
+    public function test_growth_funnel_reports_first_to_second_maintenance_log_conversion(): void
+    {
+        User::factory()->admin()->create();
+
+        $singleLogUser = User::factory()->create();
+        $singleLogVehicle = Vehicle::query()->create([
+            'user_id' => $singleLogUser->id,
+            'brand' => 'Honda',
+            'model' => 'CB500',
+        ]);
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $singleLogVehicle->id,
+            'description' => 'Service 1',
+            'maintenance_date' => today(),
+            'km_reading' => 1000,
+        ]);
+
+        $twoLogUser = User::factory()->create();
+        $twoLogVehicle = Vehicle::query()->create([
+            'user_id' => $twoLogUser->id,
+            'brand' => 'Yamaha',
+            'model' => 'MT-07',
+        ]);
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $twoLogVehicle->id,
+            'description' => 'Service 1',
+            'maintenance_date' => today(),
+            'km_reading' => 1000,
+        ]);
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $twoLogVehicle->id,
+            'description' => 'Service 2',
+            'maintenance_date' => today(),
+            'km_reading' => 2000,
+        ]);
+
+        $data = app(GrowthDashboardData::class)->activationFunnel();
+        $conversion = collect($data['conversions'])
+            ->firstWhere('label', 'Eerste onderhoudslog → tweede onderhoudslog');
+
+        $this->assertSame(2, $conversion['from']);
+        $this->assertSame(1, $conversion['to']);
+        $this->assertSame(50.0, $conversion['percentage']);
+        $this->assertSame(1, $data['stats']['users_with_two_maintenance']);
     }
 
     public function test_growth_dashboard_reports_activation_metrics_per_registration_source(): void
@@ -474,7 +521,6 @@ class GrowthDashboardTest extends TestCase
             Carbon::setTestNow();
         }
     }
-
 
     public function test_growth_dashboard_reports_prospect_follow_up_workload(): void
     {

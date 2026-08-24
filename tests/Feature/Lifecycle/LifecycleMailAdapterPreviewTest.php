@@ -59,7 +59,16 @@ class LifecycleMailAdapterPreviewTest extends TestCase
         ));
 
         $this->assertSame(LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3, $firstMaintenance['template_key']);
+        $secondMaintenance = $adapter->preview($user, LifecycleRuleResult::match(
+            'second_maintenance_log_reminder',
+            'Exact een onderhoudslog.',
+            80,
+            14,
+        ));
+
         $this->assertSame(LifecycleEmailTemplate::INACTIVE_USER_RETURN, $inactive['template_key']);
+        $this->assertSame(LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER, $secondMaintenance['template_key']);
+        $this->assertSame('Nog een onderhoudsbeurt toevoegen', $secondMaintenance['cta']);
     }
 
     public function test_unsubscribed_user_is_blocked(): void
@@ -163,6 +172,6 @@ class LifecycleMailAdapterPreviewTest extends TestCase
 
         $this->artisan('garagebook:lifecycle:evaluate-rules')->assertSuccessful();
 
-        $this->assertSame(5, LifecycleRuleEvaluation::query()->where('user_id', $user->id)->count());
+        $this->assertSame(6, LifecycleRuleEvaluation::query()->where('user_id', $user->id)->count());
     }
 }

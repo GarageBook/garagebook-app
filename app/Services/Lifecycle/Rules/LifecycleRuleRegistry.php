@@ -5,6 +5,7 @@ namespace App\Services\Lifecycle\Rules;
 use App\Services\Lifecycle\Rules\Rules\FirstMaintenanceRule;
 use App\Services\Lifecycle\Rules\Rules\InactiveMaintenanceRule;
 use App\Services\Lifecycle\Rules\Rules\NoVehicleRule;
+use App\Services\Lifecycle\Rules\Rules\SecondMaintenanceLogReminderRule;
 use App\Services\Lifecycle\Rules\Rules\UploadDocumentRule;
 use App\Services\Lifecycle\Rules\Rules\VehiclePhotoReminderRule;
 use Illuminate\Support\Collection;
@@ -19,6 +20,7 @@ class LifecycleRuleRegistry
         return collect([
             app(NoVehicleRule::class),
             app(FirstMaintenanceRule::class),
+            app(SecondMaintenanceLogReminderRule::class),
             app(UploadDocumentRule::class),
             app(VehiclePhotoReminderRule::class),
             app(InactiveMaintenanceRule::class),
