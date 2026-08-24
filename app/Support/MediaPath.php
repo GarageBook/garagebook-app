@@ -19,6 +19,8 @@ class MediaPath
             'gif' => 'image/gif',
             'bmp' => 'image/bmp',
             'svg' => 'image/svg+xml',
+            'heif' => 'image/heif',
+            'heic' => 'image/heic',
             'mp4' => 'video/mp4',
             'mov' => 'video/quicktime',
             'webm' => 'video/webm',
@@ -31,7 +33,7 @@ class MediaPath
 
     public static function isImage(?string $path): bool
     {
-        return self::matchesExtension($path, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg']);
+        return self::matchesExtension($path, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'svg', 'heif', 'heic']);
     }
 
     public static function isVideo(?string $path): bool
@@ -60,7 +62,7 @@ class MediaPath
         }
 
         return Str::endsWith(Str::lower((string) $path), collect($extensions)->map(
-            fn (string $extension) => '.' . $extension
+            fn (string $extension) => '.'.$extension
         )->all());
     }
 }

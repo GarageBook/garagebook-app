@@ -6,10 +6,12 @@ use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Models\TripLog;
 use App\Models\Vehicle;
 use App\Services\Trips\TripLogProcessingService;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class EditTripLog extends EditRecord
 {
@@ -22,6 +24,14 @@ class EditTripLog extends EditRecord
         if (! $vehicleId || ! Vehicle::query()->whereKey($vehicleId)->where('user_id', auth()->id())->exists()) {
             throw ValidationException::withMessages([
                 'data.vehicle_id' => __('trips.validation.invalid_vehicle'),
+            ]);
+        }
+
+        try {
+            $data['photos'] = app(UploadedMediaNormalizer::class)->normalizeImageList($data['photos'] ?? [], 'local');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.photos' => $exception->getMessage(),
             ]);
         }
 

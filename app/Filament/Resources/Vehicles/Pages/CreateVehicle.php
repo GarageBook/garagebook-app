@@ -8,9 +8,12 @@ use App\Services\DistanceUnitService;
 use App\Services\Outreach\OutreachDemoService;
 use App\Support\Analytics;
 use App\Support\AnalyticsEventTracker;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class CreateVehicle extends CreateRecord
 {
@@ -97,6 +100,17 @@ class CreateVehicle extends CreateRecord
         $data['current_km'] = (int) round(
             app(DistanceUnitService::class)->toKilometers($data['current_km'] ?? null, $data['distance_unit'], 0) ?? 0
         );
+
+        try {
+            $normalizer = app(UploadedMediaNormalizer::class);
+            $data['photo'] = $normalizer->normalizeNullableImage($data['photo'] ?? null, 'public');
+            $data['photos'] = $normalizer->normalizeImageList($data['photos'] ?? [], 'public');
+            $data['media_attachments'] = $normalizer->normalizeMixedAttachmentList($data['media_attachments'] ?? [], 'public');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.photo' => $exception->getMessage(),
+            ]);
+        }
 
         return $data;
     }

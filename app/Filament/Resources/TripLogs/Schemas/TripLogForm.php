@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TripLogs\Schemas;
 
 use App\Models\TripLog;
 use App\Models\Vehicle;
+use App\Support\ImageUploadSupport;
 use Filament\Forms;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -71,13 +72,7 @@ class TripLogForm
                             ->directory(fn (callable $get) => 'trip-photos/'.auth()->id().'/'.($get('vehicle_id') ?: 'draft'))
                             ->visibility('private')
                             ->image()
-                            ->acceptedFileTypes([
-                                'image/jpeg',
-                                'image/png',
-                                'image/webp',
-                                'image/gif',
-                                'image/bmp',
-                            ])
+                            ->acceptedFileTypes(ImageUploadSupport::acceptedImageMimeTypes())
                             ->maxSize(12288)
                             ->multiple()
                             ->appendFiles()

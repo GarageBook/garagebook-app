@@ -5,10 +5,13 @@ namespace App\Filament\Resources\Vehicles\Pages;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Services\DistanceUnitService;
 use App\Support\MediaPath;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class EditVehicle extends EditRecord
 {
@@ -32,6 +35,17 @@ class EditVehicle extends EditRecord
         $data['current_km'] = (int) round(
             $service->toKilometers($data['current_km'] ?? null, $data['distance_unit'], 0) ?? 0
         );
+
+        try {
+            $normalizer = app(UploadedMediaNormalizer::class);
+            $data['photo'] = $normalizer->normalizeNullableImage($data['photo'] ?? null, 'public');
+            $data['photos'] = $normalizer->normalizeImageList($data['photos'] ?? [], 'public');
+            $data['media_attachments'] = $normalizer->normalizeMixedAttachmentList($data['media_attachments'] ?? [], 'public');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.photo' => $exception->getMessage(),
+            ]);
+        }
 
         return $data;
     }

@@ -9,9 +9,12 @@ use App\Services\LifecycleEmailService;
 use App\Services\PublicGarageService;
 use App\Support\AnalyticsEventTracker;
 use App\Support\MaintenanceLogVehicleResolver;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class CreateMaintenanceLog extends CreateRecord
 {
@@ -35,6 +38,14 @@ class CreateMaintenanceLog extends CreateRecord
         $data['km_reading'] = (int) round($service->toKilometers($data['km_reading'] ?? null, $unit, 0) ?? 0);
         $data['interval_km'] = $service->toKilometers($data['interval_km'] ?? null, $unit, 0);
         unset($data['distance_unit']);
+
+        try {
+            $data['attachments'] = app(UploadedMediaNormalizer::class)->normalizeMixedAttachmentList($data['attachments'] ?? [], 'public');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.attachments' => $exception->getMessage(),
+            ]);
+        }
 
         return $data;
     }

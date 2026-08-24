@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Vehicles\RelationManagers;
 use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Models\TripLog;
 use App\Services\Trips\TripLogProcessingService;
+use App\Support\ImageUploadSupport;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -77,13 +78,7 @@ class TripLogsRelationManager extends RelationManager
                             ->directory(fn (RelationManager $livewire) => 'trip-photos/'.auth()->id().'/'.$livewire->getOwnerRecord()->getKey())
                             ->visibility('private')
                             ->image()
-                            ->acceptedFileTypes([
-                                'image/jpeg',
-                                'image/png',
-                                'image/webp',
-                                'image/gif',
-                                'image/bmp',
-                            ])
+                            ->acceptedFileTypes(ImageUploadSupport::acceptedImageMimeTypes())
                             ->maxSize(12288)
                             ->multiple()
                             ->appendFiles()

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Vehicles\Schemas;
 
 use App\Models\Vehicle;
 use App\Services\DistanceUnitService;
+use App\Support\ImageUploadSupport;
 use Filament\Forms;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -17,6 +18,7 @@ class VehicleForm
                 Forms\Components\FileUpload::make('photo')
                     ->label(__('vehicles.fields.photo'))
                     ->image()
+                    ->acceptedFileTypes(ImageUploadSupport::acceptedImageMimeTypes())
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')
@@ -29,6 +31,7 @@ class VehicleForm
                     ->multiple()
                     ->reorderable()
                     ->image()
+                    ->acceptedFileTypes(ImageUploadSupport::acceptedImageMimeTypes())
                     ->disk('public')
                     ->directory('vehicle-photos')
                     ->visibility('public')

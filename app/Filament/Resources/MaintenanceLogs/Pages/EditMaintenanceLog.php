@@ -8,10 +8,13 @@ use App\Services\DistanceUnitService;
 use App\Support\AnalyticsEventTracker;
 use App\Support\ImageThumbnail;
 use App\Support\MediaPath;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class EditMaintenanceLog extends EditRecord
 {
@@ -40,6 +43,14 @@ class EditMaintenanceLog extends EditRecord
         $data['km_reading'] = (int) round($service->toKilometers($data['km_reading'] ?? null, $unit, 0) ?? 0);
         $data['interval_km'] = $service->toKilometers($data['interval_km'] ?? null, $unit, 0);
         unset($data['distance_unit']);
+
+        try {
+            $data['attachments'] = app(UploadedMediaNormalizer::class)->normalizeMixedAttachmentList($data['attachments'] ?? [], 'public');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.attachments' => $exception->getMessage(),
+            ]);
+        }
 
         return $data;
     }

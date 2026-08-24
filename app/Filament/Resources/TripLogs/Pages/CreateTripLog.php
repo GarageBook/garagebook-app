@@ -6,8 +6,10 @@ use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Jobs\ProcessTripLogUpload;
 use App\Models\Vehicle;
 use App\Support\AnalyticsEventTracker;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class CreateTripLog extends CreateRecord
 {
@@ -26,6 +28,14 @@ class CreateTripLog extends CreateRecord
         $data['user_id'] = auth()->id();
         $data['status'] = 'pending';
         $data['source_format'] = $data['source_format'] ?? 'gpx';
+
+        try {
+            $data['photos'] = app(UploadedMediaNormalizer::class)->normalizeImageList($data['photos'] ?? [], 'local');
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'data.photos' => $exception->getMessage(),
+            ]);
+        }
 
         return $data;
     }
