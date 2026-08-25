@@ -10,6 +10,7 @@
         ['label' => 'Publieke voertuigen', 'value' => $stats['public_vehicles']],
         ['label' => 'Actief 7 dagen', 'legacy_label' => 'Teruggekomen na 7 dagen', 'value' => $stats['active_last_7_days']],
         ['label' => 'Actief 30 dagen', 'legacy_label' => 'Teruggekomen na 30 dagen', 'value' => $stats['active_last_30_days']],
+        ['label' => 'Uitgesloten users', 'value' => $stats['excluded_users'] ?? 0],
     ];
 @endphp
 
@@ -71,10 +72,52 @@
                 </div>
             </div>
 
+
+
+            @if (! empty($cohorts))
+                <div class="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm">
+                    <div class="mb-4">
+                        <h4 class="text-sm font-semibold text-slate-900">Registratiecohorten per week</h4>
+                        <p class="mt-1 text-sm text-slate-500">Core-funnel activatie per registratiecohort. Eerste-log vensters worden gemeten vanaf registratie.</p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead>
+                                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <th class="py-2 pr-4">Week</th>
+                                    <th class="py-2 pr-4">Registraties</th>
+                                    <th class="py-2 pr-4">Voertuig</th>
+                                    <th class="py-2 pr-4">Log 1d</th>
+                                    <th class="py-2 pr-4">Log 3d</th>
+                                    <th class="py-2 pr-4">Log 7d</th>
+                                    <th class="py-2 pr-4">2e log</th>
+                                    <th class="py-2 pr-4">Return 7d</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($cohorts as $cohort)
+                                    <tr class="text-slate-700">
+                                        <td class="py-2 pr-4 font-medium text-slate-900">{{ \Illuminate\Support\Carbon::parse($cohort['week'])->format('d-m-Y') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['registrations'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['vehicle_added'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['first_log_within_1_day'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['first_log_within_3_days'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['first_log_within_7_days'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['second_log'], 0, ',', '.') }}</td>
+                                        <td class="py-2 pr-4 tabular-nums">{{ number_format($cohort['returned_within_7_days'], 0, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
             <div class="rounded-[1.75rem] border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 p-5 shadow-sm">
                 <div class="mb-5">
                     <h4 class="text-sm font-semibold text-slate-900">Funnelstappen</h4>
-                    <p class="mt-1 text-sm text-slate-500">Per stap het aantal users en het aandeel ten opzichte van alle registraties.</p>
+                    <p class="mt-1 text-sm text-slate-500">Per stap het aantal core-funnel users en het aandeel ten opzichte van alle core registraties. Outreach, demo, test en interne accounts zijn uitgesloten.</p>
                 </div>
 
                 <div class="space-y-4">

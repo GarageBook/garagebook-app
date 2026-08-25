@@ -193,10 +193,10 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
             Notification::make()
                 ->success()
                 ->title('Onderhoud toegevoegd.')
-                ->body('Je onderhoudshistorie is bijgewerkt.')
+                ->body('Je onderhoudshistorie is bijgewerkt. Wanneer is dit onderhoud weer nodig?')
                 ->actions([
                     Action::make('setReminder')
-                        ->label('Reminder instellen')
+                        ->label('Herinnering instellen')
                         ->url(MaintenanceLogResource::getUrl('edit', ['record' => $log]).'?with_reminder=1')
                         ->button(),
                     Action::make('dismissReminder')
@@ -238,7 +238,7 @@ class CreateMaintenanceLogDefaultsTest extends TestCase
             Notification::make()
                 ->success()
                 ->title('Onderhoud toegevoegd.')
-                ->body('Je onderhoudshistorie is bijgewerkt.'),
+                ->body('Je onderhoudshistorie is bijgewerkt. Wanneer is dit onderhoud weer nodig?'),
         );
     }
 

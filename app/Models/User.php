@@ -7,6 +7,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -35,6 +36,56 @@ class User extends Authenticatable implements FilamentUser
     public function isGeratelUser(): bool
     {
         return $this->registration_source === 'geratel';
+    }
+
+    public function isCoreFunnelUser(): bool
+    {
+        if ($this->isAdmin() || (bool) $this->is_outreach_demo || in_array($this->registration_source, self::nonCoreFunnelSources(), true)) {
+            return false;
+        }
+
+        $attribution = $this->relationLoaded('attribution') ? $this->attribution : $this->attribution()->first();
+
+        if (! $attribution) {
+            return true;
+        }
+
+        return ! in_array($attribution->source, self::nonCoreFunnelSources(), true)
+            && $attribution->demo_user_id === null
+            && $attribution->outreach_prospect_id === null;
+    }
+
+    public function scopeCoreFunnel(Builder $query): Builder
+    {
+        return $query
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('is_admin')
+                ->orWhere('is_admin', false))
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('is_outreach_demo')
+                ->orWhere('is_outreach_demo', false))
+            ->where(fn (Builder $query): Builder => $query
+                ->whereNull('registration_source')
+                ->orWhereNotIn('registration_source', self::nonCoreFunnelSources()))
+            ->whereDoesntHave('attribution', function (Builder $query): void {
+                $query
+                    ->whereIn('source', self::nonCoreFunnelSources())
+                    ->orWhereNotNull('demo_user_id')
+                    ->orWhereNotNull('outreach_prospect_id');
+            });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function nonCoreFunnelSources(): array
+    {
+        return [
+            'outreach_demo',
+            'demo',
+            'test',
+            'internal',
+        ];
     }
 
     public function vehicles(): HasMany

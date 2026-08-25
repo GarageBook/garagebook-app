@@ -30,6 +30,10 @@ class NoVehicleRule implements LifecycleRule
 
     public function evaluate(User $user): LifecycleRuleResult
     {
+        if (! $user->isCoreFunnelUser()) {
+            return LifecycleRuleResult::miss($this->name(), 'User valt buiten de core funnel.', $this->priority(), $this->cooldownDays());
+        }
+
         if (! $user->vehicles()->exists()) {
             return LifecycleRuleResult::match($this->name(), 'User heeft nog geen voertuig.', $this->priority(), $this->cooldownDays());
         }

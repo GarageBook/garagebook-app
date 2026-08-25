@@ -12,6 +12,8 @@ class LifecycleEmailTemplate extends Model
 
     public const NO_MAINTENANCE_LOG_DAY_3 = 'no_maintenance_log_day_3';
 
+    public const NO_MAINTENANCE_LOG_DAY_7 = 'no_maintenance_log_day_7';
+
     public const NO_MAINTENANCE_LOG_DAY_14 = 'no_maintenance_log_day_14';
 
     public const NO_MAINTENANCE_LOG_DAY_30 = 'no_maintenance_log_day_30';
@@ -30,6 +32,7 @@ class LifecycleEmailTemplate extends Model
         self::NO_VEHICLE_DAY2,
         self::NO_VEHICLE_ADDED,
         self::NO_MAINTENANCE_LOG_DAY_3,
+        self::NO_MAINTENANCE_LOG_DAY_7,
         self::NO_MAINTENANCE_LOG_DAY_14,
         self::NO_MAINTENANCE_LOG_DAY_30,
         self::AFTER_FIRST_MAINTENANCE_LOG,

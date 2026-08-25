@@ -47,6 +47,18 @@ BODY,
                 'is_active' => true,
             ],
             [
+                'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
+                'name' => 'Geen onderhoudslog - dag 7',
+                'subject' => 'Start je onderhoudshistorie met één recente beurt',
+                'body' => <<<'BODY'
+Hoi {{ first_name }},
+
+Je hoeft niet je volledige historie in één keer in te voeren. Eén recente beurt is genoeg om je digitale onderhoudshistorie te starten. Daarna kun je oudere gegevens later rustig aanvullen.
+BODY,
+                'cta_text' => 'Laatste onderhoud toevoegen',
+                'is_active' => true,
+            ],
+            [
                 'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
                 'name' => 'Geen onderhoudslog - dag 14',
                 'subject' => 'Je onderhoudshistorie mist nog de eerste regel',

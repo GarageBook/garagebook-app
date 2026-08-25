@@ -26,6 +26,7 @@ class SendLifecycleEmailsCommand extends Command
         $queued = 0;
 
         User::query()
+            ->coreFunnel()
             ->whereNull('lifecycle_emails_unsubscribed_at')
             ->orderBy('id')
             ->chunkById(100, function ($users) use ($service, &$queued): void {

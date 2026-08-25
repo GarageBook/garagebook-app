@@ -30,6 +30,10 @@ class UploadDocumentRule implements LifecycleRule
 
     public function evaluate(User $user): LifecycleRuleResult
     {
+        if (! $user->isCoreFunnelUser()) {
+            return LifecycleRuleResult::miss($this->name(), 'User valt buiten de core funnel.', $this->priority(), $this->cooldownDays());
+        }
+
         if (! $user->vehicles()->whereHas('maintenanceLogs')->exists()) {
             return LifecycleRuleResult::miss($this->name(), 'Document is pas relevant na eerste onderhoud.', $this->priority(), $this->cooldownDays());
         }

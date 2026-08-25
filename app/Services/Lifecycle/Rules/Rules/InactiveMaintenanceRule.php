@@ -30,6 +30,10 @@ class InactiveMaintenanceRule implements LifecycleRule
 
     public function evaluate(User $user): LifecycleRuleResult
     {
+        if (! $user->isCoreFunnelUser()) {
+            return LifecycleRuleResult::miss($this->name(), 'User valt buiten de core funnel.', $this->priority(), $this->cooldownDays());
+        }
+
         $latestMaintenanceAt = $user->vehicles()
             ->join('maintenance_logs', 'maintenance_logs.vehicle_id', '=', 'vehicles.id')
             ->max('maintenance_logs.created_at');

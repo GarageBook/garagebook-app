@@ -12,6 +12,7 @@ use App\Mail\Lifecycle\NoVehicleDay2Mail;
 use App\Mail\NoMaintenanceLogDay14Mail;
 use App\Mail\NoMaintenanceLogDay30Mail;
 use App\Mail\NoMaintenanceLogDay3Mail;
+use App\Mail\NoMaintenanceLogDay7Mail;
 use App\Mail\NoVehicleAddedMail;
 use App\Mail\SecondMaintenanceLogReminderMail;
 use App\Models\LifecycleEmailLog;
@@ -39,6 +40,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
@@ -49,7 +51,7 @@ class LifecycleEmailService
 
     public function resolveEligibleEmailKey(User $user): ?string
     {
-        if ($user->hasUnsubscribedFromLifecycleEmails()) {
+        if (! $user->isCoreFunnelUser() || $user->hasUnsubscribedFromLifecycleEmails()) {
             return null;
         }
 
@@ -150,7 +152,7 @@ class LifecycleEmailService
 
     public function canStillReceive(User $user, string $emailKey): bool
     {
-        if ($user->hasUnsubscribedFromLifecycleEmails()) {
+        if (! $user->isCoreFunnelUser() || $user->hasUnsubscribedFromLifecycleEmails()) {
             return false;
         }
 
@@ -167,6 +169,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_VEHICLE_DAY2 => new NoVehicleDay2Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => new NoVehicleAddedMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => new NoMaintenanceLogDay3Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7 => new NoMaintenanceLogDay7Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => new NoMaintenanceLogDay14Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => new NoMaintenanceLogDay30Mail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => new AfterFirstMaintenanceLogMail($user, $template, $ctaUrl, $unsubscribeUrl, $renderedBody),
@@ -300,6 +303,7 @@ class LifecycleEmailService
                 LifecycleEmailTemplate::NO_VEHICLE_DAY2,
                 LifecycleEmailTemplate::NO_VEHICLE_ADDED,
                 LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+                LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
                 LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
                 LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             ])
@@ -318,6 +322,7 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => VehicleResource::getUrl('create'),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => $vehicle
                 ? MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->getKey()])
@@ -563,11 +568,18 @@ class LifecycleEmailService
 
     private function resolveNoMaintenanceKey(User $user): ?string
     {
-        $ageInDays = (int) $user->created_at?->startOfDay()->diffInDays(now()->startOfDay()) ?: 0;
+        $firstVehicleCreatedAt = $this->firstVehicle($user)?->created_at;
+
+        if (! $firstVehicleCreatedAt) {
+            return null;
+        }
+
+        $ageInDays = (int) $firstVehicleCreatedAt->copy()->startOfDay()->diffInDays(now()->startOfDay());
 
         foreach ([
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => 30,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14 => 14,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7 => 7,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3 => 3,
         ] as $emailKey => $threshold) {
             if ($ageInDays < $threshold) {
@@ -837,8 +849,9 @@ class LifecycleEmailService
             LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED => ! $user->vehicles()->exists(),
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
-            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => ! $this->userHasMaintenanceLogs($user),
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30 => $user->vehicles()->exists() && ! $this->userHasMaintenanceLogs($user),
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG => $this->userQualifiesForAfterFirstMaintenanceEmail($user),
             LifecycleEmailTemplate::SECOND_MAINTENANCE_LOG_REMINDER => $this->userQualifiesForSecondMaintenanceLogReminder($user),
             LifecycleEmailTemplate::INACTIVE_USER_RETURN => $this->userHasMaintenanceLogs($user) && $this->userIsInactive($user),
@@ -848,6 +861,10 @@ class LifecycleEmailService
 
     public function resolveSkipReason(User $user, string $emailKey): ?string
     {
+        if (! $user->isCoreFunnelUser()) {
+            return 'non_core_funnel_user';
+        }
+
         if ($user->hasUnsubscribedFromLifecycleEmails()) {
             return 'unsubscribed';
         }

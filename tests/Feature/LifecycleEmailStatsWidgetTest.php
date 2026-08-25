@@ -8,6 +8,7 @@ use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\LifecycleEmailLogExportService;
 use Database\Seeders\LifecycleEmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -75,6 +76,50 @@ class LifecycleEmailStatsWidgetTest extends TestCase
         $this->assertSame(1, $stats['queued']);
         $this->assertSame(1, $stats['sent_today']);
         $this->assertSame(1, $stats['failed']);
+    }
+
+    public function test_lifecycle_reporting_distinguishes_day7_retry_and_test_records(): void
+    {
+        $user = User::factory()->create();
+
+        $original = LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
+            'subject' => 'Dag 7',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subDay(),
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'retry_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7.'_20260825000000000_'.$original->id.'_abc',
+            'retry_of_log_id' => $original->id,
+            'subject' => 'Retry',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => 'test_'.LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7.'_20260825000000000',
+            'subject' => 'Test',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        $stats = LifecycleEmailStatsWidget::calculateStats();
+
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7]['unique_triggers']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7]['retries']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7]['tests']);
+        $this->assertSame(3, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7]['send_attempts']);
+
+        $csv = app(LifecycleEmailLogExportService::class)->toCsv(LifecycleEmailLog::query()->orderBy('id'));
+
+        $this->assertStringContainsString('send_attempt_type', $csv);
+        $this->assertStringContainsString('unique_trigger', $csv);
+        $this->assertStringContainsString('retry', $csv);
+        $this->assertStringContainsString('test', $csv);
     }
 
     public function test_lifecycle_email_stats_widget_reports_effectiveness_metrics_per_email_key(): void
@@ -166,6 +211,8 @@ class LifecycleEmailStatsWidgetTest extends TestCase
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['clicked']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['goal_completed']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14]['queued']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['unique_triggers']);
+        $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3]['send_attempts']);
         $this->assertSame(1, $stats['email_keys'][LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG]['failed']);
         $this->assertSame(4, $stats['users_with_vehicle_no_maintenance']);
     }

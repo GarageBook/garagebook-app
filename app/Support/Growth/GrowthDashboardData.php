@@ -14,6 +14,7 @@ use App\Models\Vehicle;
 use App\Services\Gsc\SeoOpportunityService;
 use App\Services\PublicGarageService;
 use App\Support\AnalyticsDataWindow;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -733,20 +734,24 @@ class GrowthDashboardData
         $hasLastLoginAt = $this->hasColumn('users', 'last_login_at');
         $hasBookletDownloads = $this->hasColumn('users', 'first_booklet_downloaded_at');
 
+        $coreUsers = $this->coreUserQuery();
+        $totalCoreUsers = (clone $coreUsers)->count();
+
         $stats = [
-            'total_users' => User::query()->count(),
-            'registrations_last_7_days' => User::query()->where('created_at', '>=', $sevenDayStart)->count(),
-            'registrations_last_30_days' => User::query()->where('created_at', '>=', $thirtyDayStart)->count(),
-            'users_with_vehicle' => $hasVehicles ? User::query()->whereHas('vehicles')->count() : null,
-            'users_with_maintenance' => $hasVehicles && $hasMaintenanceLogs ? User::query()->whereHas('vehicles.maintenanceLogs')->count() : null,
+            'total_users' => $totalCoreUsers,
+            'registrations_last_7_days' => (clone $coreUsers)->where('created_at', '>=', $sevenDayStart)->count(),
+            'registrations_last_30_days' => (clone $coreUsers)->where('created_at', '>=', $thirtyDayStart)->count(),
+            'excluded_users' => User::query()->count() - $totalCoreUsers,
+            'users_with_vehicle' => $hasVehicles ? (clone $coreUsers)->whereHas('vehicles')->count() : null,
+            'users_with_maintenance' => $hasVehicles && $hasMaintenanceLogs ? (clone $coreUsers)->whereHas('vehicles.maintenanceLogs')->count() : null,
             'users_with_two_maintenance' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithMinimumMaintenanceLogs(2) : null,
-            'users_with_documents' => $hasVehicles && $hasVehicleDocuments ? User::query()->whereHas('vehicles.documents')->count() : null,
-            'users_with_fuel_entries' => $hasVehicles && $hasFuelLogs ? User::query()->whereHas('vehicles.fuelLogs')->count() : null,
+            'users_with_documents' => $hasVehicles && $hasVehicleDocuments ? (clone $coreUsers)->whereHas('vehicles.documents')->count() : null,
+            'users_with_fuel_entries' => $hasVehicles && $hasFuelLogs ? (clone $coreUsers)->whereHas('vehicles.fuelLogs')->count() : null,
             'users_with_active_reminder' => $hasVehicles && $hasMaintenanceLogs ? $this->usersWithActiveReminder() : null,
-            'users_with_booklet_download' => $hasBookletDownloads ? User::query()->whereNotNull('first_booklet_downloaded_at')->count() : null,
-            'public_vehicles' => $hasVehicles && $this->hasColumn('vehicles', 'is_public') ? Vehicle::query()->where('is_public', true)->count() : null,
-            'active_last_7_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(7))->count() : null,
-            'active_last_30_days' => $hasLastLoginAt ? User::query()->where('last_login_at', '>=', Carbon::now()->subDays(30))->count() : null,
+            'users_with_booklet_download' => $hasBookletDownloads ? (clone $coreUsers)->whereNotNull('first_booklet_downloaded_at')->count() : null,
+            'public_vehicles' => $hasVehicles && $this->hasColumn('vehicles', 'is_public') ? Vehicle::query()->whereHas('user', fn (Builder $query): Builder => $query->coreFunnel())->where('is_public', true)->count() : null,
+            'active_last_7_days' => $hasLastLoginAt ? (clone $coreUsers)->where('last_login_at', '>=', Carbon::now()->subDays(7))->count() : null,
+            'active_last_30_days' => $hasLastLoginAt ? (clone $coreUsers)->where('last_login_at', '>=', Carbon::now()->subDays(30))->count() : null,
         ];
 
         $totalUsers = max(1, $stats['total_users']);
@@ -754,13 +759,13 @@ class GrowthDashboardData
 
         if ($hasFirstLoginAt && $hasLastLoginAt) {
             if (DB::getDriverName() === 'sqlite') {
-                $returnedAfterSevenDays = User::query()
+                $returnedAfterSevenDays = (clone $coreUsers)
                     ->whereNotNull('first_login_at')
                     ->whereNotNull('last_login_at')
                     ->whereColumn('last_login_at', '>', DB::raw("datetime(first_login_at, '+7 days')"))
                     ->count();
             } else {
-                $returnedAfterSevenDays = User::query()
+                $returnedAfterSevenDays = (clone $coreUsers)
                     ->whereNotNull('first_login_at')
                     ->whereNotNull('last_login_at')
                     ->get(['first_login_at', 'last_login_at'])
@@ -773,6 +778,7 @@ class GrowthDashboardData
             ['step' => 'Registratie', 'count' => $stats['total_users']],
             ['step' => 'Voertuig toegevoegd', 'count' => $stats['users_with_vehicle']],
             ['step' => 'Eerste onderhoudslog', 'count' => $stats['users_with_maintenance']],
+            ['step' => 'Tweede onderhoudslog', 'count' => $stats['users_with_two_maintenance']],
             ['step' => 'Reminder actief', 'count' => $stats['users_with_active_reminder']],
             ['step' => 'Onderhoudsboekje gedownload', 'count' => $stats['users_with_booklet_download']],
             ['step' => 'Teruggekomen na 7 dagen', 'count' => $returnedAfterSevenDays],
@@ -788,11 +794,13 @@ class GrowthDashboardData
             ], $funnel),
             'conversions' => [
                 $this->buildConversion('Registratie → voertuig', $stats['total_users'], $stats['users_with_vehicle']),
+                $this->buildConversion('Registratie → eerste onderhoudslog', $stats['total_users'], $stats['users_with_maintenance']),
                 $this->buildConversion('Voertuig → eerste onderhoudslog', $stats['users_with_vehicle'], $stats['users_with_maintenance']),
                 $this->buildConversion('Eerste onderhoudslog → tweede onderhoudslog', $stats['users_with_maintenance'], $stats['users_with_two_maintenance']),
                 $this->buildConversion('Eerste onderhoudslog → reminder actief', $stats['users_with_maintenance'], $stats['users_with_active_reminder']),
                 $this->buildConversion('Eerste onderhoudslog → onderhoudsboekje download', $stats['users_with_maintenance'], $this->usersWithMaintenanceAndBookletDownload($hasBookletDownloads, $hasVehicles, $hasMaintenanceLogs)),
             ],
+            'cohorts' => $hasVehicles && $hasMaintenanceLogs ? $this->registrationCohorts() : [],
         ];
     }
 
@@ -801,7 +809,7 @@ class GrowthDashboardData
         $registrationSources = $this->registrationAttributionRecords()
             ->mapWithKeys(fn (array $row) => [$row['id'] => $this->sourceLabel($row)]);
 
-        $registrations = User::query()
+        $registrations = $this->coreUserQuery()
             ->select(['id', 'name', 'created_at'])
             ->latest('created_at')
             ->limit(5)
@@ -818,6 +826,7 @@ class GrowthDashboardData
         if ($this->hasTable('vehicles')) {
             $vehicles = Vehicle::query()
                 ->join('users', 'users.id', '=', 'vehicles.user_id')
+                ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
                 ->select([
                     'vehicles.id',
                     'vehicles.created_at',
@@ -844,6 +853,7 @@ class GrowthDashboardData
             $maintenanceLogs = MaintenanceLog::query()
                 ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
                 ->join('users', 'users.id', '=', 'vehicles.user_id')
+                ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
                 ->select([
                     'maintenance_logs.id',
                     'maintenance_logs.created_at',
@@ -905,7 +915,7 @@ class GrowthDashboardData
 
     private function registrationAttributionRecords(): Collection
     {
-        $query = User::query()
+        $query = $this->coreUserQuery()
             ->select([
                 'users.id',
                 'users.created_at',
@@ -1132,13 +1142,74 @@ class GrowthDashboardData
         return round(((int) ($summary?->sessions_sum ?? 0)) / $users, 1);
     }
 
+    private function registrationCohorts(int $weeks = 12): array
+    {
+        $start = Carbon::today()->startOfWeek()->subWeeks($weeks - 1);
+        $users = $this->coreUserQuery()
+            ->where('created_at', '>=', $start)
+            ->with(['vehicles.maintenanceLogs'])
+            ->orderBy('created_at')
+            ->get();
+
+        $cohorts = [];
+
+        foreach ($users as $user) {
+            $weekStart = $user->created_at?->copy()->startOfWeek()->toDateString() ?? 'unknown';
+            $firstVehicleAt = $user->vehicles->min('created_at');
+            $logs = $user->vehicles->flatMap(fn ($vehicle) => $vehicle->maintenanceLogs)->sortBy('created_at')->values();
+            $firstLogAt = $logs->first()?->created_at;
+            $lastLoginAt = $user->last_login_at;
+            $firstLoginAt = $user->first_login_at ?: $user->created_at;
+
+            $cohorts[$weekStart] ??= [
+                'week' => $weekStart,
+                'registrations' => 0,
+                'vehicle_added' => 0,
+                'first_log_within_1_day' => 0,
+                'first_log_within_3_days' => 0,
+                'first_log_within_7_days' => 0,
+                'second_log' => 0,
+                'returned_within_7_days' => 0,
+            ];
+
+            $cohorts[$weekStart]['registrations']++;
+
+            if ($firstVehicleAt !== null) {
+                $cohorts[$weekStart]['vehicle_added']++;
+            }
+
+            if ($firstLogAt !== null) {
+                foreach ([1, 3, 7] as $days) {
+                    if ($firstLogAt->lte($user->created_at->copy()->addDays($days))) {
+                        $cohorts[$weekStart]['first_log_within_'.$days.'_day'.($days === 1 ? '' : 's')]++;
+                    }
+                }
+            }
+
+            if ($logs->count() >= 2) {
+                $cohorts[$weekStart]['second_log']++;
+            }
+
+            if ($firstLoginAt && $lastLoginAt && $lastLoginAt->gt($firstLoginAt) && $lastLoginAt->lte($firstLoginAt->copy()->addDays(7))) {
+                $cohorts[$weekStart]['returned_within_7_days']++;
+            }
+        }
+
+        return collect($cohorts)
+            ->sortKeysDesc()
+            ->values()
+            ->all();
+    }
+
     private function usersWithMinimumMaintenanceLogs(int $minimumLogs): int
     {
         return DB::query()
             ->fromSub(function ($query) use ($minimumLogs): void {
                 $query->select('vehicles.user_id')
                     ->from('vehicles')
+                    ->join('users', 'users.id', '=', 'vehicles.user_id')
                     ->join('maintenance_logs', 'maintenance_logs.vehicle_id', '=', 'vehicles.id')
+                    ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
                     ->groupBy('vehicles.user_id')
                     ->havingRaw('COUNT(maintenance_logs.id) >= ?', [$minimumLogs]);
             }, 'qualified_users')
@@ -1147,7 +1218,7 @@ class GrowthDashboardData
 
     private function usersWithActiveReminder(): int
     {
-        return User::query()
+        return $this->coreUserQuery()
             ->whereHas('vehicles.maintenanceLogs', function ($query) {
                 $query->where('reminder_enabled', true)
                     ->where(function ($inner) {
@@ -1164,7 +1235,7 @@ class GrowthDashboardData
             return null;
         }
 
-        return User::query()
+        return $this->coreUserQuery()
             ->whereNotNull('first_booklet_downloaded_at')
             ->whereHas('vehicles.maintenanceLogs')
             ->count();
@@ -1178,6 +1249,7 @@ class GrowthDashboardData
 
         return Vehicle::query()
             ->whereNotNull('user_id')
+            ->whereHas('user', fn (Builder $query): Builder => $query->coreFunnel())
             ->distinct()
             ->pluck('user_id')
             ->map(fn ($id) => (int) $id)
@@ -1192,11 +1264,38 @@ class GrowthDashboardData
 
         return MaintenanceLog::query()
             ->join('vehicles', 'vehicles.id', '=', 'maintenance_logs.vehicle_id')
+            ->join('users', 'users.id', '=', 'vehicles.user_id')
+            ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
             ->whereNotNull('vehicles.user_id')
             ->distinct()
             ->pluck('vehicles.user_id')
             ->map(fn ($id) => (int) $id)
             ->flip();
+    }
+
+    private function coreUserQuery(): Builder
+    {
+        return User::query()->coreFunnel();
+    }
+
+    private function applyCoreUserJoinConditions($query): void
+    {
+        $query
+            ->where(fn ($query) => $query->whereNull('users.is_admin')->orWhere('users.is_admin', false))
+            ->where(fn ($query) => $query->whereNull('users.is_outreach_demo')->orWhere('users.is_outreach_demo', false))
+            ->where(fn ($query) => $query->whereNull('users.registration_source')->orWhereNotIn('users.registration_source', User::nonCoreFunnelSources()))
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('user_attributions')
+                    ->whereColumn('user_attributions.user_id', 'users.id')
+                    ->where(function ($query): void {
+                        $query
+                            ->whereIn('user_attributions.source', User::nonCoreFunnelSources())
+                            ->orWhereNotNull('user_attributions.demo_user_id')
+                            ->orWhereNotNull('user_attributions.outreach_prospect_id');
+                    });
+            });
     }
 
     private function buildConversion(string $label, ?int $from, ?int $to): array

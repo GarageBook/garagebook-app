@@ -223,7 +223,7 @@ class LifecycleEmailAdminResourcesTest extends TestCase
             LifecycleEmailLog::query()->with('user')->whereKey($log->getKey())
         );
 
-        $this->assertStringContainsString('id,created_at,sent_at,user_id,user_name,user_email,email_key,status,reason_skipped,error_message,vehicles_count,maintenance_logs_count,documents_count,last_login_at,clicked_at,goal_completed_at', $csv);
+        $this->assertStringContainsString('id,created_at,sent_at,user_id,user_name,user_email,email_key,status,send_attempt_type,is_test,is_retry,retry_of_log_id,retry_log_id,retry_status,reason_skipped,error_message,vehicles_count,maintenance_logs_count,documents_count,last_login_at,clicked_at,goal_completed_at', $csv);
         $this->assertStringContainsString('CSV Gebruiker', $csv);
         $this->assertStringContainsString('csv@example.com', $csv);
         $this->assertStringContainsString(LifecycleEmailTemplate::NO_VEHICLE_ADDED, $csv);

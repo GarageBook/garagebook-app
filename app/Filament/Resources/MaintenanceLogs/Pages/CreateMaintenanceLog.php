@@ -80,14 +80,14 @@ class CreateMaintenanceLog extends CreateRecord
                 ? 'Onderhoud toegevoegd. Je publieke voertuigpagina is bijgewerkt.'
                 : 'Onderhoud toegevoegd.')
             ->body($vehicle?->is_public
-                ? 'Nieuwe onderhoudsregels worden meegenomen op je publieke voertuigpagina.'
-                : 'Je onderhoudshistorie is bijgewerkt.');
+                ? 'Nieuwe onderhoudsregels worden meegenomen op je publieke voertuigpagina. Wanneer is dit onderhoud weer nodig?'
+                : 'Je onderhoudshistorie is bijgewerkt. Wanneer is dit onderhoud weer nodig?');
 
         $actions = [];
 
         if (! $this->record->reminder_enabled) {
             $actions[] = Action::make('setReminder')
-                ->label('Reminder instellen')
+                ->label('Herinnering instellen')
                 ->url(MaintenanceLogResource::getUrl('edit', ['record' => $this->record]).'?with_reminder=1')
                 ->button();
 
@@ -132,7 +132,7 @@ class CreateMaintenanceLog extends CreateRecord
     public function getSubheading(): ?string
     {
         if (request()->query('onboarding') === '1') {
-            return 'Gefeliciteerd! Je voertuig is toegevoegd. Leg nu je eerste onderhoud vast om je onderhoudsboekje echt te starten.';
+            return 'Begin met je laatste onderhoud. Je hoeft niet je volledige historie in een keer in te voeren; oudere gegevens kun je later altijd aanvullen.';
         }
 
         if (request()->boolean('with_reminder')) {

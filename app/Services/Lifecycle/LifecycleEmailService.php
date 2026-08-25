@@ -43,6 +43,7 @@ class LifecycleEmailService
     private function eligibleNoVehicleUsersQuery()
     {
         return User::query()
+            ->coreFunnel()
             ->whereNotNull('email_verified_at')
             ->where('created_at', '<=', now()->subDays(2))
             ->whereNull('lifecycle_emails_unsubscribed_at')

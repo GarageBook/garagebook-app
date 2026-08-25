@@ -39,34 +39,53 @@ class DashboardActions extends Widget
         $user = auth()->user();
         $vehicle = $user->vehicles()->latest()->first();
 
+        $actions = $vehicle ? $this->buildActions($vehicle) : [];
+
         return [
-            'actions' => $vehicle ? $this->buildActions($vehicle) : [],
+            'title' => $actions['title'] ?? 'Je GarageBook is actief',
+            'description' => $actions['description'] ?? 'Werk verder aan je onderhoudshistorie wanneer er iets verandert.',
+            'primaryAction' => $actions['primary'] ?? null,
+            'actions' => $actions['secondary'] ?? [],
         ];
     }
 
     private function buildActions(Vehicle $vehicle): array
     {
-        $userState = Analytics::userState(auth()->user());
+        $user = auth()->user();
+        $userState = Analytics::userState($user);
         $publicGarageUrl = app(PublicGarageService::class)->publicUrl($vehicle);
+        $maintenanceCount = $user instanceof User
+            ? (int) $user->vehicles()->withCount('maintenanceLogs')->get()->sum('maintenance_logs_count')
+            : 0;
+        $hasActiveReminder = $user instanceof User
+            && $user->vehicles()->whereHas('maintenanceLogs', function ($query): void {
+                $query->where('reminder_enabled', true)
+                    ->where(function ($query): void {
+                        $query->whereNotNull('interval_months')
+                            ->orWhereNotNull('interval_km');
+                    });
+            })->exists();
 
-        return [
-            [
-                'label' => 'Onderhoud toevoegen',
-                'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
-                'attributes' => Analytics::clickTrackingAttributes('quick_maintenance_log_cta_clicked', [
-                    'location' => 'dashboard_actions_widget',
-                    'user_state' => $userState,
-                ]),
-            ],
-            [
-                'label' => 'Herinnering toevoegen',
-                'url' => $this->reminderUrl($vehicle),
-                'attributes' => Analytics::clickTrackingAttributes('app_cta_clicked', [
-                    'cta_name' => 'add_reminder',
-                    'location' => 'dashboard_actions_widget',
-                    'user_state' => $userState,
-                ]),
-            ],
+        $addMaintenanceAction = [
+            'label' => $maintenanceCount === 1 ? 'Nog een onderhoudsbeurt toevoegen' : 'Onderhoud toevoegen',
+            'url' => MaintenanceLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
+            'attributes' => Analytics::clickTrackingAttributes('quick_maintenance_log_cta_clicked', [
+                'location' => 'dashboard_actions_widget',
+                'user_state' => $userState,
+            ]),
+        ];
+
+        $reminderAction = [
+            'label' => 'Herinnering toevoegen',
+            'url' => $this->reminderUrl($vehicle),
+            'attributes' => Analytics::clickTrackingAttributes('app_cta_clicked', [
+                'cta_name' => 'add_reminder',
+                'location' => 'dashboard_actions_widget',
+                'user_state' => $userState,
+            ]),
+        ];
+
+        $secondary = [
             [
                 'label' => 'Voeg een rit toe',
                 'url' => TripLogResource::getUrl('create', ['vehicle_id' => $vehicle->id]),
@@ -121,6 +140,31 @@ class DashboardActions extends Widget
                     'user_state' => $userState,
                 ]),
             ],
+        ];
+
+        if ($maintenanceCount === 1) {
+            return [
+                'title' => 'Je onderhoudshistorie is gestart',
+                'description' => 'Voeg nog een eerdere of andere onderhoudsbeurt toe, zodat GarageBook meer wordt dan een losse registratie.',
+                'primary' => $addMaintenanceAction,
+                'secondary' => [$reminderAction, ...$secondary],
+            ];
+        }
+
+        if (! $hasActiveReminder) {
+            return [
+                'title' => 'Maak GarageBook terugkerend bruikbaar',
+                'description' => 'Je historie staat erin. Zet nu een eenvoudige herinnering klaar voor toekomstig onderhoud.',
+                'primary' => $reminderAction,
+                'secondary' => [$addMaintenanceAction, ...$secondary],
+            ];
+        }
+
+        return [
+            'title' => 'Je GarageBook is actief',
+            'description' => 'Werk je historie bij wanneer er nieuw onderhoud, documenten of ritten bijkomen.',
+            'primary' => $addMaintenanceAction,
+            'secondary' => [$reminderAction, ...$secondary],
         ];
     }
 

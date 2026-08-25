@@ -33,6 +33,10 @@ class VehiclePhotoReminderRule implements LifecycleRule
 
     public function evaluate(User $user): LifecycleRuleResult
     {
+        if (! $user->isCoreFunnelUser()) {
+            return LifecycleRuleResult::miss($this->name(), 'User valt buiten de core funnel.', $this->priority(), $this->cooldownDays());
+        }
+
         $vehicles = $user->vehicles()->get();
 
         if ($vehicles->isEmpty()) {

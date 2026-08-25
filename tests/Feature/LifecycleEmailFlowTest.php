@@ -7,6 +7,7 @@ use App\Filament\Resources\MaintenanceLogs\Pages\CreateMaintenanceLog;
 use App\Filament\Resources\Vehicles\VehicleResource;
 use App\Jobs\SendLifecycleEmailJob;
 use App\Mail\NoMaintenanceLogDay14Mail;
+use App\Mail\NoMaintenanceLogDay7Mail;
 use App\Mail\SecondMaintenanceLogReminderMail;
 use App\Models\LifecycleEmailLog;
 use App\Models\LifecycleEmailTemplate;
@@ -80,6 +81,29 @@ class LifecycleEmailFlowTest extends TestCase
             'created_at' => now()->subDays(3),
         ]);
 
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+            'current_km' => 10000,
+        ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(3),
+            'updated_at' => now()->subDays(3),
+        ])->saveQuietly();
+
+        $this->assertSame(
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
+        );
+    }
+
+    public function test_no_maintenance_lifecycle_uses_vehicle_age_not_registration_age(): void
+    {
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(30),
+        ]);
+
         Vehicle::query()->create([
             'user_id' => $user->id,
             'brand' => 'Honda',
@@ -87,10 +111,127 @@ class LifecycleEmailFlowTest extends TestCase
             'current_km' => 10000,
         ]);
 
+        $this->assertNull(app(LifecycleEmailService::class)->resolveEligibleEmailKey($user));
+    }
+
+    public function test_user_with_vehicle_without_maintenance_gets_day7_no_maintenance_key(): void
+    {
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(20),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+            'current_km' => 10000,
+        ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ])->saveQuietly();
+
+        LifecycleEmailLog::query()->create([
+            'user_id' => $user->id,
+            'email_key' => LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            'subject' => 'Dag 3',
+            'status' => LifecycleEmailLog::STATUS_SENT,
+            'sent_at' => now()->subDays(8),
+            'created_at' => now()->subDays(8),
+            'updated_at' => now()->subDays(8),
+        ]);
+
         $this->assertSame(
-            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
             app(LifecycleEmailService::class)->resolveEligibleEmailKey($user)
         );
+    }
+
+    public function test_outreach_demo_user_does_not_get_core_lifecycle_email(): void
+    {
+        $user = User::factory()->outreachDemo()->create([
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+        ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ])->saveQuietly();
+
+        $this->assertNull(app(LifecycleEmailService::class)->resolveEligibleEmailKey($user));
+    }
+
+    public function test_queued_no_maintenance_day7_mail_skips_when_user_becomes_non_core_before_send(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+        ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ])->saveQuietly();
+
+        $service = app(LifecycleEmailService::class);
+        $log = $service->reserveLogFor($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7);
+
+        $this->assertNotNull($log);
+
+        $user->forceFill(['is_outreach_demo' => true])->save();
+
+        (new SendLifecycleEmailJob($user->id, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7, $log->id))
+            ->handle($service, app(AnalyticsEventTracker::class));
+
+        Mail::assertNotSent(NoMaintenanceLogDay7Mail::class);
+        $log->refresh();
+        $this->assertSame(LifecycleEmailLog::STATUS_SKIPPED, $log->status);
+        $this->assertSame('non_core_funnel_user', $log->reason_skipped);
+    }
+
+    public function test_queued_no_maintenance_mail_skips_when_vehicle_is_removed_before_send(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'created_at' => now()->subDays(10),
+        ]);
+
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500X',
+        ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ])->saveQuietly();
+
+        $service = app(LifecycleEmailService::class);
+        $log = $service->reserveLogFor($user, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7);
+
+        $this->assertNotNull($log);
+
+        $vehicle->delete();
+
+        (new SendLifecycleEmailJob($user->id, LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7, $log->id))
+            ->handle($service, app(AnalyticsEventTracker::class));
+
+        Mail::assertNotSent(NoMaintenanceLogDay7Mail::class);
+        $log->refresh();
+        $this->assertSame(LifecycleEmailLog::STATUS_SKIPPED, $log->status);
+        $this->assertSame('no_vehicle', $log->reason_skipped);
     }
 
     public function test_user_with_vehicle_and_single_old_maintenance_gets_second_log_reminder_before_after_first_mail(): void
@@ -478,12 +619,16 @@ class LifecycleEmailFlowTest extends TestCase
             'created_at' => now()->subDays(14),
         ]);
 
-        Vehicle::query()->create([
+        $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
             'brand' => 'Moto Guzzi',
             'model' => 'V85 TT',
             'current_km' => 6000,
         ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(14),
+            'updated_at' => now()->subDays(14),
+        ])->saveQuietly();
 
         LifecycleEmailLog::query()->create([
             'user_id' => $user->id,
@@ -514,12 +659,16 @@ class LifecycleEmailFlowTest extends TestCase
             'created_at' => now()->subDays(14),
         ]);
 
-        Vehicle::query()->create([
+        $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
             'brand' => 'Moto Guzzi',
             'model' => 'V85 TT',
             'current_km' => 6000,
         ]);
+        $vehicle->forceFill([
+            'created_at' => now()->subDays(14),
+            'updated_at' => now()->subDays(14),
+        ])->saveQuietly();
 
         Artisan::call('garagebook:send-lifecycle-emails');
 

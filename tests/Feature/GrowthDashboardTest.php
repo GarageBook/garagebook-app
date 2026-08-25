@@ -241,9 +241,9 @@ class GrowthDashboardTest extends TestCase
 
             Livewire::test(GrowthProductActivationFunnelWidget::class)
                 ->assertSeeText('Registraties 7 dagen')
-                ->assertSeeText('3')
+                ->assertSeeText('2')
                 ->assertSeeText('Registraties 30 dagen')
-                ->assertSeeText('4')
+                ->assertSeeText('3')
                 ->assertSeeText('Reminder actief')
                 ->assertSeeText('1')
                 ->assertSeeText('Boekje gedownload')
@@ -255,6 +255,60 @@ class GrowthDashboardTest extends TestCase
                 ->assertSeeText('Eerste onderhoudslog → reminder actief')
                 ->assertSeeText('Eerste onderhoudslog → onderhoudsboekje download')
                 ->assertSeeText('50,0%');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_growth_funnel_excludes_non_core_users_and_reports_cohorts(): void
+    {
+        Carbon::setTestNow('2026-08-25 10:00:00');
+
+        try {
+            User::factory()->admin()->create([
+                'created_at' => now()->subDays(2),
+            ]);
+            User::factory()->outreachDemo()->create([
+                'created_at' => now()->subDays(2),
+            ]);
+            User::factory()->create([
+                'registration_source' => 'internal',
+                'created_at' => now()->subDays(2),
+            ]);
+
+            $coreUser = User::factory()->create([
+                'created_at' => now()->subDays(2),
+                'first_login_at' => now()->subDays(2),
+                'last_login_at' => now()->subDay(),
+            ]);
+            $vehicle = Vehicle::query()->create([
+                'user_id' => $coreUser->id,
+                'brand' => 'Honda',
+                'model' => 'CB500',
+                'created_at' => now()->subDays(2),
+                'updated_at' => now()->subDays(2),
+            ]);
+            MaintenanceLog::query()->create([
+                'vehicle_id' => $vehicle->id,
+                'description' => 'Service 1',
+                'maintenance_date' => today(),
+                'km_reading' => 1000,
+                'created_at' => now()->subDay(),
+                'updated_at' => now()->subDay(),
+            ]);
+
+            $data = app(GrowthDashboardData::class)->activationFunnel();
+            $cohort = collect($data['cohorts'])->firstWhere('week', now()->copy()->subDays(2)->startOfWeek()->toDateString());
+
+            $this->assertSame(1, $data['stats']['total_users']);
+            $this->assertSame(3, $data['stats']['excluded_users']);
+            $this->assertSame(1, $data['stats']['users_with_vehicle']);
+            $this->assertSame(1, $data['stats']['users_with_maintenance']);
+            $this->assertNotNull($cohort);
+            $this->assertSame(1, $cohort['registrations']);
+            $this->assertSame(1, $cohort['vehicle_added']);
+            $this->assertSame(1, $cohort['first_log_within_3_days']);
+            $this->assertSame(1, $cohort['returned_within_7_days']);
         } finally {
             Carbon::setTestNow();
         }

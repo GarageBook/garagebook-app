@@ -95,6 +95,42 @@ class LifecycleEmailLog extends Model
             ->all();
     }
 
+    public function baseEmailKey(): string
+    {
+        $emailKey = (string) $this->email_key;
+
+        foreach (LifecycleEmailTemplate::EMAIL_KEYS as $knownKey) {
+            if ($emailKey === $knownKey || str_starts_with($emailKey, 'test_'.$knownKey.'_') || str_starts_with($emailKey, 'retry_'.$knownKey.'_')) {
+                return $knownKey;
+            }
+        }
+
+        return $emailKey;
+    }
+
+    public function isTestLog(): bool
+    {
+        return str_starts_with((string) $this->email_key, 'test_');
+    }
+
+    public function isRetryLog(): bool
+    {
+        return $this->retry_of_log_id !== null || str_starts_with((string) $this->email_key, 'retry_');
+    }
+
+    public function sendAttemptType(): string
+    {
+        if ($this->isTestLog()) {
+            return 'test';
+        }
+
+        if ($this->isRetryLog()) {
+            return 'retry';
+        }
+
+        return 'unique_trigger';
+    }
+
     public function deliveryResolutionStatus(): string
     {
         if ($this->status !== self::STATUS_FAILED) {

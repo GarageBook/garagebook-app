@@ -135,7 +135,7 @@ class DashboardOnboardingWidget extends Widget
     private function resolveDescription(array $progress): string
     {
         if ($progress['has_vehicle'] && ! $progress['has_maintenance']) {
-            return 'Voeg nu je eerste onderhoud toe. Zelfs een eenvoudige registratie maakt je onderhoudsgeschiedenis direct waardevoller.';
+            return 'Begin met je laatste onderhoud. Je hoeft niet je volledige historie in een keer in te voeren; oudere gegevens kun je later altijd aanvullen.';
         }
 
         return 'Een complete onderhoudshistorie begint met je eerste registratie. Voeg je voertuig en onderhoud toe en bouw direct aan een waardevol dossier.';
@@ -147,7 +147,7 @@ class DashboardOnboardingWidget extends Widget
             return null;
         }
 
-        return 'Bijvoorbeeld een oliebeurt, bandenwissel, kettingonderhoud of reparatie.';
+        return 'Een korte omschrijving, datum en tellerstand zijn genoeg om te starten.';
     }
 
     private function buildPrimaryCta(array $progress): array

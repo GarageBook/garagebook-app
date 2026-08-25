@@ -207,6 +207,10 @@ class LifecycleEmailLogResource extends Resource
                     ->wrap()
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('retry_of_log_id')
+                    ->label('Retry van')
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('email_key')
@@ -215,6 +219,7 @@ class LifecycleEmailLogResource extends Resource
                         'no_vehicle_day2' => 'no_vehicle_day2',
                         'no_vehicle_added' => 'no_vehicle_added',
                         'no_maintenance_log_day_3' => 'no_maintenance_log_day_3',
+                        'no_maintenance_log_day_7' => 'no_maintenance_log_day_7',
                         'no_maintenance_log_day_14' => 'no_maintenance_log_day_14',
                         'no_maintenance_log_day_30' => 'no_maintenance_log_day_30',
                         'after_first_maintenance_log' => 'after_first_maintenance_log',
@@ -226,6 +231,7 @@ class LifecycleEmailLogResource extends Resource
                         'no_vehicle_day2' => 'no_vehicle_day2',
                         'no_vehicle_added' => 'no_vehicle_added',
                         'no_maintenance_log_day_3' => 'no_maintenance_log_day_3',
+                        'no_maintenance_log_day_7' => 'no_maintenance_log_day_7',
                         'no_maintenance_log_day_14' => 'no_maintenance_log_day_14',
                         'no_maintenance_log_day_30' => 'no_maintenance_log_day_30',
                         'after_first_maintenance_log' => 'after_first_maintenance_log',

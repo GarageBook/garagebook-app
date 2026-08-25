@@ -26,6 +26,7 @@ class EvaluateLifecycleRulesCommand extends Command
         $winnerCounts = [];
 
         User::query()
+            ->coreFunnel()
             ->orderBy('id')
             ->chunkById($chunkSize, function ($users) use ($engine, $mailAdapter, $persist, $previewMail, &$processed, &$matched, &$winnerCounts): void {
                 foreach ($users as $user) {

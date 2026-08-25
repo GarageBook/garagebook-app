@@ -40,7 +40,7 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
                 : 0.0;
 
             $cards[] = Stat::make($emailKey, sprintf('Q %d | S %d | F %d', $row['queued'], $row['sent'], $row['failed']))
-                ->description(sprintf('Kliks %d | Goals %d | Conv %.1f%% | Unsubs %d', $row['clicked'], $row['goal_completed'], $conversionRate, $row['unsubscribed_after_send']))
+                ->description(sprintf('Uniek %d | Pogingen %d | Retry %d | Test %d | Kliks %d | Goals %d | Conv %.1f%%', $row['unique_triggers'], $row['send_attempts'], $row['retries'], $row['tests'], $row['clicked'], $row['goal_completed'], $conversionRate))
                 ->color($row['failed'] > 0 ? 'danger' : ($row['queued'] > 0 ? 'warning' : 'success'));
         }
 
@@ -57,6 +57,7 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
             LifecycleEmailTemplate::NO_VEHICLE_DAY2,
             LifecycleEmailTemplate::NO_VEHICLE_ADDED,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_3,
+            LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_7,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_14,
             LifecycleEmailTemplate::NO_MAINTENANCE_LOG_DAY_30,
             LifecycleEmailTemplate::AFTER_FIRST_MAINTENANCE_LOG,
@@ -76,6 +77,10 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
                 'clicked' => 0,
                 'goal_completed' => 0,
                 'unsubscribed_after_send' => 0,
+                'unique_triggers' => 0,
+                'send_attempts' => 0,
+                'retries' => 0,
+                'tests' => 0,
             ];
         }
 
@@ -108,6 +113,29 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
 
             if ($row->status === LifecycleEmailLog::STATUS_FAILED) {
                 $stats['email_keys'][$row->email_key]['failed'] = (int) $row->aggregate;
+            }
+        }
+
+        $classificationRows = LifecycleEmailLog::query()
+            ->get(['email_key', 'status', 'retry_of_log_id']);
+
+        foreach ($classificationRows as $log) {
+            $baseEmailKey = $log->baseEmailKey();
+
+            if (! isset($stats['email_keys'][$baseEmailKey])) {
+                continue;
+            }
+
+            if ($log->isTestLog()) {
+                $stats['email_keys'][$baseEmailKey]['tests']++;
+            } elseif ($log->isRetryLog()) {
+                $stats['email_keys'][$baseEmailKey]['retries']++;
+            } else {
+                $stats['email_keys'][$baseEmailKey]['unique_triggers']++;
+            }
+
+            if (in_array($log->status, [LifecycleEmailLog::STATUS_SENT, LifecycleEmailLog::STATUS_FAILED], true)) {
+                $stats['email_keys'][$baseEmailKey]['send_attempts']++;
             }
         }
 
@@ -152,6 +180,7 @@ class LifecycleEmailStatsWidget extends StatsOverviewWidget
 
         if (Schema::hasTable('users') && Schema::hasTable('vehicles') && Schema::hasTable('maintenance_logs')) {
             $stats['users_with_vehicle_no_maintenance'] = User::query()
+                ->coreFunnel()
                 ->whereHas('vehicles')
                 ->whereDoesntHave('vehicles.maintenanceLogs')
                 ->count();
