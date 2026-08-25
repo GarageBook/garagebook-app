@@ -234,7 +234,7 @@ class RepairHeicMediaCommand extends Command
     {
         $extension = Str::lower(pathinfo($path, PATHINFO_EXTENSION));
 
-        if (in_array($extension, ['jpg', 'jpeg'], true)) {
+        if ($extension === 'jpg' && Str::endsWith($path, '.jpg')) {
             return $path;
         }
 

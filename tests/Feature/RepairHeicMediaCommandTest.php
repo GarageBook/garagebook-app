@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\MaintenanceLog;
 use App\Models\TripLog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDocument;
+use App\Support\ImageUploadSupport;
 use App\Support\RasterImageProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -62,6 +64,54 @@ class RepairHeicMediaCommandTest extends TestCase
         Storage::disk('public')->assertExists('vehicle-photos/iphone.jpg');
         Storage::disk('public')->assertMissing('vehicle-photos/iphone.heic');
         $this->assertTrue(app(RasterImageProcessor::class)->isJpegFile(Storage::disk('public')->path('vehicle-photos/iphone.jpg')));
+    }
+
+    public function test_content_detected_heic_with_uppercase_jpg_extension_is_safely_repaired(): void
+    {
+        $this->skipIfHeicRuntimeIsUnavailable();
+
+        Storage::fake('public');
+        $vehicle = $this->vehicle();
+        $sourcePath = 'maintenance-attachments/01M0TKD41MXGNMG5AV93XHSSDQ.JPG';
+        $targetPath = 'maintenance-attachments/01M0TKD41MXGNMG5AV93XHSSDQ.jpg';
+        $log = MaintenanceLog::create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'HEIC met JPG-extensie',
+            'maintenance_date' => now()->toDateString(),
+            'km_reading' => 1000,
+            'attachments' => [$sourcePath],
+        ]);
+        Storage::disk('public')->put($sourcePath, file_get_contents(base_path('tests/Fixtures/images/iphone-sample.heic')));
+
+        $this->assertTrue(ImageUploadSupport::isHeifFile(Storage::disk('public')->path($sourcePath)));
+
+        $this->artisan('garagebook:repair-heic-media')->assertSuccessful();
+
+        $this->assertSame([$targetPath], $log->refresh()->attachments);
+        Storage::disk('public')->assertExists($targetPath);
+        Storage::disk('public')->assertMissing($sourcePath);
+        $this->assertTrue(app(RasterImageProcessor::class)->isJpegFile(Storage::disk('public')->path($targetPath)));
+        $this->assertSame('image/jpeg', Storage::disk('public')->mimeType($targetPath));
+        $this->assertSame([], array_values(array_filter(
+            Storage::disk('public')->allFiles('maintenance-attachments'),
+            fn (string $path): bool => str_contains($path, '.tmp.jpg')
+        )));
+    }
+
+    public function test_uppercase_jpg_heic_failure_preserves_original_file_and_database_state(): void
+    {
+        Storage::fake('public');
+        $vehicle = $this->vehicle(['photo' => 'vehicle-photos/fail.JPG']);
+        $original = $this->contentDetectedHeicBytes();
+        Storage::disk('public')->put($vehicle->photo, $original);
+        $this->bindFailingFakeProcessor();
+
+        $this->artisan('garagebook:repair-heic-media')->assertFailed();
+
+        $this->assertSame('vehicle-photos/fail.JPG', $vehicle->refresh()->photo);
+        Storage::disk('public')->assertExists('vehicle-photos/fail.JPG');
+        Storage::disk('public')->assertMissing('vehicle-photos/fail.jpg');
+        $this->assertSame($original, Storage::disk('public')->get('vehicle-photos/fail.JPG'));
     }
 
     public function test_repair_stops_without_changes_when_heic_runtime_is_missing(): void
