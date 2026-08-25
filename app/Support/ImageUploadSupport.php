@@ -49,4 +49,80 @@ class ImageUploadSupport
     {
         return is_string($mimeType) && in_array(strtolower($mimeType), self::HEIF_MIME_TYPES, true);
     }
+
+    public static function isHeifFile(string $path): bool
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return false;
+        }
+
+        $mimeType = self::detectMimeType($path);
+
+        if (self::isHeifMimeType($mimeType)) {
+            return true;
+        }
+
+        return self::hasHeifBrand($path);
+    }
+
+    public static function detectMimeType(string $path): ?string
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return null;
+        }
+
+        $mimeType = function_exists('mime_content_type') ? @mime_content_type($path) : null;
+
+        if (is_string($mimeType) && $mimeType !== '') {
+            return strtolower($mimeType);
+        }
+
+        if (! class_exists(\finfo::class)) {
+            return null;
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+
+        return is_string($mimeType) && $mimeType !== '' ? strtolower($mimeType) : null;
+    }
+
+    public static function hasHeifBrand(string $path): bool
+    {
+        $handle = @fopen($path, 'rb');
+
+        if (! $handle) {
+            return false;
+        }
+
+        $header = fread($handle, 512);
+        fclose($handle);
+
+        if (! is_string($header) || strlen($header) < 12 || substr($header, 4, 4) !== 'ftyp') {
+            return false;
+        }
+
+        $brands = [substr($header, 8, 4)];
+
+        for ($offset = 16; $offset + 4 <= strlen($header); $offset += 4) {
+            $brand = substr($header, $offset, 4);
+
+            if (! preg_match('/^[A-Za-z0-9 ]{4}$/', $brand)) {
+                continue;
+            }
+
+            $brands[] = $brand;
+        }
+
+        return count(array_intersect($brands, [
+            'heic',
+            'heix',
+            'hevc',
+            'hevx',
+            'heis',
+            'heim',
+            'hevm',
+            'hevs',
+        ])) > 0;
+    }
 }

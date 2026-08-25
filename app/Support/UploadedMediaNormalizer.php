@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class UploadedMediaNormalizer
@@ -61,14 +62,26 @@ class UploadedMediaNormalizer
 
     private function normalizeImagePath(string $path, string $diskName, int $maxDimension, int $quality): string
     {
-        $optimizedPath = $this->processor->optimizeImage($diskName, $path, $maxDimension, $quality);
+        $disk = Storage::disk($diskName);
+        $fullPath = $disk->exists($path) ? $disk->path($path) : null;
+        $isHeifUpload = is_string($fullPath) && ImageUploadSupport::isHeifFile($fullPath);
+
+        try {
+            $optimizedPath = $this->processor->optimizeImage($diskName, $path, $maxDimension, $quality);
+        } catch (RuntimeException $exception) {
+            if ($isHeifUpload || ImageUploadSupport::isHeifPath($path)) {
+                throw $exception;
+            }
+
+            throw $exception;
+        }
 
         if ($optimizedPath !== null) {
             return $optimizedPath;
         }
 
-        if (ImageUploadSupport::isHeifPath($path)) {
-            throw new RuntimeException('HEIF/HEIC-afbeeldingen kunnen op deze server niet worden gelezen. Controleer of Imagick met libheif is geinstalleerd en upload een geldige afbeelding.');
+        if ($isHeifUpload || ImageUploadSupport::isHeifPath($path)) {
+            throw new RuntimeException('HEIC-afbeeldingen konden niet naar JPG worden geconverteerd. Upload een geldige HEIC of kies JPG, PNG of WebP.');
         }
 
         $this->processor->validateDecodable($diskName, $path);

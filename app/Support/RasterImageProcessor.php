@@ -41,7 +41,15 @@ class RasterImageProcessor
             return null;
         }
 
-        $image = $this->loadImage($sourcePath, $path);
+        if (ImageUploadSupport::isHeifFile($sourcePath)) {
+            return $this->convertHeifToJpeg($diskName, $path, $maxDimension, $quality);
+        }
+
+        if (ImageUploadSupport::isHeifPath($path)) {
+            throw new RuntimeException('Het geuploade .heic-bestand is geen geldige Apple HEIC-afbeelding. Upload een geldige HEIC of kies JPG, PNG of WebP.');
+        }
+
+        $image = $this->loadGdImage($sourcePath);
 
         if ($image === null) {
             return null;
@@ -56,27 +64,10 @@ class RasterImageProcessor
         }
 
         [$targetWidth, $targetHeight] = $this->targetSize($width, $height, $maxDimension);
-        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
-
-        if (! $canvas) {
-            imagedestroy($source);
-
-            return null;
-        }
-
-        $background = imagecolorallocate($canvas, 255, 255, 255);
-        imagefill($canvas, 0, 0, $background);
-
-        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
-
-        ob_start();
-        $encoded = imagejpeg($canvas, null, max(1, min($quality, 100)));
-        $contents = ob_get_clean();
-
-        imagedestroy($canvas);
+        $contents = $this->encodeJpegFromGd($source, $width, $height, $targetWidth, $targetHeight, $quality);
         imagedestroy($source);
 
-        if (! $encoded || ! is_string($contents) || $contents === '') {
+        if ($contents === null) {
             return null;
         }
 
@@ -90,9 +81,47 @@ class RasterImageProcessor
             return null;
         }
 
-        $disk->put($targetPath, $contents);
+        $this->writeJpeg($diskName, $targetPath, $contents);
 
         if ($extensionChanged && $disk->exists($path)) {
+            $disk->delete($path);
+        }
+
+        return $targetPath;
+    }
+
+    public function convertHeifToJpeg(string $diskName, string $path, int $maxDimension = 2200, int $quality = 82, bool $deleteOriginal = true): string
+    {
+        $disk = Storage::disk($diskName);
+
+        if (! $disk->exists($path)) {
+            throw new RuntimeException('Het geuploade HEIC-bestand kon niet worden gevonden.');
+        }
+
+        $sourcePath = $disk->path($path);
+
+        if (! ImageUploadSupport::isHeifFile($sourcePath)) {
+            throw new RuntimeException('Het bestand is geen geldige Apple HEIC-afbeelding.');
+        }
+
+        $this->ensureHeifRuntimeIsAvailable();
+
+        $targetPath = $this->availableTargetPath($diskName, $this->targetPath($path), $path);
+        $temporaryPath = $this->temporaryTargetPath($targetPath);
+
+        try {
+            $contents = $this->encodeHeifAsJpeg($sourcePath, $maxDimension, $quality);
+            $this->writeJpeg($diskName, $temporaryPath, $contents);
+            $this->replaceWithValidatedJpeg($diskName, $temporaryPath, $targetPath);
+        } catch (RuntimeException $exception) {
+            if ($disk->exists($temporaryPath)) {
+                $disk->delete($temporaryPath);
+            }
+
+            throw $exception;
+        }
+
+        if ($deleteOriginal && $targetPath !== $path && $disk->exists($path)) {
             $disk->delete($path);
         }
 
@@ -112,25 +141,46 @@ class RasterImageProcessor
         }
 
         $sourcePath = $disk->path($path);
-        $image = $this->loadImage($sourcePath, $path);
+
+        if (ImageUploadSupport::isHeifFile($sourcePath) || ImageUploadSupport::isHeifPath($path)) {
+            throw new RuntimeException('HEIC-afbeeldingen moeten eerst naar JPG worden geconverteerd en mogen niet als originele HEIC worden opgeslagen.');
+        }
+
+        $image = $this->loadGdImage($sourcePath);
 
         if ($image === null) {
-            throw new RuntimeException('De afbeelding kon niet worden gelezen. Upload een geldige JPG, PNG, WebP, GIF, BMP, HEIF of HEIC.');
+            throw new RuntimeException('De afbeelding kon niet worden gelezen. Upload een geldige JPG, PNG, WebP, GIF of BMP.');
         }
 
         imagedestroy($image[0]);
     }
 
-    private function loadImage(string $sourcePath, string $storagePath): ?array
+    public function ensureHeifRuntimeIsAvailable(): void
     {
-        if (ImageUploadSupport::isHeifPath($storagePath)) {
-            $heifImage = $this->loadWithImagick($sourcePath);
-
-            if ($heifImage !== null) {
-                return $heifImage;
-            }
+        if (! extension_loaded('imagick') || ! class_exists(\Imagick::class)) {
+            throw new RuntimeException('HEIC-afbeeldingen kunnen op deze server niet worden verwerkt omdat de PHP Imagick-extensie ontbreekt.');
         }
 
+        $supportedFormats = array_map('strtoupper', \Imagick::queryFormats());
+
+        if (! in_array('HEIC', $supportedFormats, true) && ! in_array('HEIF', $supportedFormats, true)) {
+            throw new RuntimeException('HEIC-afbeeldingen kunnen op deze server niet worden verwerkt omdat ImageMagick/libheif geen HEIC ondersteunt.');
+        }
+    }
+
+    public function isJpegFile(string $path): bool
+    {
+        if (! is_file($path) || ! is_readable($path)) {
+            return false;
+        }
+
+        $imageInfo = @getimagesize($path);
+
+        return is_array($imageInfo) && ($imageInfo['mime'] ?? null) === 'image/jpeg';
+    }
+
+    private function loadGdImage(string $sourcePath): ?array
+    {
         $imageInfo = @getimagesize($sourcePath);
 
         if (! is_array($imageInfo)) {
@@ -142,10 +192,6 @@ class RasterImageProcessor
 
         if (! $mimeType || $width < 1 || $height < 1) {
             return null;
-        }
-
-        if (ImageUploadSupport::isHeifMimeType($mimeType)) {
-            return $this->loadWithImagick($sourcePath);
         }
 
         $source = match ($mimeType) {
@@ -160,18 +206,8 @@ class RasterImageProcessor
         return $source ? [$source, (int) $width, (int) $height] : null;
     }
 
-    private function loadWithImagick(string $sourcePath): ?array
+    private function encodeHeifAsJpeg(string $sourcePath, int $maxDimension, int $quality): string
     {
-        if (! extension_loaded('imagick') || ! class_exists(\Imagick::class)) {
-            return null;
-        }
-
-        $supportedFormats = array_map('strtoupper', \Imagick::queryFormats());
-
-        if (! in_array('HEIC', $supportedFormats, true) && ! in_array('HEIF', $supportedFormats, true)) {
-            return null;
-        }
-
         try {
             $imagick = new \Imagick($sourcePath);
             $imagick = $imagick->coalesceImages();
@@ -179,20 +215,91 @@ class RasterImageProcessor
             $imagick->autoOrient();
             $imagick->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
             $imagick->setImageBackgroundColor('white');
-            $imagick->setImageFormat('png');
+            $imagick->mergeImageLayers(\Imagick::LAYERMETHOD_FLATTEN);
+
+            $width = $imagick->getImageWidth();
+            $height = $imagick->getImageHeight();
+
+            if ($width < 1 || $height < 1 || ! $this->canLoadIntoMemory($width, $height)) {
+                throw new RuntimeException('De HEIC-afbeelding is te groot om veilig te verwerken.');
+            }
+
+            [$targetWidth, $targetHeight] = $this->targetSize($width, $height, $maxDimension);
+
+            if ($targetWidth !== $width || $targetHeight !== $height) {
+                $imagick->resizeImage($targetWidth, $targetHeight, \Imagick::FILTER_LANCZOS, 1, true);
+            }
+
+            $imagick->setImageFormat('jpeg');
+            $imagick->setImageCompression(\Imagick::COMPRESSION_JPEG);
+            $imagick->setImageCompressionQuality(max(1, min($quality, 100)));
+            $imagick->stripImage();
+
             $blob = $imagick->getImageBlob();
             $imagick->clear();
             $imagick->destroy();
+        } catch (RuntimeException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new RuntimeException('De HEIC-afbeelding kon niet naar JPG worden geconverteerd.', previous: $exception);
+        }
 
-            $source = @imagecreatefromstring($blob);
+        if (! is_string($blob) || $blob === '') {
+            throw new RuntimeException('De HEIC-afbeelding leverde geen geldige JPG-output op.');
+        }
 
-            if (! $source) {
-                return null;
-            }
+        return $blob;
+    }
 
-            return [$source, imagesx($source), imagesy($source)];
-        } catch (\Throwable) {
+    private function encodeJpegFromGd($source, int $width, int $height, int $targetWidth, int $targetHeight, int $quality): ?string
+    {
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+
+        if (! $canvas) {
             return null;
+        }
+
+        $background = imagecolorallocate($canvas, 255, 255, 255);
+        imagefill($canvas, 0, 0, $background);
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+
+        ob_start();
+        $encoded = imagejpeg($canvas, null, max(1, min($quality, 100)));
+        $contents = ob_get_clean();
+
+        imagedestroy($canvas);
+
+        return $encoded && is_string($contents) && $contents !== '' ? $contents : null;
+    }
+
+    private function writeJpeg(string $diskName, string $path, string $contents): void
+    {
+        $disk = Storage::disk($diskName);
+        $disk->put($path, $contents);
+
+        if (! $this->isJpegFile($disk->path($path))) {
+            $disk->delete($path);
+
+            throw new RuntimeException('De geconverteerde afbeelding is geen geldige JPEG.');
+        }
+    }
+
+    private function replaceWithValidatedJpeg(string $diskName, string $temporaryPath, string $targetPath): void
+    {
+        $disk = Storage::disk($diskName);
+
+        if (! $this->isJpegFile($disk->path($temporaryPath))) {
+            throw new RuntimeException('De tijdelijke geconverteerde afbeelding is geen geldige JPEG.');
+        }
+
+        $contents = $disk->get($temporaryPath);
+        $disk->put($targetPath, $contents);
+        $disk->delete($temporaryPath);
+
+        if (! $this->isJpegFile($disk->path($targetPath))) {
+            $disk->delete($targetPath);
+
+            throw new RuntimeException('De definitieve geconverteerde afbeelding is geen geldige JPEG.');
         }
     }
 
@@ -223,5 +330,37 @@ class RasterImageProcessor
         }
 
         return Str::beforeLast($path, '.').'.jpg';
+    }
+
+    private function availableTargetPath(string $diskName, string $targetPath, string $sourcePath): string
+    {
+        $disk = Storage::disk($diskName);
+
+        if ($targetPath === $sourcePath || ! $disk->exists($targetPath)) {
+            return $targetPath;
+        }
+
+        $directory = dirname($targetPath);
+        $filename = pathinfo($targetPath, PATHINFO_FILENAME);
+        $extension = pathinfo($targetPath, PATHINFO_EXTENSION) ?: 'jpg';
+
+        for ($attempt = 1; $attempt <= 100; $attempt++) {
+            $candidate = $filename.'-'.$attempt.'.'.$extension;
+            $candidatePath = $directory === '.' ? $candidate : $directory.'/'.$candidate;
+
+            if (! $disk->exists($candidatePath)) {
+                return $candidatePath;
+            }
+        }
+
+        return ($directory === '.' ? $filename : $directory.'/'.$filename).'-'.Str::uuid().'.'.$extension;
+    }
+
+    private function temporaryTargetPath(string $targetPath): string
+    {
+        $directory = dirname($targetPath);
+        $filename = pathinfo($targetPath, PATHINFO_FILENAME).'.'.Str::uuid().'.tmp.jpg';
+
+        return $directory === '.' ? $filename : $directory.'/'.$filename;
     }
 }

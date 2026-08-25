@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Support\ImageUploadSupport;
+use App\Support\RasterImageProcessor;
 use App\Support\UploadedMediaNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -23,65 +24,63 @@ class UploadedMediaNormalizerTest extends TestCase
         $this->assertContains('image/x-heic', ImageUploadSupport::acceptedImageMimeTypes());
     }
 
-    public function test_successful_heif_upload_is_converted_to_jpg(): void
+    public function test_fixture_is_a_real_content_detected_heic_file(): void
     {
-        Storage::fake('public');
-        $this->putPngImage('vehicle-photos/apple-export.heif');
+        $fixture = $this->heicFixturePath();
 
-        $paths = app(UploadedMediaNormalizer::class)->normalizeImageList([
-            'vehicle-photos/apple-export.heif',
-        ], 'public');
-
-        $this->assertSame(['vehicle-photos/apple-export.jpg'], $paths);
-        Storage::disk('public')->assertExists('vehicle-photos/apple-export.jpg');
-        Storage::disk('public')->assertMissing('vehicle-photos/apple-export.heif');
+        $this->assertFileExists($fixture);
+        $this->assertTrue(ImageUploadSupport::isHeifFile($fixture));
     }
 
-    public function test_successful_heic_upload_is_converted_to_jpg(): void
+    public function test_real_heic_upload_is_converted_to_real_jpg_when_runtime_supports_heic(): void
     {
+        $this->skipIfHeicRuntimeIsUnavailable();
+
         Storage::fake('public');
-        $this->putPngImage('vehicle-photos/iphone-photo.heic');
+        Storage::disk('public')->put('vehicle-photos/iphone-photo.HEIC', file_get_contents($this->heicFixturePath()));
 
         $paths = app(UploadedMediaNormalizer::class)->normalizeImageList([
-            'vehicle-photos/iphone-photo.heic',
+            'vehicle-photos/iphone-photo.HEIC',
         ], 'public');
 
-        $this->assertSame(['vehicle-photos/iphone-photo.jpg'], $paths);
+        $this->assertCount(1, $paths);
+        $this->assertSame('vehicle-photos/iphone-photo.jpg', $paths[0]);
         Storage::disk('public')->assertExists('vehicle-photos/iphone-photo.jpg');
-        Storage::disk('public')->assertMissing('vehicle-photos/iphone-photo.heic');
+        Storage::disk('public')->assertMissing('vehicle-photos/iphone-photo.HEIC');
+        $this->assertTrue(app(RasterImageProcessor::class)->isJpegFile(Storage::disk('public')->path('vehicle-photos/iphone-photo.jpg')));
     }
 
-    public function test_uppercase_heif_and_heic_extensions_are_converted_to_jpg(): void
+    public function test_png_content_with_heic_extension_is_rejected_and_not_converted(): void
     {
         Storage::fake('public');
-        $this->putPngImage('vehicle-photos/UPPER.HEIF');
-        $this->putPngImage('vehicle-photos/OTHER.HEIC');
+        $this->putPngImage('vehicle-photos/not-real.HEIC');
 
-        $paths = app(UploadedMediaNormalizer::class)->normalizeImageList([
-            'vehicle-photos/UPPER.HEIF',
-            'vehicle-photos/OTHER.HEIC',
-        ], 'public');
+        try {
+            app(UploadedMediaNormalizer::class)->normalizeImageList([
+                'vehicle-photos/not-real.HEIC',
+            ], 'public');
+            $this->fail('Fake HEIC upload was not rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('geen geldige Apple HEIC', $exception->getMessage());
+        }
 
-        $this->assertSame([
-            'vehicle-photos/UPPER.jpg',
-            'vehicle-photos/OTHER.jpg',
-        ], $paths);
-        Storage::disk('public')->assertExists('vehicle-photos/UPPER.jpg');
-        Storage::disk('public')->assertExists('vehicle-photos/OTHER.jpg');
-        Storage::disk('public')->assertMissing('vehicle-photos/UPPER.HEIF');
-        Storage::disk('public')->assertMissing('vehicle-photos/OTHER.HEIC');
+        Storage::disk('public')->assertExists('vehicle-photos/not-real.HEIC');
+        Storage::disk('public')->assertMissing('vehicle-photos/not-real.jpg');
     }
 
-    public function test_file_with_only_heic_extension_but_no_valid_image_is_rejected(): void
+    public function test_corrupt_content_detected_heic_is_rejected_when_runtime_supports_heic(): void
     {
+        $this->skipIfHeicRuntimeIsUnavailable();
+
         Storage::fake('public');
-        Storage::disk('public')->put('vehicle-photos/not-an-image.HEIC', 'not an image');
+        Storage::disk('public')->put('vehicle-photos/corrupt.HEIC', $this->corruptHeicBytes());
+
+        $this->assertTrue(ImageUploadSupport::isHeifFile(Storage::disk('public')->path('vehicle-photos/corrupt.HEIC')));
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('HEIF/HEIC-afbeeldingen kunnen op deze server niet worden gelezen.');
 
         app(UploadedMediaNormalizer::class)->normalizeImageList([
-            'vehicle-photos/not-an-image.HEIC',
+            'vehicle-photos/corrupt.HEIC',
         ], 'public');
     }
 
@@ -104,6 +103,26 @@ class UploadedMediaNormalizerTest extends TestCase
             'vehicle-photos/photo.jpg',
         ], $paths);
         Storage::disk('public')->assertExists('vehicle-photos/photo.jpg');
+        $this->assertTrue(app(RasterImageProcessor::class)->isJpegFile(Storage::disk('public')->path('vehicle-photos/photo.jpg')));
+    }
+
+    private function skipIfHeicRuntimeIsUnavailable(): void
+    {
+        try {
+            app(RasterImageProcessor::class)->ensureHeifRuntimeIsAvailable();
+        } catch (RuntimeException $exception) {
+            $this->markTestSkipped($exception->getMessage());
+        }
+    }
+
+    private function heicFixturePath(): string
+    {
+        return base_path('tests/Fixtures/images/iphone-sample.heic');
+    }
+
+    private function corruptHeicBytes(): string
+    {
+        return pack('N', 28).'ftypheic'.pack('N', 0).'heicmif1'.'not-enough-image-data';
     }
 
     private function putPngImage(string $path): void

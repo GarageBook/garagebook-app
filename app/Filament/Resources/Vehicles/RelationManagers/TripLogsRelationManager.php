@@ -6,6 +6,7 @@ use App\Filament\Resources\TripLogs\TripLogResource;
 use App\Models\TripLog;
 use App\Services\Trips\TripLogProcessingService;
 use App\Support\ImageUploadSupport;
+use App\Support\UploadedMediaNormalizer;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -18,6 +19,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class TripLogsRelationManager extends RelationManager
 {
@@ -154,6 +157,14 @@ class TripLogsRelationManager extends RelationManager
                         $data['status'] = TripLog::STATUS_PENDING;
                         $data['source_format'] = $data['source_format'] ?? 'gpx';
 
+                        try {
+                            $data['photos'] = app(UploadedMediaNormalizer::class)->normalizeImageList($data['photos'] ?? [], 'local');
+                        } catch (RuntimeException $exception) {
+                            throw ValidationException::withMessages([
+                                'data.photos' => $exception->getMessage(),
+                            ]);
+                        }
+
                         return $data;
                     })
                     ->after(function (TripLog $record, TripLogProcessingService $processingService): void {
@@ -163,7 +174,18 @@ class TripLogsRelationManager extends RelationManager
             ->recordActions([
                 ViewAction::make()
                     ->url(fn (TripLog $record): string => TripLogResource::getUrl('view', ['record' => $record])),
-                EditAction::make(),
+                EditAction::make()
+                    ->mutateDataUsing(function (array $data): array {
+                        try {
+                            $data['photos'] = app(UploadedMediaNormalizer::class)->normalizeImageList($data['photos'] ?? [], 'local');
+                        } catch (RuntimeException $exception) {
+                            throw ValidationException::withMessages([
+                                'data.photos' => $exception->getMessage(),
+                            ]);
+                        }
+
+                        return $data;
+                    }),
                 DeleteAction::make(),
                 Action::make('reprocess')
                     ->label(__('trips.actions.reprocess'))

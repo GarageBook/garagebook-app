@@ -21,6 +21,15 @@ class VehicleDocumentMetadata
             ? $data['original_filename']
             : Str::afterLast($path, '/');
 
+        if ($disk->exists($path)) {
+            $fullPath = $disk->path($path);
+
+            if (ImageUploadSupport::isHeifFile($fullPath) || ImageUploadSupport::isHeifPath($path)) {
+                $path = app(UploadedMediaNormalizer::class)->normalizeNullableImage($path, 'local');
+                $data['file_path'] = $path;
+            }
+        }
+
         $data['mime_type'] = $disk->mimeType($path) ?: null;
         $data['file_size'] = $disk->size($path) ?: null;
 
