@@ -5,6 +5,7 @@ namespace App\Services\Growth;
 use App\Models\GrowthCampaign;
 use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
+use App\Models\OutreachEmailLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -91,8 +92,22 @@ class GrowthCampaignEligibilityService
 
     public function alreadyReceivedCampaign(GrowthProspect $prospect, string $campaignSlug): bool
     {
-        return $this->sentEventsForSimilarProspects($prospect)
+        if ($this->sentEventsForSimilarProspects($prospect)
             ->where('campaign_slug', $campaignSlug)
+            ->exists()) {
+            return true;
+        }
+
+        $normalizedEmail = $prospect->normalized_email ?: $this->normalizer->normalizeEmail($prospect->email);
+
+        if ($normalizedEmail === null) {
+            return false;
+        }
+
+        return OutreachEmailLog::query()
+            ->where('status', OutreachEmailLog::STATUS_SENT)
+            ->where('to_email', $normalizedEmail)
+            ->whereHas('campaign', fn (Builder $query): Builder => $query->where('slug', 'growth-'.$campaignSlug))
             ->exists();
     }
 
@@ -104,6 +119,7 @@ class GrowthCampaignEligibilityService
             ->where('occurred_at', '>=', $since)
             ->exists();
     }
+
     private function hasSimilarDuplicate(GrowthProspect $prospect): bool
     {
         return $this->similarProspectsQuery($prospect)

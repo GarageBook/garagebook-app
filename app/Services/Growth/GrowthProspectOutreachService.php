@@ -168,19 +168,18 @@ class GrowthProspectOutreachService
         $normalizedEmail = $normalizer->normalizeEmail($prospect->email);
         $normalizedDomain = $prospect->normalized_domain ?: $normalizer->normalizeDomain($prospect->website);
         $emailStatus = $prospect->email_status;
+        $verificationRequired = $prospect->verification_required;
 
-        if (blank($emailStatus)) {
-            if ($normalizedEmail === null) {
-                $emailStatus = GrowthProspect::EMAIL_STATUS_MISSING;
-            } elseif (filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL) === false) {
-                $emailStatus = GrowthProspect::EMAIL_STATUS_INVALID;
-            } else {
-                $emailStatus = GrowthProspect::EMAIL_STATUS_FOUND;
-            }
-        }
-
-        if ($normalizedEmail !== null && filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL) === false) {
+        if ($normalizedEmail === null) {
+            $emailStatus = GrowthProspect::EMAIL_STATUS_MISSING;
+        } elseif (filter_var($normalizedEmail, FILTER_VALIDATE_EMAIL) === false) {
             $emailStatus = GrowthProspect::EMAIL_STATUS_INVALID;
+        } elseif ($emailStatus !== GrowthProspect::EMAIL_STATUS_VERIFIED) {
+            if ($emailStatus === GrowthProspect::EMAIL_STATUS_MISSING) {
+                $verificationRequired = false;
+            }
+
+            $emailStatus = GrowthProspect::EMAIL_STATUS_FOUND;
         }
 
         $prospect->forceFill([
@@ -188,6 +187,7 @@ class GrowthProspectOutreachService
             'normalized_domain' => $normalizedDomain,
             'organization_key' => $prospect->organization_key ?: $normalizer->organizationKey($prospect->name, $normalizedDomain),
             'email_status' => $emailStatus,
+            'verification_required' => $verificationRequired,
             'phone' => $normalizer->normalizePhone($prospect->phone),
         ])->save();
     }

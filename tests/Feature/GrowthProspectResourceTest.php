@@ -12,6 +12,7 @@ use App\Models\GrowthCampaign;
 use App\Models\GrowthOutreachEvent;
 use App\Models\GrowthProspect;
 use App\Models\OutreachCampaign;
+use App\Models\OutreachEmailLog;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Services\Growth\GrowthProspectCsvImportService;
@@ -425,8 +426,19 @@ class GrowthProspectResourceTest extends TestCase
             $prospect->refresh();
 
             $this->assertSame('contacted', $prospect->status);
+            $this->assertSame(GrowthProspect::LIFECYCLE_CONTACTED, $prospect->lifecycle_status);
             $this->assertSame('2026-07-01 09:30:00', $prospect->last_contacted_at->format('Y-m-d H:i:s'));
             $this->assertSame('2026-07-08 09:30:00', $prospect->next_follow_up_at->format('Y-m-d H:i:s'));
+            $this->assertSame($campaign->id, $prospect->last_campaign_id);
+            $this->assertSame('club2026', $prospect->last_campaign_slug);
+            $this->assertNull($prospect->skip_reason);
+            $this->assertDatabaseHas('growth_outreach_events', [
+                'growth_prospect_id' => $prospect->id,
+                'campaign_id' => $campaign->id,
+                'campaign_slug' => 'club2026',
+                'event_type' => GrowthOutreachEvent::TYPE_SENT,
+                'reason' => null,
+            ]);
         } finally {
             Carbon::setTestNow();
         }
@@ -456,8 +468,120 @@ class GrowthProspectResourceTest extends TestCase
         Mail::assertNothingSent();
 
         $this->assertSame('new', $prospect->fresh()->status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_READY, $prospect->fresh()->lifecycle_status);
+        $this->assertSame('missing_email', $prospect->fresh()->skip_reason);
         $this->assertNull($prospect->fresh()->last_contacted_at);
         $this->assertNull($prospect->fresh()->next_follow_up_at);
+        $this->assertDatabaseHas('growth_outreach_events', [
+            'growth_prospect_id' => $prospect->id,
+            'campaign_slug' => 'club2026',
+            'event_type' => GrowthOutreachEvent::TYPE_SKIPPED,
+            'reason' => 'missing_email',
+        ]);
+    }
+
+    public function test_club2026_outreach_uses_new_valid_email_and_clears_stale_missing_email_state(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create(['slug' => 'club2026']);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'new-address@motorclub.example',
+            'normalized_email' => null,
+            'email_status' => GrowthProspect::EMAIL_STATUS_MISSING,
+            'verification_required' => true,
+            'skip_reason' => 'missing_email',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'updated-email-club',
+            'status' => GrowthProspect::LIFECYCLE_NEW,
+            'lifecycle_status' => GrowthProspect::LIFECYCLE_NEW,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors();
+
+        Mail::assertSent(GrowthProspectOutreachMail::class, fn (GrowthProspectOutreachMail $mail): bool => $mail->hasTo('new-address@motorclub.example'));
+
+        $prospect->refresh();
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_FOUND, $prospect->email_status);
+        $this->assertFalse($prospect->verification_required);
+        $this->assertNull($prospect->skip_reason);
+        $this->assertSame(GrowthProspect::LIFECYCLE_CONTACTED, $prospect->status);
+        $this->assertSame(GrowthProspect::LIFECYCLE_CONTACTED, $prospect->lifecycle_status);
+    }
+
+    public function test_club2026_outreach_does_not_send_twice_after_sent_event(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create(['slug' => 'club2026']);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'once@motorclub.example',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'once-only-club',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors();
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect->fresh()])
+            ->assertHasNoTableBulkActionErrors();
+
+        Mail::assertSent(GrowthProspectOutreachMail::class, 1);
+        $this->assertDatabaseCount('growth_outreach_events', 2);
+        $this->assertDatabaseHas('growth_outreach_events', [
+            'growth_prospect_id' => $prospect->id,
+            'campaign_slug' => 'club2026',
+            'event_type' => GrowthOutreachEvent::TYPE_SKIPPED,
+            'reason' => 'already_received_campaign',
+        ]);
+    }
+
+    public function test_club2026_outreach_preserves_legacy_sent_log_deduplication(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $campaign = GrowthCampaign::factory()->create(['slug' => 'club2026']);
+        $prospect = GrowthProspect::factory()->create([
+            'email' => 'legacy@motorclub.example',
+            'campaign_id' => $campaign->id,
+            'partner_slug' => 'legacy-club',
+        ]);
+        $legacyCampaign = OutreachCampaign::factory()->create(['slug' => 'growth-club2026']);
+        $legacyProspect = OutreachProspect::factory()->create([
+            'outreach_campaign_id' => $legacyCampaign->id,
+            'email' => 'legacy@motorclub.example',
+        ]);
+        OutreachEmailLog::query()->create([
+            'outreach_campaign_id' => $legacyCampaign->id,
+            'outreach_prospect_id' => $legacyProspect->id,
+            'to_email' => 'legacy@motorclub.example',
+            'subject' => 'Club2026',
+            'body_snapshot' => 'Legacy send',
+            'status' => OutreachEmailLog::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListGrowthProspects::class)
+            ->callTableBulkAction('sendClub2026Outreach', [$prospect])
+            ->assertHasNoTableBulkActionErrors();
+
+        Mail::assertNothingSent();
+        $this->assertDatabaseHas('growth_outreach_events', [
+            'growth_prospect_id' => $prospect->id,
+            'campaign_slug' => 'club2026',
+            'event_type' => GrowthOutreachEvent::TYPE_SKIPPED,
+            'reason' => 'already_received_campaign',
+        ]);
     }
 
     public function test_club2026_outreach_skips_archived_prospect(): void
