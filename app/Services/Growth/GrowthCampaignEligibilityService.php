@@ -55,7 +55,8 @@ class GrowthCampaignEligibilityService
             return self::REASON_DUPLICATE;
         }
 
-        if ($this->isPersonalEmail($prospect->email, $prospect->normalized_email)) {
+        if (! $prospect->email_verified_as_organization
+            && $this->isPersonalEmail($prospect->email, $prospect->normalized_email)) {
             return self::REASON_PERSONAL_EMAIL;
         }
 

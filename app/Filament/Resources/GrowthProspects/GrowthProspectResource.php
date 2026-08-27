@@ -133,6 +133,9 @@ class GrowthProspectResource extends Resource
                         ->default(GrowthProspect::EMAIL_STATUS_MISSING),
                     Forms\Components\Toggle::make('verification_required')
                         ->label('Verificatie nodig'),
+                    Forms\Components\Toggle::make('email_verified_as_organization')
+                        ->label('Geverifieerd als officieel organisatie-e-mailadres')
+                        ->helperText('Gebruik alleen wanneer publiek is bevestigd dat dit Gmail/Outlook/etc.-adres officieel door de organisatie wordt gebruikt.'),
                     Forms\Components\TextInput::make('phone')
                         ->label('Telefoon')
                         ->maxLength(255),

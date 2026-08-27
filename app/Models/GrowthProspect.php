@@ -102,6 +102,7 @@ class GrowthProspect extends Model
         'normalized_email',
         'email_status',
         'verification_required',
+        'email_verified_as_organization',
         'phone',
         'city',
         'priority',
@@ -137,6 +138,7 @@ class GrowthProspect extends Model
             'quality_flags' => 'array',
             'suggested_email_confidence' => 'integer',
             'verification_required' => 'boolean',
+            'email_verified_as_organization' => 'boolean',
             'last_contacted_at' => 'datetime',
             'next_follow_up_at' => 'datetime',
         ];

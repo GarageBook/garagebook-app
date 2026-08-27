@@ -42,6 +42,7 @@ class GrowthProspectFactory extends Factory
             'normalized_email' => $normalizer->normalizeEmail($email),
             'email_status' => GrowthProspect::EMAIL_STATUS_FOUND,
             'verification_required' => false,
+            'email_verified_as_organization' => false,
             'phone' => null,
             'city' => fake()->city(),
             'priority' => fake()->randomElement(['low', 'medium', 'high']),
