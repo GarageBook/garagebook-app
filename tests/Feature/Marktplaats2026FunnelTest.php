@@ -62,12 +62,129 @@ class Marktplaats2026FunnelTest extends TestCase
 
         $this->get('/admin/tijdlijn?vehicle_id='.$demoVehicle->id)
             ->assertOk()
+            ->assertSeeText('Voorbeeld onderhoudshistorie')
+            ->assertSeeText('Voorbeeld GarageBook')
             ->assertSeeText('Zo kan de onderhoudshistorie van jouw motor eruitzien')
             ->assertSeeText("Verzamel onderhoud, kilometerstanden, facturen en foto's op één plek en deel de historie overzichtelijk met een potentiële koper.")
             ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
             ->assertSee('prospect_id=MP001', false)
             ->assertSee('campaign_slug=marktplaats2026', false)
             ->assertSee('source=marktplaats', false);
+    }
+
+    public function test_marktplaats2026_never_shows_b2b_demo_identity_from_canonical_vehicle_or_prospect(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $demoVehicle = $this->createExistingPhotographedDemoVehicle('Demo motor voor Tayomoto Motor & Onderhoud');
+        $queryString = $this->marktplaatsQueryString('MP001');
+
+        $this->get('/start?'.$queryString)->assertRedirect();
+        $prospect = $this->marktplaatsProspect('MP001');
+        $this->get('/demo/garage/'.$prospect->token.'?'.$queryString)
+            ->assertRedirect('/admin/tijdlijn?vehicle_id='.$demoVehicle->id);
+
+        $this->assertSame('MP001', $prospect->company_name);
+        $this->assertSame('marktplaats:MP001', $prospect->website);
+
+        $this->get('/admin/tijdlijn?vehicle_id='.$demoVehicle->id)
+            ->assertOk()
+            ->assertSeeText('Voorbeeld onderhoudshistorie')
+            ->assertSeeText('Voorbeeld GarageBook')
+            ->assertSeeText('Zo kan de onderhoudshistorie van jouw motor eruitzien')
+            ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Tayomoto')
+            ->assertDontSeeText('Motor & Onderhoud')
+            ->assertDontSeeText('voor MP001')
+            ->assertDontSeeText('Club2026')
+            ->assertDontSeeText('Workshop2026');
+
+        $this->get('/admin/vehicles/create')
+            ->assertOk()
+            ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertSee('prospect_id=MP001', false)
+            ->assertSee('campaign_slug=marktplaats2026', false)
+            ->assertSee('source=marktplaats', false)
+            ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Tayomoto')
+            ->assertDontSeeText('Motor & Onderhoud')
+            ->assertDontSeeText('Club2026')
+            ->assertDontSeeText('Workshop2026');
+
+        $registerUrl = app(OutreachDemoService::class)
+            ->marktplaats2026DemoContextForAuthenticatedUser()['register_url'];
+
+        $this->get($registerUrl)
+            ->assertOk()
+            ->assertSessionHas(AnalyticsAttribution::SESSION_KEY, [
+                'source' => 'marktplaats',
+                'campaign_slug' => 'marktplaats2026',
+                'prospect_id' => 'MP001',
+                'utm_source' => 'marktplaats',
+                'utm_medium' => 'outreach',
+                'utm_campaign' => 'marktplaats2026',
+                'landing_page' => '/start',
+                'demo_user_id' => (string) $demoVehicle->user_id,
+                'outreach_prospect_id' => (string) $prospect->id,
+                'intended' => 'vehicle_create',
+            ])
+            ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Tayomoto')
+            ->assertDontSeeText('Motor & Onderhoud')
+            ->assertDontSeeText('Club2026')
+            ->assertDontSeeText('Workshop2026');
+    }
+
+    public function test_all_marktplaats2026_links_resolve_to_consumer_demo_context_without_b2b_identity(): void
+    {
+        Storage::fake('public');
+        Storage::fake('local');
+
+        $demoVehicle = $this->createExistingPhotographedDemoVehicle('Demo motor voor Tayomoto Motor & Onderhoud');
+
+        foreach (range(1, 24) as $number) {
+            $prospectId = sprintf('MP%03d', $number);
+            $queryString = $this->marktplaatsQueryString($prospectId);
+
+            auth()->logout();
+            $this->flushSession();
+
+            $this->get('/start?'.$queryString)->assertRedirect();
+            $prospect = $this->marktplaatsProspect($prospectId);
+
+            $this->assertSame($prospectId, $prospect->company_name);
+            $this->assertSame('marktplaats:'.$prospectId, $prospect->website);
+            $this->assertSame('marktplaats', $prospect->source);
+
+            $this->get('/demo/garage/'.$prospect->token.'?'.$queryString)
+                ->assertRedirect('/admin/tijdlijn?vehicle_id='.$demoVehicle->id);
+
+            $this->assertSame([
+                'source' => 'marktplaats',
+                'campaign_slug' => 'marktplaats2026',
+                'prospect_id' => $prospectId,
+                'utm_source' => 'marktplaats',
+                'utm_medium' => 'outreach',
+                'utm_campaign' => 'marktplaats2026',
+                'landing_page' => '/start',
+            ], session(AnalyticsAttribution::SESSION_KEY));
+
+            $this->get('/admin/tijdlijn?vehicle_id='.$demoVehicle->id)
+                ->assertOk()
+                ->assertSeeText('Voorbeeld onderhoudshistorie')
+                ->assertSeeText('Voorbeeld GarageBook')
+                ->assertSee('prospect_id='.$prospectId, false)
+                ->assertSee('campaign_slug=marktplaats2026', false)
+                ->assertSee('source=marktplaats', false)
+                ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+                ->assertDontSeeText('Tayomoto')
+                ->assertDontSeeText('Motor & Onderhoud')
+                ->assertDontSeeText('voor '.$prospectId)
+                ->assertDontSeeText('Club2026')
+                ->assertDontSeeText('Workshop2026');
+        }
     }
 
     public function test_mp002_remains_separate_from_mp001(): void
@@ -360,7 +477,7 @@ class Marktplaats2026FunnelTest extends TestCase
             ->count());
     }
 
-    private function createExistingPhotographedDemoVehicle(): Vehicle
+    private function createExistingPhotographedDemoVehicle(string $nickname = 'Existing photographed Yamaha MT-07 demo'): Vehicle
     {
         Storage::disk('public')->put('vehicle-photos/existing-yamaha-mt-07-primary.jpg', 'primary-photo');
         Storage::disk('public')->put('vehicle-photos/existing-yamaha-mt-07-detail.jpg', 'detail-photo');
@@ -375,7 +492,7 @@ class Marktplaats2026FunnelTest extends TestCase
             'brand' => 'Yamaha',
             'model' => 'MT-07',
             'display_variant' => 'Garage demo',
-            'nickname' => 'Existing photographed Yamaha MT-07 demo',
+            'nickname' => $nickname,
             'current_km' => 18750,
             'distance_unit' => 'km',
             'year' => 2023,

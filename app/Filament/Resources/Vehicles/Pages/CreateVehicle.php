@@ -51,6 +51,7 @@ class CreateVehicle extends CreateRecord
             View::make('filament.resources.vehicles.pages.outreach-demo-create-blocked')
                 ->viewData([
                     'registerUrl' => $this->getOutreachDemoRegisterUrl(),
+                    'registerCtaLabel' => $this->getOutreachDemoRegisterCtaLabel(),
                     'backUrl' => VehicleResource::getUrl('index'),
                     'analyticsAttributes' => Analytics::clickTrackingAttributes(
                         'outreach_demo_register_cta_clicked',
@@ -89,6 +90,13 @@ class CreateVehicle extends CreateRecord
             'source' => 'outreach_demo',
             ...$this->getOutreachDemoAnalyticsParams(),
         ]));
+    }
+
+    public function getOutreachDemoRegisterCtaLabel(): string
+    {
+        return is_array(app(OutreachDemoService::class)->marktplaats2026DemoContextForAuthenticatedUser())
+            ? 'Maak gratis een GarageBook voor mijn motor'
+            : 'Start gratis';
     }
 
     public function getTitle(): string

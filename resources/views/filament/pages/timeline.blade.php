@@ -949,7 +949,7 @@ U kunt vrij rondkijken. Er is niets te installeren en registreren is niet nodig.
                 <div class="gb-timeline-hero__top">
                     <div>
                         <div class="gb-timeline-hero__eyebrow">{{ __('dashboard.timeline.hero_eyebrow') }}</div>
-                        <div class="gb-timeline-hero__title">{{ $activeVehicle?->nickname ?: ($activeVehicle ? $activeVehicle->brand . ' ' . $activeVehicle->model : __('dashboard.timeline.no_vehicle')) }}</div>
+                        <div class="gb-timeline-hero__title">{{ $marktplaatsDemoContext ? 'Voorbeeld onderhoudshistorie' : ($activeVehicle?->nickname ?: ($activeVehicle ? $activeVehicle->brand . ' ' . $activeVehicle->model : __('dashboard.timeline.no_vehicle'))) }}</div>
                         <div class="gb-timeline-hero__subtitle">
                             {{ __('dashboard.timeline.hero_subtitle') }}
                         </div>
@@ -960,7 +960,7 @@ U kunt vrij rondkijken. Er is niets te installeren en registreren is niet nodig.
                         <select id="timelineVehicle" class="gb-timeline-selector__field" wire:model.live="activeVehicleId">
                             @forelse($vehicles as $vehicle)
                                 <option value="{{ $vehicle->id }}">
-                                    {{ $vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model) }}
+                                    {{ $marktplaatsDemoContext ? 'Voorbeeld GarageBook' : ($vehicle->nickname ?: ($vehicle->brand . ' ' . $vehicle->model)) }}
                                 </option>
                             @empty
                                 <option value="">{{ __('dashboard.timeline.no_vehicles_available') }}</option>
