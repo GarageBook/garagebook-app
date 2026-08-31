@@ -1125,6 +1125,17 @@ U kunt vrij rondkijken. Er is niets te installeren en registreren is niet nodig.
                     {{ __('dashboard.timeline.empty_without_vehicle') }}
                 </section>
             @endif
+
+            @if($marktplaatsDemoContext)
+                <div class="gb-marketplace-demo">
+                    <div class="gb-marketplace-demo__copy">
+                        <div class="gb-marketplace-demo__title">Maak je eigen onderhoudshistorie voor de verkoop</div>
+                        <div class="gb-marketplace-demo__body">Zet onderhoud, facturen, foto's en kilometerstanden klaar in je eigen GarageBook en deel ze overzichtelijk met een potentiële koper.</div>
+                    </div>
+
+                    <a class="gb-marketplace-demo__cta" href="{{ $marktplaatsDemoContext['register_url'] }}">Maak gratis een GarageBook voor mijn motor</a>
+                </div>
+            @endif
         </div>
 
         <div

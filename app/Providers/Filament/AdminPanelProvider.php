@@ -13,6 +13,7 @@ use App\Filament\Pages\SearchConsoleInsights;
 use App\Filament\Pages\Timeline;
 use App\Filament\Resources\BlogResource; // 👈 TOEGEVOEGD
 use App\Http\Middleware\CaptureAnalyticsAttribution;
+use App\Http\Middleware\RedirectMarktplaatsDemoAccountRoutes;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -86,6 +87,7 @@ class AdminPanelProvider extends PanelProvider
                 ShareErrorsFromSession::class,
                 SubstituteBindings::class,
                 CaptureAnalyticsAttribution::class,
+                RedirectMarktplaatsDemoAccountRoutes::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])

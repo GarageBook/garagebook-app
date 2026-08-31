@@ -67,6 +67,7 @@ class Marktplaats2026FunnelTest extends TestCase
             ->assertSeeText('Zo kan de onderhoudshistorie van jouw motor eruitzien')
             ->assertSeeText("Verzamel onderhoud, kilometerstanden, facturen en foto's op één plek en deel de historie overzichtelijk met een potentiële koper.")
             ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertSeeText('Maak je eigen onderhoudshistorie voor de verkoop')
             ->assertSee('prospect_id=MP001', false)
             ->assertSee('campaign_slug=marktplaats2026', false)
             ->assertSee('source=marktplaats', false);
@@ -101,6 +102,22 @@ class Marktplaats2026FunnelTest extends TestCase
             ->assertDontSeeText('Club2026')
             ->assertDontSeeText('Workshop2026');
 
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSeeText('Voorbeeld GarageBook')
+            ->assertSeeText('Zo kan de onderhoudshistorie van jouw motor eruitzien')
+            ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertSee('prospect_id=MP001', false)
+            ->assertSee('campaign_slug=marktplaats2026', false)
+            ->assertSee('source=marktplaats', false)
+            ->assertDontSeeText('Welkom terug, Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Welkom terug')
+            ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Tayomoto')
+            ->assertDontSeeText('Motor & Onderhoud')
+            ->assertDontSeeText('Club2026')
+            ->assertDontSeeText('Workshop2026');
+
         $this->get('/admin/vehicles/create')
             ->assertOk()
             ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
@@ -112,6 +129,20 @@ class Marktplaats2026FunnelTest extends TestCase
             ->assertDontSeeText('Motor & Onderhoud')
             ->assertDontSeeText('Club2026')
             ->assertDontSeeText('Workshop2026');
+
+        foreach (['/admin/vehicles', '/admin/maintenance-logs', '/admin/documentkluis'] as $route) {
+            $this->followingRedirects()
+                ->get($route)
+                ->assertOk()
+                ->assertDontSeeText('Welkom terug, Tayomoto Motor & Onderhoud')
+                ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+                ->assertDontSeeText('Tayomoto')
+                ->assertDontSeeText('Motor & Onderhoud')
+                ->assertDontSeeText('Club2026')
+                ->assertDontSeeText('Workshop2026')
+                ->assertSeeText('Voorbeeld GarageBook')
+                ->assertSeeText('Maak gratis een GarageBook voor mijn motor');
+        }
 
         $registerUrl = app(OutreachDemoService::class)
             ->marktplaats2026DemoContextForAuthenticatedUser()['register_url'];
@@ -175,6 +206,8 @@ class Marktplaats2026FunnelTest extends TestCase
                 ->assertOk()
                 ->assertSeeText('Voorbeeld onderhoudshistorie')
                 ->assertSeeText('Voorbeeld GarageBook')
+                ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+                ->assertSeeText('Maak je eigen onderhoudshistorie voor de verkoop')
                 ->assertSee('prospect_id='.$prospectId, false)
                 ->assertSee('campaign_slug=marktplaats2026', false)
                 ->assertSee('source=marktplaats', false)
@@ -182,6 +215,19 @@ class Marktplaats2026FunnelTest extends TestCase
                 ->assertDontSeeText('Tayomoto')
                 ->assertDontSeeText('Motor & Onderhoud')
                 ->assertDontSeeText('voor '.$prospectId)
+                ->assertDontSeeText('Club2026')
+                ->assertDontSeeText('Workshop2026');
+
+            $this->get('/admin')
+                ->assertOk()
+                ->assertSeeText('Voorbeeld GarageBook')
+                ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+                ->assertSee('prospect_id='.$prospectId, false)
+                ->assertDontSeeText('Welkom terug, Tayomoto Motor & Onderhoud')
+                ->assertDontSeeText('Welkom terug')
+                ->assertDontSeeText('Demo motor voor Tayomoto Motor & Onderhoud')
+                ->assertDontSeeText('Tayomoto')
+                ->assertDontSeeText('Motor & Onderhoud')
                 ->assertDontSeeText('Club2026')
                 ->assertDontSeeText('Workshop2026');
         }
@@ -365,8 +411,17 @@ class Marktplaats2026FunnelTest extends TestCase
 
         $timeline = $this->get('/admin/tijdlijn?vehicle_id='.$demoVehicle->id);
         $timeline->assertOk()
+            ->assertSeeText('Voorbeeld onderhoudshistorie')
             ->assertSeeText('Zo kan de onderhoudshistorie van jouw motor eruitzien')
-            ->assertSeeText('Maak gratis een GarageBook voor mijn motor');
+            ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertSeeText('Maak je eigen onderhoudshistorie voor de verkoop');
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSeeText('Voorbeeld GarageBook')
+            ->assertSeeText('Maak gratis een GarageBook voor mijn motor')
+            ->assertDontSeeText('Welkom terug, Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Welkom terug');
 
         $registerUrl = app(OutreachDemoService::class)
             ->marktplaats2026DemoContextForAuthenticatedUser()['register_url'];
@@ -441,6 +496,14 @@ class Marktplaats2026FunnelTest extends TestCase
             'description' => 'Eerste onderhoudslog MP001',
         ]);
         $this->assertCurrentState($user, LifecycleState::FIRST_MAINTENANCE_LOGGED);
+
+        $this->followingRedirects()
+            ->actingAs($user)
+            ->get('/admin')
+            ->assertOk()
+            ->assertDontSeeText('Tayomoto')
+            ->assertDontSeeText('Tayomoto Motor & Onderhoud')
+            ->assertDontSeeText('Welkom terug, Tayomoto Motor & Onderhoud');
     }
 
     private function marktplaatsQueryString(string $prospectId): string

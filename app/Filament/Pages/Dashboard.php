@@ -13,11 +13,13 @@ use App\Filament\Widgets\MaintenanceCosts;
 use App\Filament\Widgets\MaintenanceReminders;
 use App\Filament\Widgets\MyVehicles;
 use App\Filament\Widgets\PublicVehiclePagesWidget;
+use App\Services\Outreach\OutreachDemoService;
 use App\Support\AnalyticsEventTracker;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Livewire;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 
 class Dashboard extends BaseDashboard
@@ -33,6 +35,10 @@ class Dashboard extends BaseDashboard
 
     public function getHeading(): string
     {
+        if ($this->marktplaatsDemoContext() !== null) {
+            return 'Voorbeeld GarageBook';
+        }
+
         return __('dashboard.welcome_back', [
             'name' => Filament::auth()->user()->name,
         ]);
@@ -40,11 +46,27 @@ class Dashboard extends BaseDashboard
 
     public function getSubheading(): ?string
     {
+        if ($this->marktplaatsDemoContext() !== null) {
+            return "Bekijk hoe onderhoud, kilometerstanden, facturen en foto's samen een duidelijke verkoophistorie vormen.";
+        }
+
         return __('dashboard.subheading');
     }
 
     public function headerWidgets(Schema $schema): Schema
     {
+        $marktplaatsDemoContext = $this->marktplaatsDemoContext();
+
+        if ($marktplaatsDemoContext !== null) {
+            return $schema->components([
+                View::make('filament.pages.marktplaats-demo-dashboard')
+                    ->viewData([
+                        'registerUrl' => $marktplaatsDemoContext['register_url'],
+                        'timelineUrl' => route('filament.admin.pages.tijdlijn'),
+                    ]),
+            ]);
+        }
+
         $user = Filament::auth()->user();
         $hasFuelLogs = $user?->vehicles()->whereHas('fuelLogs')->exists();
         $isActivated = $user && DashboardOnboardingWidget::resolveProgressForUser($user)['is_complete'];
@@ -85,5 +107,13 @@ class Dashboard extends BaseDashboard
                 'md' => 2,
             ])->schema($chartWidgets),
         ]);
+    }
+
+    /**
+     * @return array{prospect_id:string, register_url:string}|null
+     */
+    private function marktplaatsDemoContext(): ?array
+    {
+        return app(OutreachDemoService::class)->marktplaats2026DemoContextForAuthenticatedUser();
     }
 }
