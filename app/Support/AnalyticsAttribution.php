@@ -19,6 +19,12 @@ class AnalyticsAttribution
         $existing = $request->session()->get(self::SESSION_KEY);
 
         if (is_array($existing) && $existing !== []) {
+            $payload = $this->buildPayloadFromRequest($request);
+
+            if ($payload !== null) {
+                $request->session()->put(self::SESSION_KEY, $this->mergeRegistrationContext($existing, $payload));
+            }
+
             return;
         }
 
@@ -65,6 +71,7 @@ class AnalyticsAttribution
             'source' => $request->query('source'),
             'campaign_slug' => $request->query('campaign_slug'),
             'partner_slug' => $request->query('partner_slug'),
+            'prospect_id' => $request->query('prospect_id'),
             'demo_user_id' => $request->query('demo_user_id'),
             'outreach_prospect_id' => $request->query('outreach_prospect_id'),
             'intended' => $request->query('intended'),
@@ -88,6 +95,7 @@ class AnalyticsAttribution
             'source',
             'campaign_slug',
             'partner_slug',
+            'prospect_id',
             'demo_user_id',
             'outreach_prospect_id',
             'intended',
@@ -98,6 +106,34 @@ class AnalyticsAttribution
         }
 
         return $payload;
+    }
+
+    /**
+     * Preserve first-touch attribution while allowing the demo CTA to add
+     * registration-specific context for the same Marktplaats prospect.
+     *
+     * @param  array<string, mixed>  $existing
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function mergeRegistrationContext(array $existing, array $payload): array
+    {
+        $existing = $this->sanitizePayload($existing);
+        $payload = $this->sanitizePayload($payload);
+
+        if (($existing['campaign_slug'] ?? null) !== 'marktplaats2026'
+            || ($payload['campaign_slug'] ?? null) !== 'marktplaats2026'
+            || ($existing['prospect_id'] ?? null) !== ($payload['prospect_id'] ?? null)) {
+            return $existing;
+        }
+
+        foreach (['demo_user_id', 'outreach_prospect_id', 'intended'] as $key) {
+            if (filled($payload[$key] ?? null)) {
+                $existing[$key] = $payload[$key];
+            }
+        }
+
+        return $existing;
     }
 
     private function externalReferrer(Request $request): ?string

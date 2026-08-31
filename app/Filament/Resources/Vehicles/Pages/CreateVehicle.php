@@ -79,6 +79,12 @@ class CreateVehicle extends CreateRecord
 
     public function getOutreachDemoRegisterUrl(): string
     {
+        $marktplaatsContext = app(OutreachDemoService::class)->marktplaats2026DemoContextForAuthenticatedUser();
+
+        if (is_array($marktplaatsContext)) {
+            return $marktplaatsContext['register_url'];
+        }
+
         return url('/register?'.http_build_query([
             'source' => 'outreach_demo',
             ...$this->getOutreachDemoAnalyticsParams(),

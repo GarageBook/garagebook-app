@@ -45,6 +45,11 @@ class Register extends BaseRegister
             $data['registration_source'] = 'outreach_demo';
         }
 
+        if (($attribution['source'] ?? null) === 'marktplaats'
+            && ($attribution['campaign_slug'] ?? null) === 'marktplaats2026') {
+            $data['registration_source'] = 'marktplaats';
+        }
+
         return $data;
     }
 
@@ -95,7 +100,7 @@ class Register extends BaseRegister
         app(AnalyticsEventTracker::class)->queueSignUp(
             method: 'email',
             registrationSource: $user->registration_source,
-            attribution: $attribution?->only(['source', 'demo_user_id', 'outreach_prospect_id', 'intended']),
+            attribution: $attribution?->only(['source', 'campaign_slug', 'prospect_id', 'demo_user_id', 'outreach_prospect_id', 'intended']),
         );
 
         return app(RegistrationResponse::class);

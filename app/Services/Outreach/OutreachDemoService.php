@@ -8,6 +8,7 @@ use App\Models\OutreachEvent;
 use App\Models\OutreachProspect;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\AnalyticsAttribution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -23,6 +24,8 @@ use RuntimeException;
 class OutreachDemoService
 {
     public const CURRENT_PROSPECT_SESSION_KEY = 'outreach_demo.current_prospect_id';
+
+    public const MARKTPLAATS_CAMPAIGN_SLUG = 'marktplaats2026';
 
     public function demoRouteForGrowthPartner(string $partnerSlug, string $campaignSlug): string
     {
@@ -49,6 +52,36 @@ class OutreachDemoService
                 'email' => null,
                 'city' => null,
                 'notes' => 'Automatisch aangemaakte demo-prospect voor partner tracking URL.',
+            ],
+        );
+
+        return route('outreach.demo.login', ['token' => $prospect->token], false);
+    }
+
+    public function demoRouteForMarktplaatsProspect(string $prospectId): string
+    {
+        $prospectId = $this->normalizeMarktplaatsProspectId($prospectId);
+
+        $campaign = OutreachCampaign::query()->firstOrCreate(
+            ['slug' => self::MARKTPLAATS_CAMPAIGN_SLUG],
+            [
+                'name' => 'Marktplaats2026',
+                'description' => 'Particuliere motorverkopers op Marktplaats voor de verkoopgerichte GarageBook-demo.',
+            ],
+        );
+
+        $prospect = OutreachProspect::query()->firstOrCreate(
+            [
+                'outreach_campaign_id' => $campaign->id,
+                'source' => 'marktplaats',
+                'website' => 'marktplaats:'.$prospectId,
+            ],
+            [
+                'company_name' => $prospectId,
+                'contact_name' => null,
+                'email' => null,
+                'city' => null,
+                'notes' => 'Marktplaats2026 particuliere verkoper; trackingprospect zonder contactgegevens.',
             ],
         );
 
@@ -190,6 +223,38 @@ class OutreachDemoService
         }
 
         return true;
+    }
+
+    /**
+     * @return array{prospect_id:string, register_url:string}|null
+     */
+    public function marktplaats2026DemoContextForAuthenticatedUser(): ?array
+    {
+        $attribution = app(AnalyticsAttribution::class)->current();
+
+        if (($attribution['campaign_slug'] ?? null) !== self::MARKTPLAATS_CAMPAIGN_SLUG) {
+            return null;
+        }
+
+        $prospectId = $this->normalizeMarktplaatsProspectId((string) ($attribution['prospect_id'] ?? ''));
+        $prospect = $this->currentProspectForAuthenticatedDemoUser();
+
+        return [
+            'prospect_id' => $prospectId,
+            'register_url' => url('/register?'.http_build_query(array_filter([
+                'source' => 'marktplaats',
+                'campaign_slug' => self::MARKTPLAATS_CAMPAIGN_SLUG,
+                'prospect_id' => $prospectId,
+                'utm_source' => $attribution['utm_source'] ?? 'marktplaats',
+                'utm_medium' => $attribution['utm_medium'] ?? 'outreach',
+                'utm_campaign' => $attribution['utm_campaign'] ?? self::MARKTPLAATS_CAMPAIGN_SLUG,
+                'utm_content' => $attribution['utm_content'] ?? null,
+                'utm_term' => $attribution['utm_term'] ?? null,
+                'demo_user_id' => auth()->id(),
+                'outreach_prospect_id' => $prospect?->id,
+                'intended' => 'vehicle_create',
+            ], fn (mixed $value): bool => $value !== null && $value !== ''))),
+        ];
     }
 
     public function dismissDemoIntroForAuthenticatedUser(Request $request): void
@@ -372,6 +437,15 @@ class OutreachDemoService
 
             abort(503, 'Demo tijdelijk niet beschikbaar.');
         }
+    }
+
+    private function normalizeMarktplaatsProspectId(string $prospectId): string
+    {
+        $prospectId = strtoupper(trim($prospectId));
+
+        abort_unless((bool) preg_match('/^MP\d{3}$/', $prospectId), 404);
+
+        return $prospectId;
     }
 
     private function recordEvent(OutreachProspect $prospect, string $eventType, Request $request): OutreachEvent

@@ -70,6 +70,54 @@
             overflow-wrap: anywhere;
         }
 
+        .gb-marketplace-demo {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .gb-marketplace-demo__copy {
+            display: grid;
+            gap: 0.25rem;
+            min-width: min(100%, 28rem);
+        }
+
+        .gb-marketplace-demo__title {
+            font-size: 1.1rem;
+            line-height: 1.25;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .gb-marketplace-demo__body {
+            max-width: 44rem;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, 0.76);
+        }
+
+        .gb-marketplace-demo__cta {
+            display: inline-flex;
+            min-height: 2.75rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            padding: 0.7rem 1rem;
+            background: #ffd200;
+            color: #111827;
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: normal;
+            text-align: center;
+        }
+
         .gb-timeline-selector {
             min-width: min(100%, 21rem);
             display: grid;
@@ -920,6 +968,17 @@ U kunt vrij rondkijken. Er is niets te installeren en registreren is niet nodig.
                         </select>
                     </div>
                 </div>
+
+                @if($marktplaatsDemoContext)
+                    <div class="gb-marketplace-demo">
+                        <div class="gb-marketplace-demo__copy">
+                            <div class="gb-marketplace-demo__title">Zo kan de onderhoudshistorie van jouw motor eruitzien</div>
+                            <div class="gb-marketplace-demo__body">Verzamel onderhoud, kilometerstanden, facturen en foto's op één plek en deel de historie overzichtelijk met een potentiële koper.</div>
+                        </div>
+
+                        <a class="gb-marketplace-demo__cta" href="{{ $marktplaatsDemoContext['register_url'] }}">Maak gratis een GarageBook voor mijn motor</a>
+                    </div>
+                @endif
 
                 <div class="gb-timeline-summary">
                     <div class="gb-timeline-summary__card">

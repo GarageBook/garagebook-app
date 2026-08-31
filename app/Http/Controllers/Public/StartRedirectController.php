@@ -14,6 +14,12 @@ class StartRedirectController extends Controller
         $query = $request->query();
         $queryString = $request->server->get('QUERY_STRING', $request->getQueryString());
 
+        if (($query['campaign_slug'] ?? null) === 'marktplaats2026' && filled($query['prospect_id'] ?? null)) {
+            $demoRoute = $demoService->demoRouteForMarktplaatsProspect($query['prospect_id']);
+
+            return redirect()->to($this->withRawQueryString($demoRoute, $queryString));
+        }
+
         if (filled($query['partner_slug'] ?? null) && filled($query['campaign_slug'] ?? null)) {
             $demoRoute = $demoService->demoRouteForGrowthPartner(
                 $query['partner_slug'],

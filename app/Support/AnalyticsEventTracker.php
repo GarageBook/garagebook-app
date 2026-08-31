@@ -239,6 +239,8 @@ class AnalyticsEventTracker
 
         return array_filter([
             'source' => Arr::get($attribution, 'source'),
+            'campaign_slug' => Arr::get($attribution, 'campaign_slug'),
+            'prospect_id' => Arr::get($attribution, 'prospect_id'),
             'demo_user_id' => is_numeric(Arr::get($attribution, 'demo_user_id')) ? (int) Arr::get($attribution, 'demo_user_id') : null,
             'outreach_prospect_id' => is_numeric(Arr::get($attribution, 'outreach_prospect_id')) ? (int) Arr::get($attribution, 'outreach_prospect_id') : null,
             'intended' => Arr::get($attribution, 'intended'),

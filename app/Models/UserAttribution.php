@@ -12,6 +12,7 @@ class UserAttribution extends Model
         'source',
         'campaign_slug',
         'partner_slug',
+        'prospect_id',
         'demo_user_id',
         'outreach_prospect_id',
         'intended',

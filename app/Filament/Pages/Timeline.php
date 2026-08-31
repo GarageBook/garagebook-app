@@ -114,6 +114,8 @@ class Timeline extends Page
             }
         }
 
+        $marktplaatsDemoContext = app(OutreachDemoService::class)->marktplaats2026DemoContextForAuthenticatedUser();
+
         return [
             'vehicles' => $vehicles,
             'activeVehicle' => $activeVehicle,
@@ -124,6 +126,7 @@ class Timeline extends Page
             'periodLabel' => $periodLabel,
             'showDemoIntro' => app(OutreachDemoService::class)->shouldShowDemoIntroForAuthenticatedUser(),
             'demoIntroDismissUrl' => route('outreach.demo.intro-dismiss'),
+            'marktplaatsDemoContext' => $marktplaatsDemoContext,
             'totalCostLabel' => $activeVehicle
                 ? __('dashboard.timeline.currency_prefix') . ' ' . number_format((float) ($activeVehicle->maintenance_logs_sum_cost ?? 0), 2, ',', '.')
                 : __('dashboard.timeline.currency_prefix') . ' 0,00',
