@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Support\LifecycleMailHealth;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -157,6 +158,164 @@ class LifecycleEmailService
         }
 
         return $this->emailKeyMatchesCurrentState($user, $emailKey);
+    }
+
+    /**
+     * @return array{category: string, reason: string}
+     */
+    public function classifyStaleRecovery(LifecycleEmailLog $log): array
+    {
+        $eligibility = $this->recoveryEligibility($log);
+
+        if ($eligibility !== 'eligible') {
+            return ['category' => 'no_longer_eligible', 'reason' => $eligibility];
+        }
+
+        if ($log->status === LifecycleEmailLog::STATUS_PROCESSING) {
+            return ['category' => 'ambiguous', 'reason' => 'processing_delivery_unknown'];
+        }
+
+        return ['category' => 'recoverable', 'reason' => 'eligible'];
+    }
+
+    /**
+     * @return array{category: string, reason: string}
+     */
+    public function classifyFailedRecovery(LifecycleEmailLog $log): array
+    {
+        $eligibility = $this->recoveryEligibility($log);
+
+        if ($eligibility !== 'eligible') {
+            return ['category' => 'no_longer_eligible', 'reason' => $eligibility];
+        }
+
+        $hasRecovery = LifecycleEmailLog::query()
+            ->where('retry_of_log_id', $log->getKey())
+            ->exists();
+
+        return $hasRecovery
+            ? ['category' => 'ambiguous', 'reason' => 'recovery_already_exists']
+            : ['category' => 'recoverable', 'reason' => 'eligible'];
+    }
+
+    /**
+     * @return array{status: string, reason: string}
+     */
+    public function recoverStaleLog(LifecycleEmailLog $log, Carbon $before, bool $includeProcessing): array
+    {
+        $prepared = DB::transaction(function () use ($log, $before, $includeProcessing): array {
+            $locked = LifecycleEmailLog::query()->lockForUpdate()->find($log->getKey());
+
+            if (! $locked || ! in_array($locked->status, [LifecycleEmailLog::STATUS_QUEUED, LifecycleEmailLog::STATUS_PROCESSING], true)) {
+                return ['status' => 'skipped', 'reason' => 'status_changed'];
+            }
+
+            if ($locked->updated_at && $locked->updated_at->gt($before)) {
+                return ['status' => 'skipped', 'reason' => 'not_stale'];
+            }
+
+            $classification = $this->classifyStaleRecovery($locked);
+
+            if ($classification['category'] === 'no_longer_eligible') {
+                return ['status' => 'skipped', 'reason' => $classification['reason']];
+            }
+
+            if ($classification['category'] === 'ambiguous' && ! $includeProcessing) {
+                return ['status' => 'skipped', 'reason' => $classification['reason']];
+            }
+
+            $locked->forceFill([
+                'status' => LifecycleEmailLog::STATUS_QUEUED,
+                'processing_token' => null,
+                'queued_at' => now(),
+                'failed_at' => null,
+                'error' => null,
+                'error_message' => null,
+            ])->save();
+
+            return [
+                'status' => 'queued',
+                'reason' => 'recovered',
+                'user_id' => $locked->user_id,
+                'email_key' => $locked->baseEmailKey(),
+                'log_id' => $locked->getKey(),
+            ];
+        });
+
+        if ($prepared['status'] === 'queued') {
+            SendLifecycleEmailJob::dispatch($prepared['user_id'], $prepared['email_key'], $prepared['log_id']);
+        }
+
+        return ['status' => $prepared['status'], 'reason' => $prepared['reason']];
+    }
+
+    /**
+     * @return array{status: string, reason: string, retry_log_id?: int}
+     */
+    public function recoverFailedLog(LifecycleEmailLog $log): array
+    {
+        $prepared = DB::transaction(function () use ($log): array {
+            $locked = LifecycleEmailLog::query()->lockForUpdate()->find($log->getKey());
+
+            if (! $locked || $locked->status !== LifecycleEmailLog::STATUS_FAILED) {
+                return ['status' => 'skipped', 'reason' => 'status_changed'];
+            }
+
+            $classification = $this->classifyFailedRecovery($locked);
+
+            if ($classification['category'] !== 'recoverable') {
+                return ['status' => 'skipped', 'reason' => $classification['reason']];
+            }
+
+            $user = User::query()->find($locked->user_id);
+            $template = $this->getActiveTemplate($locked->baseEmailKey());
+
+            if (! $user || ! $template) {
+                return ['status' => 'skipped', 'reason' => 'user_or_template_missing'];
+            }
+
+            $retryLog = LifecycleEmailLog::query()->create(
+                $this->lifecycleLogAttributes($user, $template, LifecycleEmailLog::STATUS_QUEUED, [
+                    'email_key' => $this->makeRetryEmailKey($locked),
+                    'retry_of_log_id' => $locked->getKey(),
+                ]),
+            );
+
+            return [
+                'status' => 'queued',
+                'reason' => 'recovered',
+                'user_id' => $user->getKey(),
+                'email_key' => $locked->baseEmailKey(),
+                'log_id' => $retryLog->getKey(),
+            ];
+        });
+
+        if ($prepared['status'] === 'queued') {
+            SendLifecycleEmailJob::dispatch($prepared['user_id'], $prepared['email_key'], $prepared['log_id']);
+        }
+
+        return [
+            'status' => $prepared['status'],
+            'reason' => $prepared['reason'],
+            ...isset($prepared['log_id']) ? ['retry_log_id' => $prepared['log_id']] : [],
+        ];
+    }
+
+    private function recoveryEligibility(LifecycleEmailLog $log): string
+    {
+        $emailKey = $log->baseEmailKey();
+
+        if (! in_array($emailKey, $this->retryableEmailKeys(), true)) {
+            return 'email_key_not_supported';
+        }
+
+        $user = User::query()->find($log->user_id);
+
+        if (! $user) {
+            return 'user_missing';
+        }
+
+        return $this->canStillReceive($user, $emailKey) ? 'eligible' : 'current_state_not_eligible';
     }
 
     public function makeMailable(User $user, LifecycleEmailTemplate $template, ?LifecycleEmailLog $log = null): LifecycleEmailMailable
@@ -806,6 +965,7 @@ class LifecycleEmailService
                 'reason_skipped' => null,
                 'error_message' => null,
                 ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext(
+                    retryOfLogId: $log->retry_of_log_id,
                     resendMessageId: $this->resolveSentMessageId($sentMessage),
                 )),
             ])->save();
@@ -823,7 +983,9 @@ class LifecycleEmailService
                     'skipped_at' => null,
                     'reason_skipped' => null,
                     'error_message' => Str::limit($message, 65535, ''),
-                    ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext()),
+                    ...LifecycleEmailLog::existingColumnAttributes($this->mailHealth->logContext(
+                        retryOfLogId: $log->retry_of_log_id,
+                    )),
                 ])->save(),
                 report: false,
             );

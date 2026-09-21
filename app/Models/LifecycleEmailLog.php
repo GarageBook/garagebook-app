@@ -48,6 +48,7 @@ class LifecycleEmailLog extends Model
         'mail_transport',
         'release_path',
         'queue_job_id',
+        'processing_token',
         'retry_of_log_id',
         'resend_message_id',
     ];

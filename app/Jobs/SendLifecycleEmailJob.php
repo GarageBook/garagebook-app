@@ -12,18 +12,31 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class SendLifecycleEmailJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 6;
+    // RateLimited releases consume attempts; retryUntil bounds queue lifetime,
+    // while maxExceptions limits real handler failures independently.
+    public int $tries = 0;
+
+    public int $maxExceptions = 3;
 
     public function __construct(
         public int $userId,
         public string $emailKey,
         public ?int $logId = null,
-    ) {}
+        public ?string $processingToken = null,
+    ) {
+        $this->processingToken ??= (string) Str::uuid();
+    }
+
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addMinutes(30);
+    }
 
     public function middleware(): array
     {
@@ -68,13 +81,13 @@ class SendLifecycleEmailJob implements ShouldQueue
         $log->refresh();
 
         if ($user->hasUnsubscribedFromLifecycleEmails()) {
-            $service->markLifecycleEmailSkipped($user, $this->emailKey, 'unsubscribed');
+            $this->markLogSkipped($log, 'unsubscribed');
 
             return;
         }
 
         if (! $template) {
-            $service->markLifecycleEmailSkipped($user, $this->emailKey, 'template_inactive');
+            $this->markLogSkipped($log, 'template_inactive');
 
             return;
         }
@@ -82,7 +95,7 @@ class SendLifecycleEmailJob implements ShouldQueue
         $reason = $service->resolveSkipReason($user, $this->emailKey);
 
         if ($reason !== null) {
-            $service->markLifecycleEmailSkipped($user, $this->emailKey, $reason);
+            $this->markLogSkipped($log, $reason);
 
             return;
         }
@@ -100,9 +113,12 @@ class SendLifecycleEmailJob implements ShouldQueue
             'error_message' => null,
             ...LifecycleEmailLog::existingColumnAttributes($health->logContext(
                 queueJobId: $this->queueJobId(),
+                retryOfLogId: $log->retry_of_log_id,
                 resendMessageId: $this->resolveSentMessageId($sentMessage),
             )),
         ])->save();
+
+        $this->syncOriginalRetryStatus($log, LifecycleEmailLog::STATUS_SENT);
 
         $tracker->queueLifecycleEmailSent($user, $this->emailKey);
     }
@@ -110,6 +126,13 @@ class SendLifecycleEmailJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         $query = LifecycleEmailLog::query();
+
+        $query->whereIn('status', [
+            LifecycleEmailLog::STATUS_QUEUED,
+            LifecycleEmailLog::STATUS_PROCESSING,
+        ])->where(function ($query): void {
+            $query->whereNull('processing_token')->orWhere('processing_token', $this->processingToken);
+        });
 
         if ($this->logId) {
             $query->whereKey($this->logId);
@@ -119,6 +142,8 @@ class SendLifecycleEmailJob implements ShouldQueue
                 ->where('email_key', $this->emailKey);
         }
 
+        $ownedLog = (clone $query)->first();
+
         $query->update([
             'status' => LifecycleEmailLog::STATUS_FAILED,
             'failed_at' => now(),
@@ -126,8 +151,44 @@ class SendLifecycleEmailJob implements ShouldQueue
             'error' => str($exception->getMessage())->limit(65535)->value(),
             ...LifecycleEmailLog::existingColumnAttributes(app(LifecycleMailHealth::class)->logContext(
                 queueJobId: $this->queueJobId(),
+                retryOfLogId: $ownedLog?->retry_of_log_id,
             )),
         ]);
+
+        $this->syncOriginalRetryStatus($ownedLog, LifecycleEmailLog::STATUS_FAILED, $exception->getMessage());
+    }
+
+    private function markLogSkipped(LifecycleEmailLog $log, string $reason): void
+    {
+        LifecycleEmailLog::query()
+            ->whereKey($log->getKey())
+            ->where('processing_token', $this->processingToken)
+            ->where('status', LifecycleEmailLog::STATUS_PROCESSING)
+            ->update([
+                'status' => LifecycleEmailLog::STATUS_SKIPPED,
+                'skipped_at' => now(),
+                'reason_skipped' => $reason,
+                'error' => $reason,
+                'error_message' => $reason,
+            ]);
+    }
+
+    private function syncOriginalRetryStatus(?LifecycleEmailLog $log, string $status, ?string $error = null): void
+    {
+        if (! $log?->retry_of_log_id) {
+            return;
+        }
+
+        LifecycleEmailLog::query()
+            ->whereKey($log->retry_of_log_id)
+            ->update([
+                'retried_at' => $status === LifecycleEmailLog::STATUS_SENT ? now() : null,
+                'retry_status' => $status,
+                'retry_log_id' => $log->getKey(),
+                'retry_error_message' => $error
+                    ? str($error)->limit(65535)->value()
+                    : null,
+            ]);
     }
 
     private function markMissingUserSkipped(): void
@@ -194,7 +255,7 @@ class SendLifecycleEmailJob implements ShouldQueue
                 return null;
             }
 
-            if ($log->user_id !== $this->userId || $log->email_key !== $this->emailKey) {
+            if ($log->user_id !== $this->userId || $log->baseEmailKey() !== $this->emailKey) {
                 return null;
             }
 
@@ -217,7 +278,8 @@ class SendLifecycleEmailJob implements ShouldQueue
     private function claimQueuedLog(LifecycleEmailLog $log): bool
     {
         if ($log->status === LifecycleEmailLog::STATUS_PROCESSING) {
-            return false;
+            return filled($log->processing_token)
+                && hash_equals((string) $log->processing_token, (string) $this->processingToken);
         }
 
         return LifecycleEmailLog::query()
@@ -225,6 +287,7 @@ class SendLifecycleEmailJob implements ShouldQueue
             ->where('status', LifecycleEmailLog::STATUS_QUEUED)
             ->update([
                 'status' => LifecycleEmailLog::STATUS_PROCESSING,
+                'processing_token' => $this->processingToken,
                 'queued_at' => $log->queued_at ?? now(),
                 'failed_at' => null,
                 'skipped_at' => null,
