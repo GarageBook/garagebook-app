@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\CanonicalizePublicUrl;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class HomepageRedirectTest extends TestCase
@@ -21,13 +24,31 @@ class HomepageRedirectTest extends TestCase
     public function test_guest_on_app_host_keeps_current_public_canonical_flow(): void
     {
         $this->get('https://app.garagebook.nl/')
-            ->assertStatus(301)
+            ->assertStatus(302)
             ->assertRedirect('https://garagebook.nl/');
 
         $this->followingRedirects()
             ->get('https://app.garagebook.nl/')
             ->assertOk()
             ->assertSee('GarageBook');
+    }
+
+    public function test_homepage_starts_session_before_canonicalizing_public_urls(): void
+    {
+        $route = collect(Route::getRoutes()->getRoutes())
+            ->first(fn ($route) => $route->uri() === '/' && in_array('GET', $route->methods(), true));
+
+        $middleware = app('router')->resolveMiddleware(
+            $route->gatherMiddleware(),
+            $route->excludedMiddleware(),
+        );
+
+        $this->assertContains(StartSession::class, $middleware);
+        $this->assertContains(CanonicalizePublicUrl::class, $middleware);
+        $this->assertLessThan(
+            array_search(CanonicalizePublicUrl::class, $middleware, true),
+            array_search(StartSession::class, $middleware, true),
+        );
     }
 
     public function test_authenticated_user_is_redirected_to_dashboard_from_homepage(): void
