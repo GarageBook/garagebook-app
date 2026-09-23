@@ -78,6 +78,29 @@ class PublicSeoCanonicalizationTest extends TestCase
         }
     }
 
+    public function test_app_host_maintenance_model_renders_repeatedly_with_production_cache_security(): void
+    {
+        Config::set('cache.default', 'database');
+        Config::set('cache.serializable_classes', false);
+
+        $user = User::factory()->create(['is_outreach_demo' => false]);
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Aprilia',
+            'model' => 'Rsv Mille R',
+            'year' => 1999,
+            'public_slug' => '1999-aprilia-rsv-mille-r',
+            'is_public' => true,
+        ]);
+        $this->artisan('garagebook:vehicle-authority:sync')->assertSuccessful();
+
+        for ($request = 0; $request < 2; $request++) {
+            $this->get('https://app.garagebook.nl/onderhoud/aprilia-rsv-mille-r')
+                ->assertOk()
+                ->assertHeaderMissing('Location');
+        }
+    }
+
     public function test_unknown_app_host_maintenance_model_stays_not_found_without_redirect(): void
     {
         $this->get('https://app.garagebook.nl/onderhoud/dit-model-bestaat-absoluut-niet')

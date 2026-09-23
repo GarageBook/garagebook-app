@@ -12,11 +12,9 @@ class VehicleAuthorityIndexService
 
     public function resolveBySlug(string $slug): ?VehicleAuthorityIndex
     {
-        return Cache::remember("vai:slug:{$slug}", self::CACHE_TTL, function () use ($slug) {
-            return VehicleAuthorityIndex::where('slug', $slug)
-                ->where('is_indexable', true)
-                ->first();
-        });
+        return VehicleAuthorityIndex::where('slug', $slug)
+            ->where('is_indexable', true)
+            ->first();
     }
 
     /**

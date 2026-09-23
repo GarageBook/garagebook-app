@@ -4,12 +4,9 @@ namespace App\Services;
 
 use App\Models\Vehicle;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 class VehicleAuthorityService
 {
-    private const CACHE_TTL = 1800;
-
     private const RELATED_PAGES = [
         ['url' => '/digitaal-onderhoudsboekje', 'title' => 'Digitaal onderhoudsboekje', 'description' => 'Centrale voertuiggeschiedenis voor auto en motor.'],
         ['url' => '/onderhoudsboekje-kwijt', 'title' => 'Onderhoudsboekje kwijt?', 'description' => 'Stappen om je onderhoudshistorie te reconstrueren.'],
@@ -24,9 +21,7 @@ class VehicleAuthorityService
 
     public function resolveBySlug(string $slug): ?array
     {
-        return Cache::remember("vehicle-authority:page:{$slug}", self::CACHE_TTL, function () use ($slug) {
-            return $this->build($slug);
-        });
+        return $this->build($slug);
     }
 
     /**

@@ -238,7 +238,7 @@ class VehicleAuthorityIndexServiceTest extends TestCase
     // Caching
     // -------------------------------------------------------------------------
 
-    public function test_resolve_by_slug_is_cached_after_first_call(): void
+    public function test_resolve_by_slug_does_not_reuse_serialized_model_cache(): void
     {
         $this->indexEntry();
 
@@ -248,12 +248,10 @@ class VehicleAuthorityIndexServiceTest extends TestCase
         // Delete from DB
         VehicleAuthorityIndex::where('slug', 'yamaha-mt-07')->delete();
 
-        // Second call should hit cache and still return the entry
         $second = $this->service->resolveBySlug('yamaha-mt-07');
 
         $this->assertNotNull($first);
-        $this->assertNotNull($second, 'Should return cached value even after DB delete');
-        $this->assertSame($first->id, $second->id);
+        $this->assertNull($second);
     }
 
     public function test_flush_cache_clears_stats_and_slugs_cache(): void

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,8 +13,6 @@ use Illuminate\Support\Facades\DB;
  */
 class VehicleIntelligenceService
 {
-    private const CACHE_TTL = 1800;
-
     private const POWERTRAIN_LABELS = [
         'petrol' => 'Benzine',
         'diesel' => 'Diesel',
@@ -35,26 +32,18 @@ class VehicleIntelligenceService
      */
     public function forBrandModel(string $brand, string $model): array
     {
-        $cacheKey = 'vi:'.md5($brand.'|'.$model);
-
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($brand, $model) {
-            $specs = $this->specifications($brand, $model);
-            $commonMaintenance = $this->commonMaintenance($brand, $model);
-            $stats = $this->garageBookStats($brand, $model);
-
-            return [
-                'specifications' => $specs,
-                'common_maintenance' => $commonMaintenance,
-                'garage_book_stats' => $stats,
-                // known_issues: no dedicated data source exists; always empty
-                'known_issues' => [],
-            ];
-        });
+        return [
+            'specifications' => $this->specifications($brand, $model),
+            'common_maintenance' => $this->commonMaintenance($brand, $model),
+            'garage_book_stats' => $this->garageBookStats($brand, $model),
+            // known_issues: no dedicated data source exists; always empty
+            'known_issues' => [],
+        ];
     }
 
     public function flushForBrandModel(string $brand, string $model): void
     {
-        Cache::forget('vi:'.md5($brand.'|'.$model));
+        // Kept for callers; authority intelligence is resolved directly.
     }
 
     /**
