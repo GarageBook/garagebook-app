@@ -57,7 +57,9 @@ class CanonicalizePublicUrl
 
     private function shouldSkip(Request $request): bool
     {
-        return $request->is('admin') || $request->is('admin/*');
+        return $request->is('robots.txt')
+            || $request->is('admin')
+            || $request->is('admin/*');
     }
 
     private function isPublicCanonicalizableAppPath(Request $request): bool
@@ -73,7 +75,6 @@ class CanonicalizePublicUrl
             'blogs',
             'blogs/*',
             'onderhoud/*',
-            'robots.txt',
             'sitemap.xml',
             'sitemap-onderhoud.xml',
             'sitemap-vehicle-authority.xml',
