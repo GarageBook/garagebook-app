@@ -286,6 +286,28 @@ class VehicleAuthorityPageTest extends TestCase
             ->assertSee(url('/onderhoud/yamaha-mt-07'), false);
     }
 
+    public function test_sitemap_onderhoud_model_urls_resolve_on_app_host(): void
+    {
+        config()->set('app.url', 'https://app.garagebook.nl');
+
+        $user = $this->regularUser();
+        $this->makePublicVehicle($user, 'Aprilia', 'Rsv Mille R');
+        $this->makePublicVehicle($user, 'Kawasaki', 'Z650');
+
+        $this->sync();
+
+        $sitemap = $this->get('/sitemap-onderhoud.xml')->assertOk();
+
+        foreach (['aprilia-rsv-mille-r', 'kawasaki-z650'] as $slug) {
+            $url = 'https://app.garagebook.nl/onderhoud/'.$slug;
+
+            $sitemap->assertSee('/onderhoud/'.$slug, false);
+            $this->get($url)
+                ->assertOk()
+                ->assertHeaderMissing('Location');
+        }
+    }
+
     public function test_sitemap_onderhoud_excludes_outreach_demo_vehicles(): void
     {
         $demoUser = User::factory()->outreachDemo()->create();

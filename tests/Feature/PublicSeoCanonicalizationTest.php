@@ -54,6 +54,37 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertHeader('Location', 'https://garagebook.nl/onderhoud/?utm_source=test');
     }
 
+    public function test_app_host_existing_maintenance_models_are_rendered_for_get_and_head(): void
+    {
+        $user = User::factory()->create(['is_outreach_demo' => false]);
+        foreach ([
+            ['brand' => 'Aprilia', 'model' => 'Rsv Mille R', 'year' => 1999, 'public_slug' => '1999-aprilia-rsv-mille-r'],
+            ['brand' => 'Kawasaki', 'model' => 'Z650', 'year' => 2020, 'public_slug' => '2020-kawasaki-z650'],
+        ] as $vehicle) {
+            Vehicle::query()->create([
+                'user_id' => $user->id,
+                'is_public' => true,
+                ...$vehicle,
+            ]);
+        }
+        $this->artisan('garagebook:vehicle-authority:sync')->assertSuccessful();
+
+        foreach (['aprilia-rsv-mille-r', 'kawasaki-z650'] as $slug) {
+            foreach (['GET', 'HEAD'] as $method) {
+                $this->call($method, 'https://app.garagebook.nl/onderhoud/'.$slug)
+                    ->assertOk()
+                    ->assertHeaderMissing('Location');
+            }
+        }
+    }
+
+    public function test_unknown_app_host_maintenance_model_stays_not_found_without_redirect(): void
+    {
+        $this->get('https://app.garagebook.nl/onderhoud/dit-model-bestaat-absoluut-niet')
+            ->assertNotFound()
+            ->assertHeaderMissing('Location');
+    }
+
     public function test_app_host_app_routes_are_not_host_redirected(): void
     {
         $this->get('https://app.garagebook.nl/admin/login')

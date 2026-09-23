@@ -12,7 +12,7 @@ Treat these areas as high-risk and validate them carefully before and after chan
 - tests and regression coverage
 - CSS consistency between public app and Filament admin
 - domain logic around vehicles, maintenance logs, reminders, sharing, and exports
-- admin authorization and navigation. The only admin account is `willemvanveelen@icloud.com`. Never grant admin rights to any other user. Do not treat the `is_admin` database flag as the sole source of truth. Any change touching Filament resources, pages, widgets, navigation, policies, gates or `User::isAdmin()` must run the admin access regression tests before commit or deploy.
+- admin authorization and navigation. The only authorized admin accounts are `willemvanveelen@icloud.com` and `leroy@lenduria.nl`. Never grant admin rights to any other user. Do not treat the `is_admin` database flag as the sole source of truth. Any change touching Filament resources, pages, widgets, navigation, policies, gates or `User::isAdmin()` must run the admin access regression tests before commit or deploy.
 
 ## Code Quality Expectations
 Explicitly flag duplicate, legacy, or dead code when you find it. In this repository that includes overlapping resources, unfinished models, parallel CSS paths, and partially implemented features. Do not silently work around structural issues; call them out.
@@ -34,7 +34,7 @@ Explicitly flag duplicate, legacy, or dead code when you find it. In this reposi
 ## Publish Checklist
 - Follow `docs/publish-checklist.md` before every publish or deploy.
 - Do not deploy if any admin access regression test fails.
-- Verify the canonical admin account remains `willemvanveelen@icloud.com`.
+- Verify the production admin accounts are exactly `willemvanveelen@icloud.com` and `leroy@lenduria.nl`.
 
 ## Review Focus
 Prioritize findings around security, ownership boundaries, broken assumptions, CSS/font inconsistency, and incomplete business logic. The goal is not just to ship changes, but to steer GarageBook toward a reliable, maintainable product within 3 months.

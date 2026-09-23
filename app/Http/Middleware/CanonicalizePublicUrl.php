@@ -78,7 +78,6 @@ class CanonicalizePublicUrl
             'blog/*',
             'blogs',
             'blogs/*',
-            'onderhoud/*',
             'sitemap.xml',
             'sitemap-onderhoud.xml',
             'sitemap-vehicle-authority.xml',
