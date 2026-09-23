@@ -39,6 +39,21 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertRedirect('https://garagebook.nl/privacy-statement?utm_source=gsc&x=1');
     }
 
+    public function test_app_host_maintenance_landing_redirects_directly_and_permanently_to_public_site(): void
+    {
+        foreach (['GET', 'HEAD'] as $method) {
+            $response = $this->call($method, 'https://app.garagebook.nl/onderhoud');
+
+            $response
+                ->assertStatus(301)
+                ->assertHeader('Location', 'https://garagebook.nl/onderhoud/');
+        }
+
+        $this->get('https://app.garagebook.nl/onderhoud?utm_source=test')
+            ->assertStatus(301)
+            ->assertHeader('Location', 'https://garagebook.nl/onderhoud/?utm_source=test');
+    }
+
     public function test_app_host_app_routes_are_not_host_redirected(): void
     {
         $this->get('https://app.garagebook.nl/admin/login')

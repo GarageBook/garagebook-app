@@ -24,6 +24,10 @@ class CanonicalizePublicUrl
             return $blogRedirect;
         }
 
+        if ($request->getHost() === 'app.garagebook.nl' && $request->getPathInfo() === '/onderhoud') {
+            return redirect()->to($this->targetUrl(PublicSeoUrl::HOST, '/onderhoud/', $request), 301);
+        }
+
         if ($request->getHost() === 'app.garagebook.nl' && $this->isPublicCanonicalizableAppPath($request)) {
             $status = $request->getPathInfo() === '/' ? 302 : 301;
 
