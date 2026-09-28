@@ -16,7 +16,8 @@ if (config('backups.enabled')) {
 
 Schedule::command('garagebook:send-growth-report')
     ->mondays()
-    ->at('09:00')
+    ->at('07:00')
+    ->timezone('Europe/Amsterdam')
     ->withoutOverlapping();
 
 Schedule::command('garagebook:send-lifecycle-emails')

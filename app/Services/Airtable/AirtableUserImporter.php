@@ -107,6 +107,8 @@ class AirtableUserImporter
             'email' => $user?->email ?: $airtableEmail,
             'airtable_record_id' => $record['id'],
             'airtable_synced_at' => now(),
+            'record_origin' => 'airtable_import',
+            'source_created_at' => $record['createdTime'] ?? null,
         ];
 
         $generatedPassword = null;

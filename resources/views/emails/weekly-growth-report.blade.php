@@ -4,6 +4,23 @@
     $extraKpis = $report['extra_product_seo_kpis'] ?? [];
     $seoOpportunities = $report['seo_opportunities'] ?? [];
     $interpretation = $report['interpretation'];
+    $cohorts = $report['cohorts'] ?? [];
+    $trends = $report['trends'] ?? [];
+    $dataQuality = $report['data_quality'] ?? [];
+    $activityRetention = $report['retention']['daily_activity'] ?? [];
+    $formatMetric = static function (array $metric): string {
+        if (($metric['percentage'] ?? null) === null) {
+            return 'n.v.t. (0/0)';
+        }
+
+        $formatted = number_format((float) $metric['percentage'], 1, ',', '.').'% ('.$metric['numerator'].'/'.$metric['denominator'].')';
+
+        if (($metric['status'] ?? null) === 'provisional') {
+            $formatted .= ' — provisional: '.$metric['denominator'].'/'.($metric['eligible_population'] ?? $metric['denominator']).' eligible';
+        }
+
+        return $formatted;
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="nl">
@@ -27,9 +44,15 @@
         <li>Users actief laatste 30 dagen: {{ $stats['active_last_30_days'] === null ? 'niet beschikbaar' : number_format((int) $stats['active_last_30_days'], 0, ',', '.') }}</li>
     </ul>
 
-    <h2 style="font-size: 16px; margin-top: 24px;">Conversies</h2>
+    <h2 style="font-size: 16px; margin-top: 24px;">Acquisition</h2>
     <ul>
-        @foreach ($conversions as $conversion)
+        <li>Nieuwe registraties laatste 7 dagen: {{ number_format((int) ($report['acquisition']['registrations_last_7_days'] ?? 0), 0, ',', '.') }}</li>
+        <li>Nieuwe registraties laatste 30 dagen: {{ number_format((int) ($report['acquisition']['registrations_last_30_days'] ?? 0), 0, ',', '.') }}</li>
+    </ul>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">Activation</h2>
+    <ul>
+        @foreach (collect($conversions)->whereIn('label', ['Registratie → voertuig', 'Registratie → eerste onderhoudslog', 'Voertuig → eerste onderhoudslog']) as $conversion)
             <li>
                 {{ $conversion['label'] }}:
                 {{ $conversion['percentage'] === null ? 'niet beschikbaar' : number_format((float) $conversion['percentage'], 1, ',', '.') . '%' }}
@@ -38,8 +61,22 @@
         @endforeach
     </ul>
 
-    <h2 style="font-size: 16px; margin-top: 24px;">Extra product/SEO KPI’s</h2>
+    <h2 style="font-size: 16px; margin-top: 24px;">Retention</h2>
     <ul>
+        @foreach (collect($conversions)->where('label', 'Eerste onderhoudslog → tweede onderhoudslog') as $conversion)
+            <li>{{ $conversion['label'] }}: {{ $conversion['percentage'] === null ? 'niet beschikbaar' : number_format((float) $conversion['percentage'], 1, ',', '.') . '%' }} ({{ $conversion['to'] ?? 'niet beschikbaar' }} van {{ $conversion['from'] ?? 'niet beschikbaar' }})</li>
+        @endforeach
+        <li>Dagelijkse activity-tracking gestart: {{ $activityRetention['tracking_started_at'] ?? 'nog geen data' }}</li>
+        <li>Actieve core-users laatste 7 dagen (activity-history): {{ $activityRetention['active_last_7_days'] ?? 'niet beschikbaar' }}</li>
+        <li>Actieve core-users laatste 30 dagen (activity-history): {{ $activityRetention['active_last_30_days'] ?? 'niet beschikbaar' }}</li>
+    </ul>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">Feature adoption</h2>
+    <h3 style="font-size: 14px;">Extra product/SEO KPI’s</h3>
+    <ul>
+        @foreach (collect($conversions)->whereIn('label', ['Eerste onderhoudslog → reminder actief', 'Eerste onderhoudslog → onderhoudsboekje download']) as $conversion)
+            <li>{{ $conversion['label'] }}: {{ $conversion['percentage'] === null ? 'niet beschikbaar' : number_format((float) $conversion['percentage'], 1, ',', '.') . '%' }} ({{ $conversion['to'] ?? 'niet beschikbaar' }} van {{ $conversion['from'] ?? 'niet beschikbaar' }})</li>
+        @endforeach
         <li>Gem. onderhoudslogs per voertuig: {{ ($extraKpis['average_maintenance_logs_per_vehicle'] ?? null) === null ? 'niet beschikbaar' : number_format((float) ($extraKpis['average_maintenance_logs_per_vehicle'] ?? 0), 1, ',', '.') }}</li>
         <li>
             Users met ≥2 onderhoudslogs:
@@ -74,7 +111,41 @@
         @endforeach
     </ul>
 
-    <h2 style="font-size: 16px; margin-top: 24px;">Top 10 SEO-kansen</h2>
+    <h2 style="font-size: 16px; margin-top: 24px;">Cohortanalyse</h2>
+    <table cellpadding="5" cellspacing="0" border="1" style="border-collapse: collapse; font-size: 12px;">
+        <thead>
+            <tr><th>Cohort</th><th>Users</th><th>Timing</th><th>→ voertuig</th><th>→ 1e log</th><th>≤24u</th><th>≤7d</th><th>≤30d</th><th>→ 2e log</th></tr>
+        </thead>
+        <tbody>
+            @forelse ($cohorts as $cohort)
+                <tr>
+                    <td>{{ $cohort['cohort_month'] }}</td>
+                    <td>{{ $cohort['core_users'] }}</td>
+                    <td>{{ $cohort['timing_eligible'] }}/{{ $cohort['core_users'] }} eligible</td>
+                    <td>{{ $formatMetric($cohort['registration_to_vehicle']) }}</td>
+                    <td>{{ $formatMetric($cohort['registration_to_first_log']) }}</td>
+                    <td>{{ $formatMetric($cohort['first_log_within_24h']) }}@if ($cohort['first_log_within_24h']['status'] !== 'provisional') — {{ $cohort['first_log_within_24h']['status'] }}@endif</td>
+                    <td>{{ $formatMetric($cohort['first_log_within_7d']) }}@if ($cohort['first_log_within_7d']['status'] !== 'provisional') — {{ $cohort['first_log_within_7d']['status'] }}@endif</td>
+                    <td>{{ $formatMetric($cohort['first_log_within_30d']) }}@if ($cohort['first_log_within_30d']['status'] !== 'provisional') — {{ $cohort['first_log_within_30d']['status'] }}@endif</td>
+                    <td>{{ $formatMetric($cohort['first_to_second_log']) }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="9">Nog geen cohortdata.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">Trends</h2>
+    <ul>
+        @forelse ($trends as $trend)
+            <li>{{ $trend['from_cohort'] }} → {{ $trend['to_cohort'] }}: {{ $formatMetric($trend['from']) }} → {{ $formatMetric($trend['to']) }} ({{ number_format((float) $trend['delta_percentage_points'], 1, ',', '.') }} procentpunt). {{ $trend['interpretation'] }}</li>
+        @empty
+            <li>Nog onvoldoende vergelijkbare, mature cohorten voor een trend.</li>
+        @endforelse
+    </ul>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">SEO/content growth</h2>
+    <h3 style="font-size: 14px;">Top 10 SEO-kansen</h3>
     <ul>
         @forelse ($seoOpportunities as $opportunity)
             <li>
@@ -85,6 +156,18 @@
         @empty
             <li>Geen SEO-kansen gevonden in de nieuwste Search Console import.</li>
         @endforelse
+    </ul>
+
+    <h2 style="font-size: 16px; margin-top: 24px;">Datakwaliteit</h2>
+    <ul>
+        <li>Timing eligible: {{ $dataQuality['timing_eligible'] ?? 0 }}</li>
+        <li>Timing excluded: {{ $dataQuality['timing_excluded'] ?? 0 }}</li>
+        <li>Importverdachte records: {{ $dataQuality['import_suspected'] ?? 0 }}</li>
+        <li>Provisional cohorts: {{ $dataQuality['provisional_cohorts'] ?? 0 }}</li>
+        @if (($dataQuality['anomalies'] ?? 0) > 0)
+            <li>Timinganomalieën: {{ $dataQuality['anomalies'] }}</li>
+        @endif
+        <li>Definitieversie: {{ $dataQuality['definition_version'] ?? 'onbekend' }}</li>
     </ul>
 
     <h2 style="font-size: 16px; margin-top: 24px;">Korte interpretatie</h2>

@@ -143,6 +143,15 @@ class SendGrowthReportCommandTest extends TestCase
         $text = $this->renderedMailText($mail);
 
         $this->assertStringContainsString('Totaal gebruikers', $text);
+        $this->assertStringContainsString('Stand van zaken', $text);
+        $this->assertStringContainsString('Acquisition', $text);
+        $this->assertStringContainsString('Activation', $text);
+        $this->assertStringContainsString('Retention', $text);
+        $this->assertStringContainsString('Feature adoption', $text);
+        $this->assertStringContainsString('Cohortanalyse', $text);
+        $this->assertStringContainsString('Trends', $text);
+        $this->assertStringContainsString('SEO/content growth', $text);
+        $this->assertStringContainsString('Datakwaliteit', $text);
         $this->assertStringContainsString('Users met voertuig', $text);
         $this->assertStringContainsString('Users met actieve reminder', $text);
         $this->assertStringContainsString('Registratie → voertuig', $text);
@@ -181,6 +190,60 @@ class SendGrowthReportCommandTest extends TestCase
         $this->assertStringContainsString('Onderhoudslogs toegevoegd laatste 7 dagen: 0', $text);
         $this->assertStringContainsString('Gem. tijd tot eerste onderhoud: niet beschikbaar', $text);
         $this->assertStringContainsString('Gem. sessies per gebruiker: niet beschikbaar', $text);
+    }
+
+    public function test_feature_adoption_is_never_presented_as_the_largest_core_funnel_drop_off(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'brand' => 'Honda',
+            'model' => 'CB500',
+        ]);
+        MaintenanceLog::query()->create([
+            'vehicle_id' => $vehicle->id,
+            'description' => 'Eerste log',
+            'maintenance_date' => today(),
+            'km_reading' => 100,
+            'reminder_enabled' => false,
+        ]);
+
+        $report = app(GrowthDashboardData::class)->weeklyGrowthReport();
+
+        $this->assertNotSame('Eerste onderhoudslog → reminder actief', $report['interpretation']['largest_drop_off']);
+        $this->assertNotSame('Eerste onderhoudslog → onderhoudsboekje download', $report['interpretation']['largest_drop_off']);
+    }
+
+    public function test_provisional_cohort_metric_shows_window_eligibility_context(): void
+    {
+        $report = app(GrowthDashboardData::class)->weeklyGrowthReport();
+        $report['cohorts'] = [[
+            'cohort_month' => '2026-06',
+            'core_users' => 22,
+            'timing_eligible' => 22,
+            'registration_to_vehicle' => $this->metric(14, 22),
+            'registration_to_first_log' => $this->metric(14, 22),
+            'first_log_within_24h' => $this->metric(14, 22),
+            'first_log_within_7d' => $this->metric(14, 22),
+            'first_log_within_30d' => $this->metric(14, 14, 'provisional', 22),
+            'first_to_second_log' => $this->metric(10, 14),
+        ]];
+
+        $text = preg_replace('/\s+/', ' ', html_entity_decode(strip_tags(view('emails.weekly-growth-report', ['report' => $report])->render())));
+
+        $this->assertStringContainsString('100,0% (14/14) — provisional: 14/22 eligible', $text);
+        $this->assertStringNotContainsString('100,0% van cohort', $text);
+    }
+
+    private function metric(int $numerator, int $denominator, string $status = 'mature', ?int $eligiblePopulation = null): array
+    {
+        return [
+            'numerator' => $numerator,
+            'denominator' => $denominator,
+            'percentage' => $denominator === 0 ? null : round($numerator / $denominator * 100, 1),
+            'status' => $status,
+            'eligible_population' => $eligiblePopulation ?? $denominator,
+        ];
     }
 
     private function renderedMailText(WeeklyGrowthReportMail $mail): string

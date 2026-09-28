@@ -31,6 +31,9 @@ class MaintenanceLog extends Model
         'last_km',
         'last_date',
         'airtable_synced_at',
+        'record_origin',
+        'source_created_at',
+        'reminder_first_enabled_at',
     ];
 
     protected $casts = [
@@ -40,17 +43,37 @@ class MaintenanceLog extends Model
         'share_attachments_publicly' => 'boolean',
         'hide_photos_on_public_page' => 'boolean',
         'airtable_synced_at' => 'datetime',
+        'source_created_at' => 'datetime',
+        'reminder_first_enabled_at' => 'datetime',
         'maintenance_date' => 'date',
         'last_date' => 'date',
         'worked_hours' => 'decimal:2',
         'reminder_enabled' => 'boolean',
     ];
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::creating(function ($log) {
+        static::creating(function (MaintenanceLog $log): void {
             $log->last_km = $log->km_reading;
             $log->last_date = $log->maintenance_date;
+            $log->record_origin ??= filled($log->airtable_record_id) ? 'airtable_import' : 'native';
+            if ($log->record_origin === 'native') {
+                $log->source_created_at ??= now();
+            }
+
+            if ($log->record_origin === 'native' && $log->reminder_enabled && $log->reminder_first_enabled_at === null) {
+                $log->reminder_first_enabled_at = now();
+            }
+        });
+
+        static::saving(function (MaintenanceLog $log): void {
+            if ($log->exists
+                && $log->record_origin === 'native'
+                && $log->isDirty('reminder_enabled')
+                && $log->reminder_enabled
+                && $log->reminder_first_enabled_at === null) {
+                $log->reminder_first_enabled_at = now();
+            }
         });
     }
 

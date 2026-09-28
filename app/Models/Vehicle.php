@@ -28,6 +28,9 @@ class Vehicle extends Model
         'user_id',
         'airtable_record_id',
         'airtable_synced_at',
+        'record_origin',
+        'source_created_at',
+        'first_published_at',
         'brand',
         'model',
         'display_variant',
@@ -59,6 +62,8 @@ class Vehicle extends Model
         'photos' => 'array',
         'media_attachments' => 'array',
         'airtable_synced_at' => 'datetime',
+        'source_created_at' => 'datetime',
+        'first_published_at' => 'datetime',
         'is_public' => 'boolean',
         'purchase_price' => 'decimal:2',
         'share_attachments_publicly' => 'boolean',
@@ -70,7 +75,26 @@ class Vehicle extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Vehicle $vehicle): void {
+            $vehicle->record_origin ??= filled($vehicle->airtable_record_id) ? 'airtable_import' : 'native';
+            if ($vehicle->record_origin === 'native') {
+                $vehicle->source_created_at ??= now();
+            }
+
+            if ($vehicle->record_origin === 'native' && $vehicle->is_public && $vehicle->first_published_at === null) {
+                $vehicle->first_published_at = now();
+            }
+        });
+
         static::saving(function (Vehicle $vehicle): void {
+            if ($vehicle->exists
+                && $vehicle->record_origin === 'native'
+                && $vehicle->isDirty('is_public')
+                && $vehicle->is_public
+                && $vehicle->first_published_at === null) {
+                $vehicle->first_published_at = now();
+            }
+
             if (! Schema::hasColumn($vehicle->getTable(), 'public_slug') || filled($vehicle->public_slug)) {
                 return;
             }

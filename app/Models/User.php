@@ -14,12 +14,25 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'is_outreach_demo', 'first_login_at', 'last_login_at', 'first_booklet_downloaded_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'lifecycle_emails_unsubscribed_at'])]
+#[Fillable(['name', 'email', 'password', 'is_admin', 'is_outreach_demo', 'first_login_at', 'last_login_at', 'first_booklet_downloaded_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'record_origin', 'source_created_at', 'onboarding_version', 'lifecycle_emails_unsubscribed_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
+    public const CURRENT_ONBOARDING_VERSION = '2026-09-activation-v1';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            $user->record_origin ??= filled($user->airtable_record_id) ? 'airtable_import' : 'native';
+            if ($user->record_origin === 'native') {
+                $user->source_created_at ??= now();
+                $user->onboarding_version ??= self::CURRENT_ONBOARDING_VERSION;
+            }
+        });
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {
@@ -108,6 +121,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(LifecycleEmailLog::class);
     }
 
+    public function dailyActivities(): HasMany
+    {
+        return $this->hasMany(UserDailyActivity::class);
+    }
+
     public function outreachProspect(): HasOne
     {
         return $this->hasOne(OutreachProspect::class);
@@ -128,6 +146,7 @@ class User extends Authenticatable implements FilamentUser
             'is_admin' => 'boolean',
             'is_outreach_demo' => 'boolean',
             'last_login_at' => 'datetime',
+            'source_created_at' => 'datetime',
             'lifecycle_emails_unsubscribed_at' => 'datetime',
             'password' => 'hashed',
         ];

@@ -85,6 +85,8 @@ class AirtableUserDataImporter
                 'photos' => $galleryImages,
                 'media_attachments' => $genericAttachments,
                 'airtable_synced_at' => now(),
+                'record_origin' => 'airtable_import',
+                'source_created_at' => $record['createdTime'] ?? null,
             ]
         );
     }
@@ -118,6 +120,8 @@ class AirtableUserDataImporter
                 'file_attachments' => $fileAttachments,
                 'notes' => $notes !== '' ? $notes : null,
                 'airtable_synced_at' => now(),
+                'record_origin' => 'airtable_import',
+                'source_created_at' => $record['createdTime'] ?? null,
             ]
         );
     }

@@ -11,6 +11,8 @@ use App\Models\SearchConsolePage;
 use App\Models\SearchConsoleQuery;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Growth\ActivationCohortService;
+use App\Services\Growth\ActivationTrendService;
 use App\Services\Gsc\SeoOpportunityService;
 use App\Services\PublicGarageService;
 use App\Support\AnalyticsDataWindow;
@@ -530,8 +532,17 @@ class GrowthDashboardData
         $stats = $activation['stats'];
         $conversions = collect($activation['conversions']);
         $extraKpis = $this->weeklyProductSeoKpis();
+        $cohorts = app(ActivationCohortService::class)->monthly();
+        $recentCohorts = collect($cohorts)->take(6)->all();
+        $trends = app(ActivationTrendService::class)->compare($cohorts);
+        $coreConversionLabels = [
+            'Registratie → voertuig',
+            'Voertuig → eerste onderhoudslog',
+            'Eerste onderhoudslog → tweede onderhoudslog',
+        ];
 
         $largestDropOff = $conversions
+            ->whereIn('label', $coreConversionLabels)
             ->filter(fn (array $conversion) => $conversion['percentage'] !== null)
             ->sortBy('percentage')
             ->first();
@@ -564,10 +575,76 @@ class GrowthDashboardData
                 'active_last_30_days' => $stats['active_last_30_days'],
             ],
             'conversions' => $conversions->all(),
+            'acquisition' => [
+                'registrations_last_7_days' => $stats['registrations_last_7_days'],
+                'registrations_last_30_days' => $stats['registrations_last_30_days'],
+            ],
+            'activation' => [
+                'users_with_vehicle' => $stats['users_with_vehicle'],
+                'users_with_first_log' => $stats['users_with_maintenance'],
+            ],
+            'retention' => [
+                'users_with_second_log' => $stats['users_with_two_maintenance'],
+                'daily_activity' => $this->dailyActivityRetention(),
+            ],
+            'feature_adoption' => [
+                'users_with_active_reminder' => $stats['users_with_active_reminder'],
+                'users_with_booklet_download' => $stats['users_with_booklet_download'],
+                'public_vehicles' => $stats['public_vehicles'],
+            ],
+            'cohorts' => $recentCohorts,
+            'trends' => $trends,
+            'data_quality' => $this->weeklyDataQuality($cohorts),
             'extra_product_seo_kpis' => $extraKpis,
             'seo_opportunities' => $this->weeklySeoOpportunities(),
             'interpretation' => $interpretation,
         ];
+    }
+
+    private function dailyActivityRetention(): array
+    {
+        if (! $this->hasTable('user_daily_activities')) {
+            return ['tracking_started_at' => null, 'active_last_7_days' => null, 'active_last_30_days' => null];
+        }
+
+        $trackingStartedAt = DB::table('user_daily_activities')->min('activity_date');
+
+        return [
+            'tracking_started_at' => $trackingStartedAt,
+            'active_last_7_days' => DB::table('user_daily_activities')
+                ->join('users', 'users.id', '=', 'user_daily_activities.user_id')
+                ->where('activity_date', '>=', now(self::reportTimezone())->subDays(6)->toDateString())
+                ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
+                ->distinct('user_daily_activities.user_id')
+                ->count('user_daily_activities.user_id'),
+            'active_last_30_days' => DB::table('user_daily_activities')
+                ->join('users', 'users.id', '=', 'user_daily_activities.user_id')
+                ->where('activity_date', '>=', now(self::reportTimezone())->subDays(29)->toDateString())
+                ->where(fn ($query) => $this->applyCoreUserJoinConditions($query))
+                ->distinct('user_daily_activities.user_id')
+                ->count('user_daily_activities.user_id'),
+        ];
+    }
+
+    private function weeklyDataQuality(array $cohorts): array
+    {
+        return [
+            'timing_eligible' => collect($cohorts)->sum('timing_eligible'),
+            'timing_excluded' => collect($cohorts)->sum('timing_excluded'),
+            'import_suspected' => collect($cohorts)->sum('import_suspected'),
+            'provisional_cohorts' => collect($cohorts)->filter(
+                fn (array $cohort): bool => collect(['first_log_within_24h', 'first_log_within_7d', 'first_log_within_30d'])
+                    ->contains(fn (string $key): bool => ($cohort[$key]['status'] ?? null) === 'provisional')
+            )->count(),
+            'anomalies' => collect($cohorts)->sum('anomalies'),
+            'activity_tracking_started_at' => $this->dailyActivityRetention()['tracking_started_at'],
+            'definition_version' => ActivationCohortService::DEFINITION_VERSION,
+        ];
+    }
+
+    private static function reportTimezone(): string
+    {
+        return ActivationCohortService::TIMEZONE;
     }
 
     private function activationRetentionSummary(array $stats): string

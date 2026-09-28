@@ -1,11 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CachePublicResponses;
 use App\Http\Middleware\CanonicalizePublicUrl;
 use App\Http\Middleware\CaptureAnalyticsAttribution;
+use App\Http\Middleware\RecordDailyUserActivity;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             CanonicalizePublicUrl::class,
             CaptureAnalyticsAttribution::class,
             CachePublicResponses::class,
+            RecordDailyUserActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
