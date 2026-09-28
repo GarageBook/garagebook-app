@@ -7,6 +7,7 @@ use App\Models\AnalyticsDailySummary;
 use App\Models\MaintenanceLog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Growth\ActivationTrendService;
 use App\Support\Growth\GrowthDashboardData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -233,6 +234,45 @@ class SendGrowthReportCommandTest extends TestCase
 
         $this->assertStringContainsString('100,0% (14/14) — provisional: 14/22 eligible', $text);
         $this->assertStringNotContainsString('100,0% van cohort', $text);
+    }
+
+    public function test_full_weekly_mail_renders_multiple_cohort_trend_windows(): void
+    {
+        $report = app(GrowthDashboardData::class)->weeklyGrowthReport();
+        $report['cohorts'] = collect([
+            ['2026-08', 18, 30],
+            ['2026-07', 15, 30],
+            ['2026-06', 10, 25],
+            ['2026-05', 9, 20],
+            ['2026-04', 5, 20],
+        ])->map(fn (array $values): array => $this->reportCohort(...$values))->all();
+        $report['trends'] = app(ActivationTrendService::class)->compare($report['cohorts']);
+
+        $this->assertCount(4, $report['trends']);
+
+        $text = $this->renderedMailText(new WeeklyGrowthReportMail($report));
+
+        $this->assertStringContainsString('2026-04 → 2026-05', $text);
+        $this->assertStringContainsString('2026-05 → 2026-06', $text);
+        $this->assertStringContainsString('2026-06 → 2026-07', $text);
+        $this->assertStringContainsString('2026-07 → 2026-08', $text);
+    }
+
+    private function reportCohort(string $month, int $numerator, int $denominator): array
+    {
+        $metric = $this->metric($numerator, $denominator);
+
+        return [
+            'cohort_month' => $month,
+            'core_users' => $denominator,
+            'timing_eligible' => $denominator,
+            'registration_to_vehicle' => $metric,
+            'registration_to_first_log' => $metric,
+            'first_log_within_24h' => $metric,
+            'first_log_within_7d' => $metric,
+            'first_log_within_30d' => $metric,
+            'first_to_second_log' => $metric,
+        ];
     }
 
     private function metric(int $numerator, int $denominator, string $status = 'mature', ?int $eligiblePopulation = null): array
