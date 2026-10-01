@@ -92,7 +92,10 @@ class Community2026EnrichmentCommandTest extends TestCase
 
         $prospect->refresh();
         $this->assertSame('secretariaat@vereniging.example', $prospect->email);
-        $this->assertSame('secretariaat@vereniging.example', $prospect->suggested_email);
+        $this->assertNull($prospect->suggested_email);
+        $this->assertSame(GrowthProspect::EMAIL_STATUS_FOUND, $prospect->email_status);
+        $this->assertFalse($prospect->verification_required);
+        $this->assertSame(GrowthProspect::LIFECYCLE_READY, $prospect->lifecycle_status);
         $this->assertSame(95, $prospect->suggested_email_confidence);
     }
 

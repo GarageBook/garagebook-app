@@ -379,6 +379,10 @@ class WebsiteDiscoveryProvider implements DiscoveryProvider
 
     private function inferSubtype(string $text): ?string
     {
+        if ($this->defaultProspectType === 'community') {
+            return app(DiscoveryNormalizer::class)->inferProspectSubtype($text);
+        }
+
         $text = Str::lower($text);
 
         return match (true) {

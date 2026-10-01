@@ -148,6 +148,7 @@ class LifecycleEventsObserverTest extends TestCase
             'user_id' => $user->id,
             'brand' => 'Kia',
             'model' => 'Ceed',
+            'is_public' => false,
             ...$attributes,
         ]);
     }

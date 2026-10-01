@@ -42,6 +42,7 @@ class LifecycleProgressSyncTest extends TestCase
             'user_id' => $user->id,
             'brand' => 'Kia',
             'model' => 'Ceed',
+            'is_public' => false,
         ]);
 
         app(LifecycleProgressSyncService::class)->syncUser($user, now());
@@ -86,6 +87,7 @@ class LifecycleProgressSyncTest extends TestCase
             'user_id' => $user->id,
             'brand' => 'Kia',
             'model' => 'Ceed',
+            'is_public' => false,
         ]);
         MaintenanceLog::query()->create([
             'vehicle_id' => $vehicle->id,

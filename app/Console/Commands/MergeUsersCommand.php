@@ -65,7 +65,7 @@ class MergeUsersCommand extends Command
                 }
 
                 $target->forceFill([
-                    'is_admin' => $target->is_admin || $source->is_admin,
+                    'is_admin' => $target->isAdmin(),
                     'airtable_record_id' => $target->airtable_record_id ?: $sourceAirtableRecordId,
                     'airtable_synced_at' => $target->airtable_synced_at ?: $sourceAirtableSyncedAt,
                     'email_verified_at' => $target->email_verified_at ?: $sourceEmailVerifiedAt,
@@ -77,7 +77,7 @@ class MergeUsersCommand extends Command
 
                 DB::table('sessions')
                     ->where('user_id', $source->id)
-                    ->update(['user_id' => $target->id]);
+                    ->delete();
 
                 if ($this->option('delete-source')) {
                     $source->delete();

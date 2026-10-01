@@ -412,28 +412,26 @@ class VehicleIntelligenceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // Caching
+    // Fresh data and legacy compatibility
     // -------------------------------------------------------------------------
 
-    public function test_intelligence_is_cached_and_returned_from_cache(): void
+    public function test_intelligence_reflects_database_changes_without_a_cache_flush(): void
     {
         $user = $this->regularUser();
         $this->publicVehicle($user, 'Yamaha', 'MT-07', ['year' => 2021]);
 
-        // First call – warms cache
         $first = $this->service->forBrandModel('Yamaha', 'MT-07');
+        $this->assertSame('2021', $first['specifications']['year_range']);
 
-        // Modify DB after caching
+        // Authority intelligence intentionally resolves current data on every call.
         Vehicle::query()->update(['year' => 2099]);
 
-        // Second call – should return cached (not 2099)
         $second = $this->service->forBrandModel('Yamaha', 'MT-07');
 
-        $this->assertSame($first['specifications']['year_range'], $second['specifications']['year_range']);
-        $this->assertNotSame('2099', $second['specifications']['year_range']);
+        $this->assertSame('2099', $second['specifications']['year_range']);
     }
 
-    public function test_flush_for_brand_model_clears_cache(): void
+    public function test_legacy_flush_call_remains_compatible_with_fresh_intelligence(): void
     {
         $user = $this->regularUser();
         $this->publicVehicle($user, 'Yamaha', 'MT-07', ['year' => 2021]);

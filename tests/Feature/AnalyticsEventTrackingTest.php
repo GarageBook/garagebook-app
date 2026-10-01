@@ -498,12 +498,15 @@ class AnalyticsEventTrackingTest extends TestCase
                     'fuel_log_count' => 1,
                 ],
             ],
+            [
+                'name' => 'public_vehicle_dashboard_widget_viewed',
+                'params' => ['public_vehicle_count' => 1],
+            ],
         ], session(AnalyticsEventTracker::SESSION_KEY));
 
-        $this->assertPayloadDoesNotContainKeys(
-            session(AnalyticsEventTracker::SESSION_KEY)[0]['params'],
-            ['user_id', 'vehicle_id', 'email', 'name']
-        );
+        foreach (session(AnalyticsEventTracker::SESSION_KEY) as $event) {
+            $this->assertPayloadDoesNotContainKeys($event['params'], ['user_id', 'vehicle_id', 'email', 'name']);
+        }
     }
 
     public function test_register_page_renders_registration_started_with_safe_utm_params(): void

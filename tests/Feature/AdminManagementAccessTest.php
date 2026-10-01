@@ -50,6 +50,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class AdminManagementAccessTest extends TestCase
@@ -81,9 +83,20 @@ class AdminManagementAccessTest extends TestCase
             ->assertDontSee('/admin/outreach-prospects', false);
     }
 
-    public function test_admin_can_open_filament_panel_and_management_routes(): void
+    public static function authorizedAdmins(): array
     {
-        $admin = User::factory()->admin()->create();
+        return [['willemvanveelen@icloud.com'], ['leroy@lenduria.nl']];
+    }
+
+    public static function unauthorizedDatabaseFlags(): array
+    {
+        return [[false], [true]];
+    }
+
+    #[DataProvider('authorizedAdmins')]
+    public function test_admin_can_open_filament_panel_and_management_routes(string $email): void
+    {
+        $admin = User::factory()->admin()->create(['email' => $email]);
         $managedUser = User::factory()->create();
         $blog = Blog::query()->create([
             'title' => 'Admin blog',
@@ -133,22 +146,28 @@ class AdminManagementAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_different_email_with_is_admin_gets_admin_rights(): void
+    public function test_different_email_with_database_admin_flag_is_denied_management_access(): void
     {
         $admin = User::factory()->create([
             'email' => 'trusted-admin@example.com',
             'is_admin' => true,
         ]);
 
-        $this->assertTrue($admin->isAdmin());
+        DB::table('users')->where('id', $admin->id)->update(['is_admin' => true]);
+        $admin->refresh();
+
+        $this->assertFalse($admin->isAdmin());
         $this->assertTrue($admin->canAccessPanel(Filament::getPanel('admin')));
 
         $this->actingAs($admin)
             ->get('/admin')
-            ->assertOk();
+            ->assertOk()
+            ->assertDontSee('/admin/users', false);
+
+        $this->get('/admin/users')->assertForbidden();
     }
 
-    public function test_is_admin_uses_database_boolean(): void
+    public function test_database_boolean_alone_never_grants_admin_rights(): void
     {
         $user = User::factory()->create([
             'is_admin' => false,
@@ -156,16 +175,20 @@ class AdminManagementAccessTest extends TestCase
 
         $this->assertFalse($user->isAdmin());
 
-        $user->forceFill(['is_admin' => true])->save();
+        DB::table('users')->where('id', $user->id)->update(['is_admin' => true]);
 
-        $this->assertTrue($user->fresh()->isAdmin());
+        $this->assertFalse($user->fresh()->isAdmin());
     }
 
-    public function test_regular_user_can_open_core_garagebook_flows_under_admin_panel(): void
+    #[DataProvider('unauthorizedDatabaseFlags')]
+    public function test_regular_user_can_open_core_garagebook_flows_under_admin_panel(bool $flag): void
     {
         $user = User::factory()->create([
             'is_admin' => false,
         ]);
+
+        DB::table('users')->where('id', $user->id)->update(['is_admin' => $flag]);
+        $user->refresh();
 
         $vehicle = Vehicle::query()->create([
             'user_id' => $user->id,
@@ -207,11 +230,14 @@ class AdminManagementAccessTest extends TestCase
             ->assertOk();
     }
 
-    public function test_regular_user_cannot_open_admin_only_management_routes(): void
+    #[DataProvider('unauthorizedDatabaseFlags')]
+    public function test_regular_user_cannot_open_admin_only_management_routes(bool $flag): void
     {
         $user = User::factory()->create([
             'is_admin' => false,
         ]);
+        DB::table('users')->where('id', $user->id)->update(['is_admin' => $flag]);
+        $user->refresh();
         $managedUser = User::factory()->create();
         $blog = Blog::query()->create([
             'title' => 'Admin blog',
@@ -251,12 +277,16 @@ class AdminManagementAccessTest extends TestCase
         $this->assertFalse(InactiveUsersTable::canView());
     }
 
-    public function test_admin_only_surfaces_use_is_admin_authorization_checks(): void
+    #[DataProvider('unauthorizedDatabaseFlags')]
+    public function test_admin_only_surfaces_use_is_admin_authorization_checks(bool $flag): void
     {
         $admin = User::factory()->admin()->create();
         $user = User::factory()->create([
             'is_admin' => false,
         ]);
+
+        DB::table('users')->where('id', $user->id)->update(['is_admin' => $flag]);
+        $user->refresh();
 
         foreach ($this->adminOnlyResources() as $resource) {
             $this->actingAs($admin);

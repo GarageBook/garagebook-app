@@ -67,9 +67,23 @@ class MergeUsersCommandTest extends TestCase
         $this->assertDatabaseMissing('users', [
             'id' => $source->id,
         ]);
-        $this->assertDatabaseHas('sessions', [
+        $this->assertDatabaseMissing('sessions', [
             'id' => 'session-1',
-            'user_id' => $target->id,
         ]);
+    }
+
+    public function test_merge_does_not_transfer_source_admin_rights(): void
+    {
+        $source = User::factory()->admin()->create();
+        $target = User::factory()->create(['email' => 'leroy@lenduria.nl']);
+
+        $this->artisan('users:merge', [
+            '--from' => $source->email,
+            '--into' => $target->email,
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $this->assertFalse($target->fresh()->is_admin);
+        $this->assertTrue($source->fresh()->isAdmin());
     }
 }

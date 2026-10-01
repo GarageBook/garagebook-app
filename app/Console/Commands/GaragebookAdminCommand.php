@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GaragebookAdminCommand extends Command
@@ -38,7 +39,15 @@ class GaragebookAdminCommand extends Command
         }
 
         $desiredAdminStatus = $action === 'grant';
+
+        if ($desiredAdminStatus && ! User::isAllowedAdminEmail($user->email)) {
+            $this->error('Admin rights are restricted to the two authorized GarageBook accounts.');
+
+            return self::FAILURE;
+        }
+
         $currentAdminStatus = $user->isAdmin();
+        $changed = (bool) $user->is_admin !== $desiredAdminStatus;
 
         $this->line('User ID: '.$user->id);
         $this->line('Name: '.$user->name);
@@ -58,7 +67,7 @@ class GaragebookAdminCommand extends Command
             return self::FAILURE;
         }
 
-        if ($currentAdminStatus !== $desiredAdminStatus) {
+        if ($changed) {
             $user->forceFill([
                 'is_admin' => $desiredAdminStatus,
             ])->save();
@@ -69,7 +78,7 @@ class GaragebookAdminCommand extends Command
             'email' => $user->email,
             'action' => $action,
             'environment' => app()->environment(),
-            'changed' => $currentAdminStatus !== $desiredAdminStatus,
+            'changed' => $changed,
         ]);
 
         $this->info('Admin rights '.($desiredAdminStatus ? 'granted' : 'revoked').'.');
@@ -81,6 +90,7 @@ class GaragebookAdminCommand extends Command
     {
         return User::query()
             ->where('is_admin', true)
+            ->whereIn(DB::raw('lower(trim(email))'), User::ADMIN_EMAILS)
             ->whereKeyNot($user->getKey())
             ->doesntExist();
     }

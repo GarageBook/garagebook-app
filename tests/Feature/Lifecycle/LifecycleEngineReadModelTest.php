@@ -20,6 +20,19 @@ class LifecycleEngineReadModelTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_default_public_vehicle_records_public_garage_state_and_milestone(): void
+    {
+        $user = User::factory()->create();
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id, 'brand' => 'Kia', 'model' => 'Ceed',
+        ]);
+
+        $this->assertTrue($vehicle->is_public);
+        $this->assertNotEmpty($vehicle->public_slug);
+        $this->assertSame(LifecycleState::PUBLIC_GARAGE_ENABLED, app(LifecycleStateService::class)->determine($user));
+        $this->assertContains(LifecycleMilestone::PUBLIC_GARAGE, app(LifecycleMilestoneService::class)->achieved($user));
+    }
+
     public function test_user_without_vehicle_is_registered(): void
     {
         $user = User::factory()->create();
@@ -213,6 +226,7 @@ class LifecycleEngineReadModelTest extends TestCase
             'user_id' => $user->id,
             'brand' => 'Kia',
             'model' => 'Ceed SW PHEV',
+            'is_public' => false,
             ...$attributes,
         ]);
     }

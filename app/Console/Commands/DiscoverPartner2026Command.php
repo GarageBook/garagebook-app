@@ -100,7 +100,7 @@ class DiscoverPartner2026Command extends Command
         );
 
         if ($urls !== []) {
-            $providers[] = new WebsiteDiscoveryProvider($urls, (int) $this->option('limit'), 75, $this->definition->seedLabel());
+            $providers[] = new WebsiteDiscoveryProvider($urls, (int) $this->option('limit'), 75, $this->definition->seedLabel(), 'partner');
         }
 
         return $providers;

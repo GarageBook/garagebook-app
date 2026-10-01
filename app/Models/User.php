@@ -14,17 +14,31 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'is_admin', 'is_outreach_demo', 'first_login_at', 'last_login_at', 'first_booklet_downloaded_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'record_origin', 'source_created_at', 'onboarding_version', 'lifecycle_emails_unsubscribed_at'])]
+#[Fillable(['name', 'email', 'password', 'is_outreach_demo', 'first_login_at', 'last_login_at', 'first_booklet_downloaded_at', 'airtable_record_id', 'airtable_synced_at', 'consumption_unit', 'registration_source', 'record_origin', 'source_created_at', 'onboarding_version', 'lifecycle_emails_unsubscribed_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
     public const CURRENT_ONBOARDING_VERSION = '2026-09-activation-v1';
+
+    public const ADMIN_EMAILS = [
+        'willemvanveelen@icloud.com',
+        'leroy@lenduria.nl',
+    ];
 
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     protected static function booted(): void
     {
+        static::saving(function (User $user): void {
+            // Privileges cannot follow an email change or be assigned outside the allowlist.
+            if (! self::isAllowedAdminEmail($user->email)
+                || ($user->exists && $user->isDirty('email')
+                    && strtolower(trim((string) $user->getOriginal('email'))) !== strtolower(trim((string) $user->email)))) {
+                $user->is_admin = false;
+            }
+        });
+
         static::creating(function (User $user): void {
             $user->record_origin ??= filled($user->airtable_record_id) ? 'airtable_import' : 'native';
             if ($user->record_origin === 'native') {
@@ -43,7 +57,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function isAdmin(): bool
     {
-        return (bool) $this->is_admin;
+        return (bool) $this->is_admin && self::isAllowedAdminEmail($this->email);
+    }
+
+    public static function isAllowedAdminEmail(?string $email): bool
+    {
+        return in_array(strtolower(trim((string) $email)), self::ADMIN_EMAILS, true);
     }
 
     public function isGeratelUser(): bool

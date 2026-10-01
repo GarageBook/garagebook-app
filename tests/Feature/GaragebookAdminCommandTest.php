@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
@@ -11,24 +12,62 @@ class GaragebookAdminCommandTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_grant_refuses_other_accounts_even_with_force(): void
+    {
+        $user = User::factory()->create(['email' => 'other@example.com']);
+
+        $this->artisan('garagebook:admin', [
+            'action' => 'grant', 'email' => $user->email, '--force' => true,
+        ])->expectsOutput('Admin rights are restricted to the two authorized GarageBook accounts.')
+            ->assertFailed();
+
+        $this->assertFalse($user->fresh()->is_admin);
+    }
+
+    public function test_revoke_clears_an_unauthorized_database_flag(): void
+    {
+        $user = User::factory()->create();
+        DB::table('users')->where('id', $user->id)->update(['is_admin' => true]);
+
+        $this->artisan('garagebook:admin', [
+            'action' => 'revoke', 'email' => $user->email, '--force' => true,
+        ])->assertSuccessful();
+
+        $this->assertFalse($user->fresh()->is_admin);
+    }
+
+    public function test_unauthorized_database_flag_does_not_count_as_a_remaining_admin(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $other = User::factory()->create();
+        DB::table('users')->where('id', $other->id)->update(['is_admin' => true]);
+
+        $this->artisan('garagebook:admin', [
+            'action' => 'revoke', 'email' => $admin->email, '--force' => true,
+        ])->expectsOutput('Refusing to revoke the last admin account. Pass --allow-no-admin to override.')
+            ->assertFailed();
+
+        $this->assertTrue($admin->fresh()->isAdmin());
+    }
+
     public function test_grant_makes_existing_user_admin_with_force(): void
     {
         Log::spy();
 
         $user = User::factory()->create([
             'name' => 'Trusted User',
-            'email' => 'Trusted.User@Example.com',
+            'email' => 'WillemVanVeelen@ICloud.Com',
             'is_admin' => false,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'grant',
-            'email' => 'trusted.user@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             '--force' => true,
         ])
             ->expectsOutput('User ID: '.$user->id)
             ->expectsOutput('Name: Trusted User')
-            ->expectsOutput('Email: Trusted.User@Example.com')
+            ->expectsOutput('Email: WillemVanVeelen@ICloud.Com')
             ->expectsOutput('Current admin status: no')
             ->expectsOutput('Desired admin status: yes')
             ->expectsOutput('Admin rights granted.')
@@ -42,7 +81,7 @@ class GaragebookAdminCommandTest extends TestCase
 
         Log::shouldHaveReceived('info')
             ->with('garagebook_admin_rights_changed', \Mockery::on(fn (array $context): bool => $context['user_id'] === $user->id
-                && $context['email'] === 'Trusted.User@Example.com'
+                && $context['email'] === 'WillemVanVeelen@ICloud.Com'
                 && $context['action'] === 'grant'
                 && $context['environment'] === 'testing'
                 && $context['changed'] === true
@@ -53,17 +92,17 @@ class GaragebookAdminCommandTest extends TestCase
     public function test_revoke_removes_admin_rights_when_another_admin_remains(): void
     {
         $user = User::factory()->create([
-            'email' => 'admin-one@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             'is_admin' => true,
         ]);
         User::factory()->create([
-            'email' => 'admin-two@example.com',
+            'email' => 'leroy@lenduria.nl',
             'is_admin' => true,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'revoke',
-            'email' => 'ADMIN-ONE@example.com',
+            'email' => 'WILLEMVANVEELEN@icloud.com',
             '--force' => true,
         ])
             ->expectsOutput('Current admin status: yes')
@@ -103,13 +142,13 @@ class GaragebookAdminCommandTest extends TestCase
     public function test_cancelled_interactive_change_does_not_update_user(): void
     {
         $user = User::factory()->create([
-            'email' => 'cancel@example.com',
+            'email' => 'leroy@lenduria.nl',
             'is_admin' => false,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'grant',
-            'email' => 'cancel@example.com',
+            'email' => 'leroy@lenduria.nl',
         ])
             ->expectsConfirmation('Apply this admin change?', 'no')
             ->expectsOutput('Cancelled. No changes saved.')
@@ -121,13 +160,13 @@ class GaragebookAdminCommandTest extends TestCase
     public function test_force_skips_confirmation_and_is_idempotent(): void
     {
         $user = User::factory()->create([
-            'email' => 'already-admin@example.com',
+            'email' => 'leroy@lenduria.nl',
             'is_admin' => true,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'grant',
-            'email' => 'already-admin@example.com',
+            'email' => 'leroy@lenduria.nl',
             '--force' => true,
         ])
             ->expectsOutput('Current admin status: yes')
@@ -141,13 +180,13 @@ class GaragebookAdminCommandTest extends TestCase
     public function test_revoke_refuses_to_remove_last_admin_by_default(): void
     {
         $admin = User::factory()->create([
-            'email' => 'last-admin@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             'is_admin' => true,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'revoke',
-            'email' => 'last-admin@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             '--force' => true,
         ])
             ->expectsOutput('Refusing to revoke the last admin account. Pass --allow-no-admin to override.')
@@ -159,13 +198,13 @@ class GaragebookAdminCommandTest extends TestCase
     public function test_allow_no_admin_can_revoke_last_admin(): void
     {
         $admin = User::factory()->create([
-            'email' => 'last-admin@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             'is_admin' => true,
         ]);
 
         $this->artisan('garagebook:admin', [
             'action' => 'revoke',
-            'email' => 'last-admin@example.com',
+            'email' => 'willemvanveelen@icloud.com',
             '--force' => true,
             '--allow-no-admin' => true,
         ])

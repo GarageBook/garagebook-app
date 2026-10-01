@@ -111,7 +111,6 @@ class ImportUserSnapshotCommand extends Command
 
         $targetUser->forceFill([
             'name' => $sourceUser['name'] ?? $targetUser->name,
-            'is_admin' => $sourceUser['is_admin'] ?? $targetUser->is_admin,
             'first_login_at' => $sourceUser['first_login_at'] ?? $targetUser->first_login_at,
             'last_login_at' => $sourceUser['last_login_at'] ?? $targetUser->last_login_at,
             'airtable_record_id' => $sourceUser['airtable_record_id'] ?? $targetUser->airtable_record_id,

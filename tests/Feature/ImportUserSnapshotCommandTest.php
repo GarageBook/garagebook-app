@@ -10,6 +10,39 @@ class ImportUserSnapshotCommandTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_snapshot_cannot_grant_admin_rights_to_the_target(): void
+    {
+        $user = User::factory()->create(['email' => 'leroy@lenduria.nl']);
+        $path = tempnam(sys_get_temp_dir(), 'garagebook-snapshot-');
+        file_put_contents($path, json_encode(['user' => ['name' => 'Imported', 'is_admin' => true]]));
+
+        try {
+            $this->artisan('users:import-snapshot', [
+                'export' => $path, '--email' => $user->email, '--force' => true,
+            ])->assertSuccessful();
+            $this->assertSame('Imported', $user->fresh()->name);
+            $this->assertFalse($user->fresh()->is_admin);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function test_snapshot_cannot_revoke_existing_authorized_admin_rights(): void
+    {
+        $user = User::factory()->admin()->create();
+        $path = tempnam(sys_get_temp_dir(), 'garagebook-snapshot-');
+        file_put_contents($path, json_encode(['user' => ['is_admin' => false]]));
+
+        try {
+            $this->artisan('users:import-snapshot', [
+                'export' => $path, '--email' => $user->email, '--force' => true,
+            ])->assertSuccessful();
+            $this->assertTrue($user->fresh()->isAdmin());
+        } finally {
+            unlink($path);
+        }
+    }
+
     public function test_command_is_blocked_outside_local_and_testing(): void
     {
         $this->app['env'] = 'production';

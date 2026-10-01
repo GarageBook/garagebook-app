@@ -1,0 +1,163 @@
+GarageBook security- en regressieonderzoek — 2026-10-01
+
+Scope: lokale code en tests. Geen deploy, productiedatawijziging of autorisatie
+van nieuwe adminaccounts. Bestaande losse werkboomwijzigingen zijn behouden.
+
+BASELINE
+php artisan test: 900 geslaagd, 13 gefaald, 5 overgeslagen; 5488 assertions.
+Volledige uitvoer: /tmp/garagebook-security-baseline.log
+
+SECURITYREGEL EN WIJZIGINGEN
+Een expliciete is_admin-grant EN een van deze twee adressen zijn vereist:
+willemvanveelen@icloud.com, leroy@lenduria.nl.
+De adressen staan centraal in User::ADMIN_EMAILS. Vergelijking is niet
+hoofdlettergevoelig. Een onterecht rechtstreeks in de database gezette vlag
+levert geen beheerrechten of policy-bypass op.
+
+is_admin is verwijderd uit Fillable. Modelopslag wist de vlag voor andere
+adressen en bij een inhoudelijke e-mailwijziging. Een wijziging van alleen
+hoofdletters behoudt de bestaande rechten. Een toegestane e-mail op zichzelf
+geeft nooit rechten: registratie of e-mailwijziging is geen admingrant.
+
+Inventarisatie van schrijfpaden:
+- GaragebookAdminCommand: grant buiten de allowlist wordt geweigerd, ook met
+  --force. Revoke kan een ongeoorloofde databasevlag opruimen. De bescherming
+  tegen het intrekken van de laatste admin telt alleen toegestane admins.
+- MergeUsersCommand: behoudt uitsluitend de bestaande rechten van de doeluser;
+  neemt geen rechten van de bron over. Bronsessies worden verwijderd in plaats
+  van naar de doeluser verplaatst, om toegangsovername te voorkomen.
+- ImportUserSnapshotCommand: neemt is_admin niet over uit importgegevens;
+  bestaande doelaccountrechten blijven intact. Blijft local/testing-only.
+- Registratie: Register en GeratelRegister gebruiken Filament-formulierdata
+  en model-create. Geïnjecteerde is_admin is afgedekt met Livewire-tests.
+- Gebruikersbeheer: CreateUser/EditUser hebben geen adminveld, gebruiken
+  modelopslag en controleren beheerautorisatie. Injectie bij creëren en
+  opslaan, toegang door gewone gebruikers en herautorisatie bij save getest.
+- Profiel/API: geen profielpagina geconfigureerd op het panel, geen API-routing
+  in bootstrap/app.php en geen api/profile-routes in route:list. De aanwezige
+  Livewire-gebruikersinvoer is hierboven getest. Geen nieuwe routes toegevoegd.
+- AirtableUserImporter: expliciete veldmapping zonder is_admin; behoudt het
+  bestaande e-mailadres bij updates. Geen wijziging nodig.
+- Overige user-writes (o.a. login, boekdownload, verbruikseenheid, demo en
+  unsubscribe): schrijven expliciete velden zonder adminstatus.
+- Migratie 2026_04_22_101412: is_admin heeft standaard false.
+- Migratie 2026_07_30_190000: geeft uitsluitend het bestaande Willem-adres
+  rechten. Historische migratie ongewijzigd.
+- UserFactory::admin: gebruikt het toegestane Willem-adres; tests voor Leroy
+  gebruiken expliciet Leroy. Geen nieuwe productieaccounts aangemaakt.
+
+Read-only toepassingen van de ruwe vlag in analyticsfilters en CSV-export
+verlenen geen rechten. Alle aangetroffen beheertoegangschecks en policy-
+uitzonderingen lopen via User::isAdmin(). De gewone app blijft toegankelijk
+onder /admin; canAccessPanel blijft daarvoor beschikbaar aan normale users.
+
+CLASSIFICATIE VAN ALLE 13 OORSPRONKELIJKE FAILURES
+A = applicatieregressie; B = verouderde/foutieve test; C = fixture/isolation.
+
+1. C — LifecycleEngineReadModelTest::test_user_with_vehicle_reaches_vehicle_added
+2. C — LifecycleEngineReadModelTest::test_user_with_vehicle_and_maintenance_reaches_first_maintenance_logged
+3. C — LifecycleEventsObserverTest::test_vehicle_created_triggers_first_vehicle_milestone
+4. C — LifecycleEventsObserverTest::test_maintenance_created_triggers_first_maintenance_milestone
+5. C — LifecycleEventsObserverTest::test_document_uploaded_triggers_first_document_milestone
+6. C — LifecycleEventsObserverTest::test_lifecycle_state_changed_event_is_dispatched_on_transition
+7. C — LifecycleProgressSyncTest::test_state_transition_closes_previous_state
+8. C — LifecycleProgressSyncTest::test_command_is_idempotent
+   Oorzaak: fixtures lieten is_public weg terwijl het model sinds b952cc7
+   standaard openbaar is. Lifecycle geeft publieke/complete garages terecht
+   voorrang en registreert ook de publieke milestone. De tests bedoelen een
+   privévoertuig in een eerdere fase. Alleen die fixtures zijn expliciet privé
+   gemaakt; statusassertions en lifecycleproductiecode zijn behouden. Een extra
+   regressietest bevestigt de huidige openbare standaard en publieke milestone.
+
+9. A — Community2026DiscoveryCommandTest::test_urls_option_can_read_from_text_file
+10. A — Community2026DiscoveryCommandTest::test_website_input_extracts_contact_details
+   Oorzaak: de gedeelde WebsiteDiscoveryProvider paste commerciële subtypes toe
+   op communities. Afwijzings-CSV bevestigde oldtimer_restoration/invalid_subtype
+   voor Club Voorbeeld. Community2026Definition accepteert oldtimer_club.
+   Fix: communitycontext gebruikt de bestaande DiscoveryNormalizer; commerciële
+   partnercontext behoudt de partnerclassificatie. Het expliciete URL-pad van
+   DiscoverPartner2026Command geeft nu ook 'partner' mee, zoals het seedpad al
+   deed. Regressies dekken oldtimer, camper en youngtimer in beide contexten,
+   expliciete subtypevoorrang en het partnercommando met een URL.
+
+11. B — Community2026EnrichmentCommandTest::test_enrichment_blocks_personal_noreply_and_webshop_addresses
+   Oorzaak: sinds 7fe5ff7 wordt een voldoende betrouwbaar adres direct email en
+   vervalt suggested_email; confidence en bron blijven bewaard. De test verwachtte
+   nog duplicatie. Nu worden het gekozen secretariaatsadres, een lege suggestie,
+   found/ready, geen verificatievereiste en confidence 95 gezamenlijk getest.
+   Geen wijziging aan productiegedrag of selectie van adressen.
+
+12. B — AnalyticsEventTrackingTest::test_dashboard_view_event_queues_privacy_safe_counts
+   Oorzaak: de publieke-voertuigwidget verstuurt bewust een eigen view-event;
+   PublicVehiclePagesWidgetTest bevestigt dit contract. De dashboardtest verwachtte
+   uitsluitend het oudere event. Test controleert nu beide exacte payloads en
+   controleert verboden identificerende velden voor beide events.
+
+13. B — VehicleIntelligenceTest::test_intelligence_is_cached_and_returned_from_cache
+   Oorzaak: 8f4f3c6 verwijderde de cache bewust voor actuele authoritygegevens.
+   De oude test eiste nog verouderde data. De vervangende test controleert de
+   eerste waarde en actualisatie na een databasewijziging zonder cacheflush.
+   De compatibiliteitstest voor de oude flush-methode is passend hernoemd.
+
+Totaal: 2 A, 3 B, 8 C. Voor elk onderdeel is het bedoelde gedrag vastgesteld
+uit code, bestaande tests en waar relevant git-historie; geen open productkeuze.
+
+GEWIJZIGDE BESTANDEN VOOR DEZE OPDRACHT
+app/Models/User.php
+app/Console/Commands/GaragebookAdminCommand.php
+app/Console/Commands/MergeUsersCommand.php
+app/Console/Commands/ImportUserSnapshotCommand.php
+app/Console/Commands/DiscoverPartner2026Command.php
+app/Services/Growth/Discovery/WebsiteDiscoveryProvider.php
+tests/Feature/AdminSecurityTest.php (nieuw)
+tests/Feature/AdminManagementAccessTest.php
+tests/Feature/GaragebookAdminCommandTest.php
+tests/Feature/MergeUsersCommandTest.php
+tests/Feature/ImportUserSnapshotCommandTest.php
+tests/Feature/AnalyticsEventTrackingTest.php
+tests/Feature/Community2026EnrichmentCommandTest.php
+tests/Feature/Lifecycle/LifecycleEngineReadModelTest.php
+tests/Feature/Lifecycle/LifecycleEventsObserverTest.php
+tests/Feature/Lifecycle/LifecycleProgressSyncTest.php
+tests/Feature/VehicleIntelligenceTest.php
+tests/Feature/WebsiteDiscoverySubtypeTest.php (nieuw)
+docs/security-regression-review-2026-10-01.txt (nieuw)
+
+BESTAANDE STRUCTURELE AANDACHTSPUNTEN, NIET GEREFACTORD
+- BlogResource en Blogs/BlogResource bestaan naast elkaar; beide zijn opgenomen
+  in de beheerautorisatietests.
+- WebsiteDiscoveryProvider en DiscoveryNormalizer bevatten overlappende
+  subtypeherkenning. De fix hergebruikt de normalizer voor communities zonder
+  een brede herschrijving van de commerciële herkenningsregels.
+- VehicleIntelligenceService::flushForBrandModel is een lege legacy-
+  compatibiliteitsmethode. Behouden om bestaande callers niet te breken.
+- Community2026DiscoveryService injecteert nog een ongebruikte quality-service
+  naast de generieke campagneservice. Buiten deze gerichte fixes gelaten.
+
+VALIDATIE
+De nieuwe securitytests faalden eerst op zes punten tegen de oude code.
+De nieuwe subtype-tests faalden eerst voor alle drie communitycategorieën.
+Gerichte oorspronkelijke failuregroepen plus discoveryregressies: 94 geslaagd.
+Formattering beperkt tot de PHP-bestanden van deze opdracht; git diff --check.
+Security- en accountgroepen in de volledige eindrun: 49 geslaagd,
+506 assertions (AdminManagementAccess, AdminSecurity, GaragebookAdminCommand,
+ImportUserSnapshotCommand, MergeUsersCommand en UserResource).
+
+Volledige eindrun:
+php artisan test --log-junit /tmp/garagebook-security-final.xml
+947 geslaagd, 0 failures, 0 errors, 5 bestaande skips; 5782 assertions.
+Duur: 101,95 seconden. Exitcode: 0.
+Log: /tmp/garagebook-security-final.log
+Machineleesbaar resultaat: /tmp/garagebook-security-final.xml
+
+De vijf bestaande skips zijn vier HEIC-tests waarvoor de runtimeondersteuning
+ontbreekt, plus SeoQualityGateTest::test_seo_report_writes_markdown_report
+omdat garagebook:seo-report in deze checkout niet geregistreerd is. Geen tests
+zijn voor deze opdracht uitgeschakeld of nieuw overgeslagen.
+
+Functionele impact: rechten uitsluitend voor de twee toegestane accounts met
+expliciete grant; adminrechten volgen geen e-mailwijziging, merge of import;
+bronsessies bij een merge vervallen. Website-discovery onderscheidt communities
+en commerciële partners correct. Lifecycle-, analytics-, enrichment- en
+voertuigintelligencegedrag is verder ongewijzigd. Geen stylingwijzigingen.
+Geen deploy of commit uitgevoerd.
