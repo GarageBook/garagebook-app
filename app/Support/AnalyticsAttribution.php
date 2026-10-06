@@ -75,14 +75,14 @@ class AnalyticsAttribution
             'demo_user_id' => $request->query('demo_user_id'),
             'outreach_prospect_id' => $request->query('outreach_prospect_id'),
             'intended' => $request->query('intended'),
-            'utm_source' => $request->query('utm_source'),
-            'utm_medium' => $request->query('utm_medium'),
-            'utm_campaign' => $request->query('utm_campaign'),
+            'utm_source' => $this->firstTouchValue($request, 'attr_source') ?? $request->query('utm_source'),
+            'utm_medium' => $this->firstTouchValue($request, 'attr_medium') ?? $request->query('utm_medium'),
+            'utm_campaign' => $this->firstTouchValue($request, 'attr_campaign') ?? $request->query('utm_campaign'),
             'utm_content' => $request->query('utm_content'),
             'utm_term' => $request->query('utm_term'),
             'gclid' => $request->query('gclid'),
-            'landing_page' => $request->getPathInfo(),
-            'referrer' => $this->externalReferrer($request),
+            'landing_page' => $this->landingPage($request),
+            'referrer' => $this->firstTouchReferrer($request) ?? $this->externalReferrer($request),
         ]);
 
         $hasUtm = collect([
@@ -101,7 +101,7 @@ class AnalyticsAttribution
             'intended',
         ])->contains(fn (string $key): bool => filled($payload[$key] ?? null));
 
-        if (! $hasUtm && blank($payload['referrer'] ?? null)) {
+        if (! $hasUtm && blank($payload['referrer'] ?? null) && $this->firstTouchLanding($request) === null) {
             return null;
         }
 
@@ -153,6 +153,87 @@ class AnalyticsAttribution
         return $referrerHost === $request->getHost()
             ? null
             : $referrer;
+    }
+
+    private function landingPage(Request $request): string
+    {
+        return $this->firstTouchLanding($request) ?? $request->getPathInfo();
+    }
+
+    private function firstTouchLanding(Request $request): ?string
+    {
+        if (! $this->acceptsPublicFirstTouch($request)) {
+            return null;
+        }
+
+        $path = $request->query('attr_landing');
+
+        if (! is_string($path)
+            || ! str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || strpbrk($path, "\\?#\r\n") !== false
+            || preg_match('/[[:cntrl:]]|(?:^|\/)\.{1,2}(?:\/|$)/u', $path)
+            || mb_strlen($path) > 255) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    private function firstTouchValue(Request $request, string $key): ?string
+    {
+        if (! $this->acceptsPublicFirstTouch($request)) {
+            return null;
+        }
+
+        $value = $request->query($key);
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value !== '' && mb_strlen($value) <= 255 && ! preg_match('/[[:cntrl:]]/u', $value)
+            ? $value
+            : null;
+    }
+
+    private function firstTouchReferrer(Request $request): ?string
+    {
+        if (! $this->acceptsPublicFirstTouch($request)) {
+            return null;
+        }
+
+        $referrer = $request->query('attr_referrer');
+
+        if (! is_string($referrer) || strlen($referrer) > 2048) {
+            return null;
+        }
+
+        $parts = parse_url($referrer);
+
+        if (! is_array($parts)
+            || ! in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
+            || ! isset($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || ! preg_match('/^[a-z0-9.-]+$/i', $parts['host'])) {
+            return null;
+        }
+
+        return strtolower($parts['scheme']).'://'.strtolower($parts['host'])
+            .(isset($parts['port']) ? ':'.$parts['port'] : '');
+    }
+
+    private function acceptsPublicFirstTouch(Request $request): bool
+    {
+        return in_array($request->getPathInfo(), [
+            '/start',
+            '/register',
+            '/admin/register',
+            '/admin/register/geratel',
+        ], true);
     }
 
     private function sanitizePayload(array $payload): array
