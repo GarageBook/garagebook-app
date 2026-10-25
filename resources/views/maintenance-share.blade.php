@@ -72,6 +72,10 @@
             </div>
         @endif
 
+        @if(isset($vehicle))
+            @include('partials.nin-cross-promo', ['vehicle' => $vehicle, 'isPdf' => request()->is('maintenance/pdf')])
+        @endif
+
         @foreach($logs as $log)
             @php
                 $attachments = $log->attachments;

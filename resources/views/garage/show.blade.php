@@ -208,6 +208,7 @@
             </div>
         </section>
 
+        @include('partials.nin-cross-promo', ['vehicle' => $vehicle])
         <section style="display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin-bottom:40px;">
             @foreach($historyHighlights as $highlight)
                 <article style="padding:20px; border-radius:24px; border:1px solid #e5e7eb; background:#fff; box-shadow:0 16px 40px rgba(15, 23, 42, 0.04);">
@@ -351,6 +352,7 @@
             </div>
         </section>
 
+        @include('partials.nin-cross-promo', ['vehicle' => $vehicle])
         <section style="padding:24px; border-radius:28px; background:linear-gradient(135deg, #111827 0%, #1f2937 100%); color:#fff; margin-bottom:32px;">
             <h2 style="margin:0 0 12px; font-size:clamp(1.45rem, 7vw, 1.75rem); overflow-wrap:normal;">Bouw aan een overdraagbare voertuiggeschiedenis</h2>
             <p style="margin:0 0 14px; color:#e5e7eb; max-width:760px; line-height:1.7;">

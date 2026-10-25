@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\NinLinkResolver;
 use App\Services\PublicGarageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class PublicGarageController extends Controller
 {
     public function __construct(
         private readonly PublicGarageService $publicGarageService,
+        private readonly NinLinkResolver $ninLinkResolver,
     ) {}
 
     public function show(Request $request, string $publicSlug): View|RedirectResponse
@@ -48,6 +50,7 @@ class PublicGarageController extends Controller
             'vehicleHeading' => $vehicleHeading,
             'vehicleName' => $vehicleName,
             'vehiclePhotos' => $this->publicGarageService->publicVehiclePhotos($vehicle),
+            'ninUrl' => $this->ninLinkResolver->resolve($vehicle),
             'verificationNote' => $this->publicGarageService->publicVerificationNote($vehicle),
         ]);
     }

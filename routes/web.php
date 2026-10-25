@@ -19,6 +19,7 @@ use App\Models\Blog;
 use App\Models\MaintenanceLog;
 use App\Models\Page;
 use App\Models\Vehicle;
+use App\Services\NinLinkResolver;
 use App\Support\InternalContentLinks;
 use App\Support\PublicSeoUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -90,7 +91,9 @@ Route::get('/maintenance/pdf', function () {
         ])->save();
     }
 
-    $pdf = Pdf::loadView('maintenance-share', compact('logs', 'vehicle'));
+    $ninUrl = app(NinLinkResolver::class)->resolve($vehicle);
+
+    $pdf = Pdf::loadView('maintenance-share', compact('logs', 'vehicle', 'ninUrl'));
 
     return $pdf->download(
         Str::slug($vehicle->nickname ?: $vehicle->brand.' '.$vehicle->model)
