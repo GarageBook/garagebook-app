@@ -43,6 +43,7 @@ class NinCrossPromotionTest extends TestCase
 
         $this->assertSame(2, substr_count($html, 'data-nin-cross-promo="true"'));
         $this->assertSame(2, substr_count($html, 'href="https://noginnederland.nl/auto/volkswagen/golf"'));
+        $this->assertSame(2, preg_match_all('/href="https:\/\/noginnederland\.nl\/auto\/volkswagen\/golf"\s+target="_blank"\s+rel="noopener noreferrer"/', $html));
         $this->assertSame(2, substr_count($html, 'Hoeveel Volkswagen Golf zijn er nog in Nederland?'));
         $this->assertLessThan(strpos($html, 'data-nin-cross-promo="true"'), strpos($html, 'Laatst bijgewerkt'));
         $this->assertLessThan(strrpos($html, 'data-nin-cross-promo="true"'), strpos($html, 'Onderhoudstijdlijn'));
@@ -65,6 +66,8 @@ class NinCrossPromotionTest extends TestCase
 
         $this->assertSame(2, substr_count($html, 'href="https://noginnederland.nl/auto/volkswagen/golf?registration=TEST"'));
         $this->assertStringNotContainsString('12-AB-34', $html);
+        $pdfBannerHtml = view('partials.nin-cross-promo', ['vehicle' => $vehicle, 'ninUrl' => 'https://noginnederland.nl/auto/volkswagen/golf?registration=TEST', 'isPdf' => true])->render();
+        $this->assertMatchesRegularExpression('/href="https:\/\/noginnederland\.nl\/auto\/volkswagen\/golf\?registration=TEST"\s+target="_blank"\s+rel="noopener noreferrer"/', $pdfBannerHtml);
 
         $response = $this->actingAs($vehicle->user)->get('/maintenance/pdf?vehicle_id='.$vehicle->id);
         $response->assertOk()->assertHeader('content-type', 'application/pdf');

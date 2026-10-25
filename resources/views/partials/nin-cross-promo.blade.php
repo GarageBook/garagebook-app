@@ -22,6 +22,8 @@
     </p>
     <a
         href="{{ $ninUrl }}"
+        target="_blank"
+        rel="noopener noreferrer"
         style="display:inline-block; max-width:100%; box-sizing:border-box; padding:12px 20px; border-radius:12px; background:#0757f9; color:#fff; font-weight:700; text-decoration:none; text-align:center;"
     >Doe de check →</a>
 </aside>
