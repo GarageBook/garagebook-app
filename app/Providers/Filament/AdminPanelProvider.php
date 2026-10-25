@@ -559,10 +559,10 @@ class AdminPanelProvider extends PanelProvider
                             <div>
                                 <h3>'.$aboutGarageBookLabel.'</h3>
                                 <div class="gb-footer-links">
-                                    <a href="/">'.$websiteHomeLabel.'</a>
-                                    <a href="/blogs">'.$blogsLabel.'</a>
-                                    <a href="/ons-verhaal">'.$ourStoryLabel.'</a>
-                                    <a href="/privacy-statement">'.$privacyStatementLabel.'</a>
+                                    <a href="https://garagebook.nl/">'.$websiteHomeLabel.'</a>
+                                    <a href="https://garagebook.nl/blog/">'.$blogsLabel.'</a>
+                                    <a href="https://garagebook.nl/over-garagebook/">'.$ourStoryLabel.'</a>
+                                    <a href="https://garagebook.nl/privacy/">'.$privacyStatementLabel.'</a>
                                     <a href="/algemene-voorwaarden">'.$termsLabel.'</a>
                                     <a href="/contact">'.$contactLabel.'</a>
                                 </div>

@@ -22,7 +22,7 @@ class BlogAppNoindexTest extends TestCase
 
         $this->get('https://app.garagebook.nl/blogs')
             ->assertStatus(301)
-            ->assertRedirect('https://garagebook.nl/blogs');
+            ->assertRedirect('https://garagebook.nl/blog/');
     }
 
     public function test_app_blog_detail_redirects_to_canonical_blog_detail(): void

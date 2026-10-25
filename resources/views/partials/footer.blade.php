@@ -35,10 +35,10 @@
                 </h3>
 
                 <div class="gb-footer-links">
-                    <a href="{{ url('/') }}">Website home</a>
-                    <a href="/blogs">Blogs</a>
-                    <a href="/ons-verhaal">Ons verhaal</a>
-                    <a href="/privacy-statement">Privacy Statement</a>
+                    <a href="https://garagebook.nl/">Website home</a>
+                    <a href="https://garagebook.nl/blog/">Blogs</a>
+                    <a href="https://garagebook.nl/over-garagebook/">Ons verhaal</a>
+                    <a href="https://garagebook.nl/privacy/">Privacy Statement</a>
                     <a href="/algemene-voorwaarden">Voorwaarden</a>
                     <a href="/contact">Contact</a>
                 </div>

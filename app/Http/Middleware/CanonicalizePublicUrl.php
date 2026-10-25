@@ -16,6 +16,10 @@ class CanonicalizePublicUrl
             return $next($request);
         }
 
+        if ($marketingRedirect = $this->marketingRedirect($request)) {
+            return $marketingRedirect;
+        }
+
         if ($indexHtmlRedirect = $this->indexHtmlRedirect($request)) {
             return $indexHtmlRedirect;
         }
@@ -57,6 +61,34 @@ class CanonicalizePublicUrl
         }
 
         return $next($request);
+    }
+
+    private function marketingRedirect(Request $request): ?Response
+    {
+        if ($request->getHost() !== PublicSeoUrl::APP_HOST) {
+            return null;
+        }
+
+        $targets = [
+            '/blogs' => '/blog/',
+            '/ons-verhaal' => '/over-garagebook/',
+            '/privacy-statement' => '/privacy/',
+            '/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026' => '/blog/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026/',
+        ];
+        $targetPath = $targets[rtrim($request->getPathInfo(), '/')] ?? null;
+
+        if ($targetPath === null) {
+            return null;
+        }
+
+        $targetUrl = PublicSeoUrl::path($targetPath);
+        $queryString = $request->server->get('QUERY_STRING', '');
+
+        if ($queryString !== '') {
+            $targetUrl .= '?'.$queryString;
+        }
+
+        return redirect()->to($targetUrl, 301);
     }
 
     private function shouldSkip(Request $request): bool

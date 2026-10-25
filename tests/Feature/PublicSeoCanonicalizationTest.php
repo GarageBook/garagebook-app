@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
+use Livewire\Livewire;
+use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use Tests\TestCase;
 
 class PublicSeoCanonicalizationTest extends TestCase
@@ -36,7 +38,7 @@ class PublicSeoCanonicalizationTest extends TestCase
 
         $this->get('https://app.garagebook.nl/privacy-statement?utm_source=gsc&x=1')
             ->assertStatus(301)
-            ->assertRedirect('https://garagebook.nl/privacy-statement?utm_source=gsc&x=1');
+            ->assertRedirect('https://garagebook.nl/privacy/?utm_source=gsc&x=1');
     }
 
     public function test_app_host_maintenance_landing_redirects_directly_and_permanently_to_public_site(): void
@@ -136,12 +138,13 @@ class PublicSeoCanonicalizationTest extends TestCase
         $this->get('https://app.garagebook.nl/api/ping')
             ->assertStatus(404);
 
-        $this->post('https://app.garagebook.nl/livewire-33d43eea/update')
+        $this->post('https://app.garagebook.nl'.Livewire::getUpdateUri())
             ->assertStatus(404)
             ->assertHeaderMissing('Location');
 
-        $this->get('https://app.garagebook.nl/livewire-33d43eea/livewire.js')
-            ->assertStatus(200);
+        $this->get('https://app.garagebook.nl'.EndpointResolver::scriptPath(minified: ! config('app.debug')))
+            ->assertStatus(200)
+            ->assertHeaderMissing('Location');
     }
 
     public function test_unknown_app_host_path_is_not_redirected_to_public_host(): void
