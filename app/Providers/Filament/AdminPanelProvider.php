@@ -114,6 +114,12 @@ class AdminPanelProvider extends PanelProvider
             PanelsRenderHook::HEAD_START,
             fn (): HtmlString => new HtmlString(view('partials.google-tag')->render()),
         );
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_START,
+            fn (): HtmlString => new HtmlString(
+                request()->is('admin/register') ? '<meta name="robots" content="noindex,follow">' : ''
+            ),
+        );
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,

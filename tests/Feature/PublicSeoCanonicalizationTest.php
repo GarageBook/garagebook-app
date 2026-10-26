@@ -127,6 +127,9 @@ class PublicSeoCanonicalizationTest extends TestCase
 
         $this->get('https://app.garagebook.nl/admin/register')
             ->assertStatus(200);
+        $this->get('https://app.garagebook.nl/admin/register?utm_source=garagebook.nl')
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex,follow">', false);
 
         $this->get('https://app.garagebook.nl/register')
             ->assertStatus(200);
