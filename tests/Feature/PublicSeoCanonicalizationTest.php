@@ -66,6 +66,18 @@ class PublicSeoCanonicalizationTest extends TestCase
         }
     }
 
+    public function test_legacy_maintenance_sitemap_remains_available_with_database_cache_security(): void
+    {
+        Config::set('cache.default', 'database');
+        Config::set('cache.serializable_classes', false);
+
+        for ($request = 0; $request < 2; $request++) {
+            $this->get('https://app.garagebook.nl/sitemap-onderhoud.xml')
+                ->assertOk()
+                ->assertHeader('Content-Type', 'application/xml');
+        }
+    }
+
     public function test_app_host_existing_maintenance_models_are_rendered_for_get_and_head(): void
     {
         $user = User::factory()->create(['is_outreach_demo' => false]);

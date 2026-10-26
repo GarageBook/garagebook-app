@@ -22,11 +22,11 @@ class VehicleAuthorityIndexService
      */
     public function allIndexableSlugs(): Collection
     {
-        return Cache::remember('vai:all-slugs', self::CACHE_TTL, function () {
+        return collect(Cache::remember('vai:all-slugs-v2', self::CACHE_TTL, function () {
             return VehicleAuthorityIndex::where('is_indexable', true)
                 ->orderByDesc('public_vehicle_count')
-                ->pluck('slug');
-        });
+                ->pluck('slug')->all();
+        }));
     }
 
     /**
@@ -121,6 +121,7 @@ class VehicleAuthorityIndexService
     {
         Cache::forget('vai:stats');
         Cache::forget('vai:all-slugs');
+        Cache::forget('vai:all-slugs-v2');
     }
 
     public function flushSlugCache(string $slug): void
