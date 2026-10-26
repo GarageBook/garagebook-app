@@ -9,9 +9,9 @@ class VehicleAuthorityService
 {
     private const RELATED_PAGES = [
         ['url' => '/digitaal-onderhoudsboekje', 'title' => 'Digitaal onderhoudsboekje', 'description' => 'Centrale voertuiggeschiedenis voor auto en motor.'],
-        ['url' => '/onderhoudsboekje-kwijt', 'title' => 'Onderhoudsboekje kwijt?', 'description' => 'Stappen om je onderhoudshistorie te reconstrueren.'],
+        ['url' => 'https://garagebook.nl/blog/onderhoudsboekje-kwijt-wat-te-doen/', 'title' => 'Onderhoudsboekje kwijt?', 'description' => 'Stappen om je onderhoudshistorie te reconstrueren.'],
         ['url' => '/onderhoudshistorie-auto', 'title' => 'Onderhoudshistorie', 'description' => 'Alles over onderhoudshistorie opbouwen en overdragen.'],
-        ['url' => '/universeel-onderhoudsboekje', 'title' => 'Universeel onderhoudsboekje', 'description' => 'Voordelen, nadelen en digitale alternatieven.'],
+        ['url' => 'https://garagebook.nl/blog/waarom-een-universeel-onderhoudsboekje-achterhaald-is-en-wat-je-beter-kunt-gebruiken/', 'title' => 'Universeel onderhoudsboekje', 'description' => 'Voordelen, nadelen en digitale alternatieven.'],
     ];
 
     public function __construct(

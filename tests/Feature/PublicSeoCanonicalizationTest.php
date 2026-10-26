@@ -56,6 +56,23 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertHeader('Location', 'https://garagebook.nl/onderhoud/?utm_source=test');
     }
 
+    public function test_legacy_marketing_urls_redirect_directly_to_existing_public_pages(): void
+    {
+        $targets = [
+            '/universeel-onderhoudsboekje' => '/blog/waarom-een-universeel-onderhoudsboekje-achterhaald-is-en-wat-je-beter-kunt-gebruiken/',
+            '/onderhoudsgeschiedenis-auto' => '/onderhoudshistorie-auto/',
+            '/digitaal-onderhoudsboekje-auto' => '/onderhoudsboekje/auto/',
+            '/onderhoudsboekje-kwijt' => '/blog/onderhoudsboekje-kwijt-wat-te-doen/',
+            '/website' => '/',
+        ];
+
+        foreach ($targets as $source => $target) {
+            $this->get('https://app.garagebook.nl'.$source)
+                ->assertStatus(301)
+                ->assertRedirect('https://garagebook.nl'.$target);
+        }
+    }
+
     public function test_app_host_maintenance_sitemaps_return_xml_without_redirect(): void
     {
         foreach (['sitemap-onderhoud.xml', 'sitemap-vehicle-authority.xml'] as $path) {

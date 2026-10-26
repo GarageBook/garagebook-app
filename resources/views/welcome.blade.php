@@ -226,7 +226,7 @@
                             <strong>Onderhoudshistorie auto</strong>
                             <span>Alles over het bijhouden en opvragen van de onderhoudshistorie van een auto.</span>
                         </a>
-                        <a href="/digitaal-onderhoudsboekje-auto" class="gb-topic-link">
+                        <a href="https://garagebook.nl/onderhoudsboekje/auto/" class="gb-topic-link">
                             <strong>Digitaal onderhoudsboekje auto</strong>
                             <span>Vervang het papieren boekje door een digitale versie voor je auto.</span>
                         </a>
@@ -238,7 +238,7 @@
                             <strong>Motor onderhoud app</strong>
                             <span>De app voor motorrijders die hun rijder serieus bijhouden.</span>
                         </a>
-                        <a href="/onderhoudsboekje-kwijt" class="gb-topic-link">
+                        <a href="https://garagebook.nl/blog/onderhoudsboekje-kwijt-wat-te-doen/" class="gb-topic-link">
                             <strong>Onderhoudsboekje kwijt?</strong>
                             <span>Stappen om je onderhoudshistorie te reconstrueren.</span>
                         </a>

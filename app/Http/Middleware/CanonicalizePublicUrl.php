@@ -74,6 +74,11 @@ class CanonicalizePublicUrl
             '/ons-verhaal' => '/over-garagebook/',
             '/privacy-statement' => '/privacy/',
             '/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026' => '/blog/universeel-onderhoudsboekje-kopen-dit-is-het-beste-alternatief-2026/',
+            '/universeel-onderhoudsboekje' => '/blog/waarom-een-universeel-onderhoudsboekje-achterhaald-is-en-wat-je-beter-kunt-gebruiken/',
+            '/onderhoudsgeschiedenis-auto' => '/onderhoudshistorie-auto/',
+            '/digitaal-onderhoudsboekje-auto' => '/onderhoudsboekje/auto/',
+            '/onderhoudsboekje-kwijt' => '/blog/onderhoudsboekje-kwijt-wat-te-doen/',
+            '/website' => '/',
         ];
         $targetPath = $targets[rtrim($request->getPathInfo(), '/')] ?? null;
 

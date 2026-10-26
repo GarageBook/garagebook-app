@@ -180,9 +180,9 @@ class VehicleAuthorityPageTest extends TestCase
         $response = $this->get('/onderhoud/yamaha-mt-07')->assertOk();
 
         $this->assertStringContainsString('/digitaal-onderhoudsboekje', $response->getContent());
-        $this->assertStringContainsString('/onderhoudsboekje-kwijt', $response->getContent());
+        $this->assertStringContainsString('https://garagebook.nl/blog/onderhoudsboekje-kwijt-wat-te-doen/', $response->getContent());
         $this->assertStringContainsString('/onderhoudshistorie-auto', $response->getContent());
-        $this->assertStringContainsString('/universeel-onderhoudsboekje', $response->getContent());
+        $this->assertStringContainsString('https://garagebook.nl/blog/waarom-een-universeel-onderhoudsboekje-achterhaald-is-en-wat-je-beter-kunt-gebruiken/', $response->getContent());
     }
 
     // -------------------------------------------------------------------------
