@@ -103,12 +103,9 @@ class PublicGarageService
     public function indexableVehicles(): Collection
     {
         return Vehicle::query()
-            ->with([
-                'user',
-                'maintenanceLogs' => fn ($query) => $query
-                    ->latest('maintenance_date')
-                    ->latest('id'),
-            ])
+            ->select(['id', 'user_id', 'public_slug', 'is_public', 'updated_at'])
+            ->with('user:id,is_outreach_demo')
+            ->withMax('maintenanceLogs as latest_maintenance_updated_at', 'updated_at')
             ->where('is_public', true)
             ->whereNotNull('public_slug')
             ->where('public_slug', '!=', '')
@@ -116,6 +113,22 @@ class PublicGarageService
             ->get()
             ->filter(fn (Vehicle $vehicle) => $this->shouldIndex($vehicle))
             ->values();
+    }
+
+    public function sitemapLastmod(Vehicle $vehicle): ?Carbon
+    {
+        $vehicleUpdatedAt = $vehicle->updated_at;
+        $maintenanceUpdatedAt = filled($vehicle->latest_maintenance_updated_at)
+            ? Carbon::parse($vehicle->latest_maintenance_updated_at)
+            : null;
+
+        if ($vehicleUpdatedAt === null) {
+            return $maintenanceUpdatedAt;
+        }
+
+        return $maintenanceUpdatedAt?->greaterThan($vehicleUpdatedAt)
+            ? $maintenanceUpdatedAt
+            : $vehicleUpdatedAt;
     }
 
     public function isOutreachDemoVehicle(Vehicle $vehicle): bool

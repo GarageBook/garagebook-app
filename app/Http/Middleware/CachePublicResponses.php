@@ -12,6 +12,12 @@ class CachePublicResponses
     {
         $response = $next($request);
 
+        if ($request->is('sitemap-garages.xml', 'sitemap-vehicle-authority.xml', 'sitemap-onderhoud.xml')) {
+            $response->headers->set('Cache-Control', 'no-store');
+
+            return $response;
+        }
+
         if (! $this->shouldCache($request, $response)) {
             return $response;
         }

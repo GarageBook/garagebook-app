@@ -22,11 +22,9 @@ class VehicleAuthorityIndexService
      */
     public function allIndexableSlugs(): Collection
     {
-        return collect(Cache::remember('vai:all-slugs-v2', self::CACHE_TTL, function () {
-            return VehicleAuthorityIndex::where('is_indexable', true)
-                ->orderByDesc('public_vehicle_count')
-                ->pluck('slug')->all();
-        }));
+        return VehicleAuthorityIndex::where('is_indexable', true)
+            ->orderByDesc('public_vehicle_count')
+            ->pluck('slug');
     }
 
     /**
