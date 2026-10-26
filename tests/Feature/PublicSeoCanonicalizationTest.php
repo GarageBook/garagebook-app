@@ -56,6 +56,16 @@ class PublicSeoCanonicalizationTest extends TestCase
             ->assertHeader('Location', 'https://garagebook.nl/onderhoud/?utm_source=test');
     }
 
+    public function test_app_host_maintenance_sitemaps_return_xml_without_redirect(): void
+    {
+        foreach (['sitemap-onderhoud.xml', 'sitemap-vehicle-authority.xml'] as $path) {
+            $this->get('https://app.garagebook.nl/'.$path)
+                ->assertOk()
+                ->assertHeader('Content-Type', 'application/xml')
+                ->assertHeaderMissing('Location');
+        }
+    }
+
     public function test_app_host_existing_maintenance_models_are_rendered_for_get_and_head(): void
     {
         $user = User::factory()->create(['is_outreach_demo' => false]);

@@ -7,7 +7,7 @@ use Tests\TestCase;
 
 class RobotsTest extends TestCase
 {
-    public function test_app_robots_txt_only_includes_public_garage_sitemap(): void
+    public function test_app_robots_txt_includes_public_app_sitemaps(): void
     {
         Config::set('app.url', 'https://app.garagebook.nl');
         $this->get('https://app.garagebook.nl/robots.txt')
@@ -17,8 +17,8 @@ class RobotsTest extends TestCase
             ->assertSee('User-agent: *', false)
             ->assertSee('Allow: /', false)
             ->assertSee('Sitemap: https://app.garagebook.nl/sitemap-garages.xml', false)
+            ->assertSee('Sitemap: https://app.garagebook.nl/sitemap-vehicle-authority.xml', false)
             ->assertDontSee('sitemap.xml', false)
-            ->assertDontSee('sitemap-onderhoud.xml', false)
-            ->assertDontSee('sitemap-vehicle-authority.xml', false);
+            ->assertDontSee('sitemap-onderhoud.xml', false);
     }
 }

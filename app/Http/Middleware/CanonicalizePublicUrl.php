@@ -111,8 +111,6 @@ class CanonicalizePublicUrl
             'blogs',
             'blogs/*',
             'sitemap.xml',
-            'sitemap-onderhoud.xml',
-            'sitemap-vehicle-authority.xml',
             'website',
         ])) {
             return true;
